@@ -25,16 +25,29 @@ export function DocumentationPicker({
         <span>TOOL GUIDES</span>
         <strong>{allToolsCount} documented tools</strong>
       </div>
-      <label className="docs-search">
+      <div className="docs-search">
         <Icon name="search" size={17} />
-        <span className="sr-only">Search documentation</span>
+        <label className="sr-only" htmlFor="documentation-search">
+          Search documentation
+        </label>
         <input
+          id="documentation-search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search tool, vendor, or tag…"
+          placeholder="Search tool, vendor, owner, or tag…"
           autoComplete="off"
         />
-      </label>
+        {query && (
+          <button
+            className="docs-search-clear"
+            type="button"
+            aria-label="Clear documentation search"
+            onClick={() => onQueryChange("")}
+          >
+            <Icon name="close" size={16} />
+          </button>
+        )}
+      </div>
       <p className="docs-result-count" role="status" aria-live="polite">
         {matchingTools.length} {matchingTools.length === 1 ? "guide" : "guides"}
       </p>

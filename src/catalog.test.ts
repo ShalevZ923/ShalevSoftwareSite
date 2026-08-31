@@ -9,6 +9,18 @@ describe('catalog filters', () => {
     expect(getCatalogTools(tools, { ...defaultFilters, platform: 'Web' }).map((tool) => tool.id)).toEqual(['postman'])
   })
 
+  it('keeps catalog content complete and safe to publish as static data', () => {
+    expect(new Set(tools.map((tool) => tool.id)).size).toBe(tools.length)
+
+    for (const tool of tools) {
+      expect(tool.id).toMatch(/^[a-z0-9-]+$/)
+      expect(tool.name).not.toHaveLength(0)
+      expect(tool.support.email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+      expect(new URL(tool.download).protocol).toBe('https:')
+      expect(tool.facts?.some((fact) => /key|activation|password|token/i.test(fact.label))).not.toBe(true)
+    }
+  })
+
   it('combines filters and preserves a predictable sort order', () => {
     expect(getCatalogTools(tools, { ...defaultFilters, category: 'IDE', platform: 'Linux' }).map((tool) => tool.name)).toEqual(['IntelliJ IDEA', 'Visual Studio Code'])
     expect(getCatalogTools(tools, { ...defaultFilters, lifecycle: 'New' }).map((tool) => tool.id)).toEqual(['dbeaver'])

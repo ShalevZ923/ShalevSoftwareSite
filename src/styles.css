@@ -1123,6 +1123,8 @@ main {
 .docs-search:focus-within { border-color: #1764ec; box-shadow: 0 0 0 2px rgba(23, 100, 236, .1); }
 .docs-search input { min-width: 0; min-height: 44px; flex: 1; border: 0; outline: 0; color: #10243e; font: 13px "DM Mono", monospace; }
 .docs-search input::placeholder { color: #72849a; }
+.docs-search-clear { display: grid; place-items: center; width: 44px; min-height: 44px; margin-right: -10px; border: 0; background: transparent; color: #486580; }
+.docs-search-clear:hover { color: #075bc9; }
 .docs-result-count { margin: 14px 0 8px; }
 .docs-tool-list { display: grid; max-height: min(560px, calc(100vh - 300px)); overflow: auto; padding: 2px 6px 2px 2px; gap: 5px; scrollbar-color: #b9cbe0 transparent; }
 .doc-tool-option { display: grid; grid-template-columns: 32px minmax(0, 1fr) 18px; align-items: center; min-height: 56px; gap: 9px; padding: 8px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #294561; text-align: left; }
