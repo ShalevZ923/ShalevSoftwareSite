@@ -46,3 +46,11 @@ This form never changes the site on its own. A maintainer must verify the owner,
 4. Opens a pull request for normal review and merge.
 
 The approval label is the trust boundary: only people with repository label-management permission should apply it. If validation fails, the workflow does not create a PR; correct the issue and re-apply the label after review.
+
+## GitLab path
+
+GitLab users can select the **Add catalog software** description template from [`.gitlab/issue_templates`](./.gitlab/issue_templates). A maintainer reviews the issue, then applies the `catalog-approved` label.
+
+GitLab CI does not have a pipeline event for an issue label, so the maintainer then starts a pipeline on the default branch with the non-secret variable `CATALOG_ISSUE_IID` set to the issue IID and runs the manual `create_catalog_merge_request` job. That job verifies the label again, creates an isolated branch through GitLab’s API, adds the content file and generated catalog, then opens a merge request.
+
+Before enabling this path, create a short-lived, **Developer** project access token with the `api` scope and save it as the `GITLAB_CATALOG_MR_TOKEN` CI/CD variable. Mark the variable **masked**, **hidden**, and **protected**, and run the job only from the protected default branch. Never put this token in the issue, repository, or pipeline variables. GitLab.com project access tokens require Premium or Ultimate; use the local contributor path if that feature is unavailable.
