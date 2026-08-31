@@ -1,0 +1,18 @@
+{
+	# Certificate contact address comes from the deployment environment.
+	email {$ACME_EMAIL}
+	admin off
+}
+
+# Caddy obtains and renews a public ACME certificate automatically. The hostname
+# must resolve to this host and ports 80 and 443 must be reachable publicly.
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	reverse_proxy app:8080
+}

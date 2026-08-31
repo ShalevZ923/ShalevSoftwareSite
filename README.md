@@ -30,13 +30,81 @@ pnpm audit --prod
 
 `public/_headers` is copied to `dist/_headers` for Cloudflare Pages and Netlify-compatible static hosting. For other hosts, apply the equivalent response headers at the CDN or web-server layer before production promotion.
 
-## Container deployment
+## Production deployment with Docker and HTTPS
 
-The optional container image builds the static bundle and serves it with NGINX as the unprivileged `nginx` user on port 8080:
+The included Compose deployment keeps the static app private on an internal Docker network and exposes only Caddy, which obtains and renews a public ACME TLS certificate automatically. Configuration is read from a host-local `.env` file; it is intentionally ignored by Git.
 
-```bash
-docker build -t tool-atlas:local .
-docker run --rm -p 8080:8080 tool-atlas:local
+```mermaid
+flowchart LR
+  Browser[Visitor browser] --> DNS[Public DNS]
+  DNS --> Firewall[Host firewall: 80 and 443]
+  Firewall -->|HTTP :80, ACME challenge and redirect| Caddy[Caddy TLS proxy]
+  Firewall -->|HTTPS :443| Caddy
+  Caddy <-->|Certificate state| Certs[(Docker volume: caddy_data)]
+  Caddy -->|internal Docker network only| App[Tool Atlas container]
+  App --> Nginx[Unprivileged NGINX :8080]
+  Nginx --> Assets[Static React bundle]
 ```
 
-It sends the same security headers as `_headers` and includes a built-in HTTP health check. No runtime configuration or secrets are required.
+### 1. Prepare the host
+
+- Use a supported Linux host with Docker Engine and the Docker Compose plugin.
+- Create a public DNS `A` (and, if used, `AAAA`) record for the intended hostname pointing at the host.
+- Allow inbound TCP **80** and **443** only. Do not publish the app's port `8080`.
+- Do not place another proxy on ports 80/443 unless it forwards both ports to this host; Caddy needs port 80 for ACME HTTP validation and redirect handling.
+
+### 2. Configure the environment
+
+Copy the template and replace every example value with the production values:
+
+```bash
+cp .env.example .env
+chmod 600 .env
+```
+
+`.env` controls the deployment without changing tracked files:
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `SITE_DOMAIN` | Yes | Public hostname, without `https://`, a path, or a port. |
+| `ACME_EMAIL` | Yes | Certificate-expiry/contact address supplied to the ACME CA. |
+| `HTTP_PORT` | No | Host HTTP port; use `80` in production. |
+| `HTTPS_PORT` | No | Host HTTPS port; use `443` in production. |
+
+This static app has no application secrets and does not consume browser-visible runtime variables. Keep future credentials out of Vite variables (`VITE_*` values are compiled into public JavaScript); use a server-side secret mechanism if a backend is later introduced.
+
+### 3. Build and start
+
+Validate the resolved configuration before starting it, then build and run the stack:
+
+```bash
+docker compose --env-file .env config
+docker compose --env-file .env up --build --detach
+docker compose --env-file .env ps
+```
+
+Caddy requests the certificate after DNS and firewall access are correct. Follow its startup until it reports successful certificate management:
+
+```bash
+docker compose --env-file .env logs --follow proxy
+```
+
+Verify the public endpoint from a separate network when possible:
+
+```bash
+curl --fail --show-error --head "https://YOUR_PRODUCTION_DOMAIN"
+curl --fail --show-error --head "http://YOUR_PRODUCTION_DOMAIN"
+```
+
+The HTTP check should redirect to HTTPS. The HTTPS response should include `Strict-Transport-Security`, `Content-Security-Policy`, `X-Content-Type-Options`, and `X-Frame-Options`.
+
+### 4. Operate safely
+
+- Certificates renew automatically; retain and back up the Docker volumes `tool-atlas_caddy_data` and `tool-atlas_caddy_config`. Losing them can trigger new certificate issuance and ACME rate limits.
+- For an app update, run `pnpm verify`, build a reviewed image, and then run `docker compose --env-file .env up --build --detach`. The tracked base and proxy images are pinned to immutable digests; update those pins only through a reviewed vulnerability/provenance check.
+- For a hostname change, update `SITE_DOMAIN`, verify the new DNS record, then run the same `up` command. Caddy will obtain a certificate for the new hostname.
+- Inspect the live state with `docker compose --env-file .env ps` and `docker compose --env-file .env logs proxy app`. Do not copy `.env` into an image or commit it.
+
+The app container runs as the unprivileged `nginx` user with a read-only filesystem, a small writable temporary filesystem, no Linux capabilities, and no host port. The proxy is the only public container; it has only the capability needed to bind HTTP(S) ports and persists certificate state in named volumes.
+
+See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.

@@ -3,5 +3,9 @@ dist
 .git
 .agents
 .codex
+.env
+.playwright-mcp
+.playwright-cli
+output
 npm-debug.log*
 pnpm-debug.log*
