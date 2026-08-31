@@ -120,17 +120,25 @@ export function getCatalogTools(catalog: Tool[], filters: CatalogFilters) {
 
 /** Returns a predictable, searchable list for the documentation library. */
 export function getDocumentationTools(catalog: Tool[], query: string) {
-  const normalizedQuery = query.trim().toLocaleLowerCase()
+  const normalizedQuery = query.trim().toLocaleLowerCase();
 
   return [...catalog]
     .filter((tool) => {
-      if (!normalizedQuery) return true
-      return [tool.name, tool.company, tool.category, tool.support.name, tool.support.team, ...tool.tags]
-        .join(' ')
+      if (!normalizedQuery) return true;
+
+      return [
+        tool.name,
+        tool.company,
+        tool.category,
+        tool.support.name,
+        tool.support.team,
+        ...tool.tags,
+      ]
+        .join(" ")
         .toLocaleLowerCase()
-        .includes(normalizedQuery)
+        .includes(normalizedQuery);
     })
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function slugifyHeading(value: string) {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Platform, Tool } from "../data";
+import { getTrustedImageSource } from "../markdown";
 
 export type IconName =
   | "arrow"
@@ -53,9 +54,11 @@ export function PlatformMark({ platform }: { platform: Platform }) {
 }
 
 export function ToolGlyph({ tool }: { tool: Tool }) {
+  const imageSource = getTrustedImageSource(tool.image?.src);
+
   return (
     <span className={`tool-glyph glyph-${tool.id}`} aria-hidden="true">
-      {tool.image ? <img src={tool.image.src} alt="" loading="lazy" /> : tool.icon}
+      {imageSource ? <img src={imageSource} alt="" loading="lazy" /> : tool.icon}
     </span>
   );
 }

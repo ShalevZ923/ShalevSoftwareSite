@@ -64,7 +64,7 @@ The image replaces the small text tile in catalog rows. To show an image inside 
 ![PyCharm welcome screen](/tool-images/pycharm-welcome.png)
 ```
 
-Use local, appropriately licensed images. Avoid remote image URLs so the static site has no third-party runtime requests or referrer leakage.
+Use local, appropriately licensed images. The viewer deliberately renders only paths below `/tool-images/`; remote image URLs are ignored so the static site has no third-party runtime requests or referrer leakage.
 
 ## Add more information
 

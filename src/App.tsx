@@ -1,6 +1,4 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { docs, getToolById, tools, type Platform, type Tool } from "./data";
 import {
   catalogFiltersFromSearch,
@@ -8,11 +6,12 @@ import {
   defaultFilters,
   getCatalogTools,
   getDocumentationTools,
-  slugifyHeading,
   type CatalogFilters,
 } from "./catalog";
+import { readSavedToolIds, writeSavedToolIds } from "./catalogStorage";
 import { DocumentationPicker } from "./components/DocumentationPicker";
 import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from "./components/ui";
+import { MarkdownDocument, getTrustedHttpsUrl } from "./markdown";
 
 type Page = "catalog" | "documentation" | "about";
 
@@ -28,22 +27,7 @@ const platforms: Array<"All platforms" | Platform> = [
   "Web",
 ];
 const lifecycles = ["All lifecycles", "Current", "New", "Legacy"];
-const savedToolsKey = "tool-atlas.saved-tools.v1";
-
-function getSavedToolIds() {
-  try {
-    const stored = window.localStorage.getItem(savedToolsKey);
-    const ids = stored ? JSON.parse(stored) : [];
-    return Array.isArray(ids)
-      ? ids.filter(
-          (id): id is string =>
-            typeof id === "string" && tools.some((tool) => tool.id === id),
-        )
-      : [];
-  } catch {
-    return [];
-  }
-}
+const toolIds = new Set(tools.map((tool) => tool.id));
 
 function Sidebar({
   page,
@@ -175,19 +159,20 @@ function Catalog({ onDocs }: { onDocs: (tool: Tool) => void }) {
     catalogFiltersFromSearch(window.location.search, categories),
   );
   const [expanded, setExpanded] = useState<string | null>("intellij");
-  const [savedToolIds, setSavedToolIds] = useState<string[]>(getSavedToolIds);
+  const [savedToolIds, setSavedToolIds] = useState<string[]>(() => readSavedToolIds(toolIds));
   const [savedOnly, setSavedOnly] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "unavailable">(
     "idle",
   );
   const searchRef = useRef<HTMLInputElement>(null);
   const filtered = useMemo(() => getCatalogTools(tools, filters), [filters]);
+  const savedToolIdSet = useMemo(() => new Set(savedToolIds), [savedToolIds]);
   const visibleTools = useMemo(
     () =>
       savedOnly
-        ? filtered.filter((tool) => savedToolIds.includes(tool.id))
+        ? filtered.filter((tool) => savedToolIdSet.has(tool.id))
         : filtered,
-    [filtered, savedOnly, savedToolIds],
+    [filtered, savedOnly, savedToolIdSet],
   );
   const updateFilter = <K extends keyof CatalogFilters>(
     key: K,
@@ -195,11 +180,12 @@ function Catalog({ onDocs }: { onDocs: (tool: Tool) => void }) {
   ) => setFilters((current) => ({ ...current, [key]: value }));
   const clear = () => setFilters(defaultFilters);
   const toggleSaved = (id: string) =>
-    setSavedToolIds((current) =>
-      current.includes(id)
-        ? current.filter((savedId) => savedId !== id)
-        : [...current, id],
-    );
+    setSavedToolIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return [...next];
+    });
   const resetView = () => {
     clear();
     setSavedOnly(false);
@@ -216,11 +202,7 @@ function Catalog({ onDocs }: { onDocs: (tool: Tool) => void }) {
   }, [filters]);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(savedToolsKey, JSON.stringify(savedToolIds));
-    } catch {
-      // Saved tools are optional convenience data; the catalog stays usable when storage is unavailable.
-    }
+    writeSavedToolIds(savedToolIds);
   }, [savedToolIds]);
 
   const copyViewLink = async () => {
@@ -376,7 +358,7 @@ function Catalog({ onDocs }: { onDocs: (tool: Tool) => void }) {
                   setExpanded(expanded === tool.id ? null : tool.id)
                 }
                 onDocs={() => onDocs(tool)}
-                saved={savedToolIds.includes(tool.id)}
+                saved={savedToolIdSet.has(tool.id)}
                 onToggleSaved={() => toggleSaved(tool.id)}
               />
             ))}
@@ -424,6 +406,8 @@ function ToolRow({
   saved: boolean;
   onToggleSaved: () => void;
 }) {
+  const downloadUrl = getTrustedHttpsUrl(tool.download);
+
   return (
     <article
       className={`tool-row ${expanded ? "expanded" : ""}`}
@@ -491,15 +475,17 @@ function ToolRow({
                 </dl>
               )}
               <div className="detail-actions">
-                <a
-                  className="text-action"
-                  href={tool.download}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Icon name="download" />
-                  Download <Icon name="external" size={15} />
-                </a>
+                {downloadUrl && (
+                  <a
+                    className="text-action"
+                    href={downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Icon name="download" />
+                    Download <Icon name="external" size={15} />
+                  </a>
+                )}
                 <button className="secondary-button" onClick={onDocs}>
                   <Icon name="book" />
                   View documentation
@@ -612,29 +598,7 @@ function Documentation({
               <a href="#support">Support</a>
             </div>
           </div>
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h2: ({ children }) => (
-                <h2 id={slugifyHeading(String(children))}>{children}</h2>
-              ),
-              a: ({ href, children }) => (
-                <a href={href} target="_blank" rel="noreferrer">
-                  {children}
-                </a>
-              ),
-              img: ({ src, alt }) => (
-                <img
-                  src={src}
-                  alt={alt ?? ""}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              ),
-            }}
-          >
-            {docs[selected]}
-          </ReactMarkdown>
+          <MarkdownDocument content={docs[selected]} />
         </article>
       </div>
     </section>

@@ -5,10 +5,13 @@ import { resolve } from 'node:path'
 const dist = resolve('dist')
 const requiredHeaders = [
   "Content-Security-Policy: default-src 'self'",
+  "img-src 'self' data:",
   'X-Content-Type-Options: nosniff',
   'Referrer-Policy: strict-origin-when-cross-origin',
   'Permissions-Policy:',
   'Cross-Origin-Opener-Policy: same-origin',
+  'Cross-Origin-Resource-Policy: same-origin',
+  'X-Frame-Options: DENY',
 ]
 
 async function requireFile(path) {
