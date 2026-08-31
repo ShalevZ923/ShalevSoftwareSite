@@ -33,6 +33,15 @@ pnpm verify
 - Guides must include `## Install` and `## Support`.
 - Product images must be local files below `public/tool-images/`, referenced as `/tool-images/...`. Remote guide images are deliberately ignored.
 - Facts are small, non-sensitive `label`/`value` pairs. Never add license keys, activation codes, passwords, tokens, personal data, or contract documents.
+- A tool can optionally have a visible, tool-specific notice. Use it only for actionable information such as an approved retirement date or planned maintenance; it is omitted from every tool that does not define it:
+
+  ```json
+  "notice": {
+    "tone": "warning",
+    "title": "Retires 31 December 2026",
+    "message": "Move to the supported replacement before this date."
+  }
+  ```
 
 ## GitHub Issue Form path
 

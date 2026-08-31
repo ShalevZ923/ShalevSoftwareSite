@@ -11,6 +11,7 @@ const lifecycles = new Set(["Current", "New", "Legacy"]);
 const idPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const localImagePattern = /^\/tool-images\/[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 const sensitiveFactPattern = /key|activation|password|token/i;
+const noticeTones = new Set(["info", "warning"]);
 
 function fail(source, message) {
   throw new Error(`${source}: ${message}`);
@@ -135,6 +136,16 @@ export function validateCatalogEntry(source, metadata, guide) {
       requiredString(fact.value, "facts.value", source);
       if (sensitiveFactPattern.test(label)) fail(source, "fact labels cannot describe credentials or activation material");
     }
+  }
+  if (metadata.notice !== undefined) {
+    if (!metadata.notice || typeof metadata.notice !== "object" || Array.isArray(metadata.notice)) {
+      fail(source, "notice must be an object when supplied");
+    }
+    if (!noticeTones.has(metadata.notice.tone)) {
+      fail(source, "notice.tone must be info or warning");
+    }
+    requiredString(metadata.notice.title, "notice.title", source);
+    requiredString(metadata.notice.message, "notice.message", source);
   }
   if (metadata.image !== undefined) {
     if (!metadata.image || typeof metadata.image !== "object" || Array.isArray(metadata.image)) fail(source, "image must be an object when supplied");
