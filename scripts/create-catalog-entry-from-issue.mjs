@@ -1,7 +1,7 @@
 import { access, readFile, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { join } from "node:path";
-import { contentDirectory, nextCatalogOrder, renderCatalogFile, slugifyId, writeGeneratedCatalog } from "./catalog-content.mjs";
+import { contentDirectory, nextCatalogOrder, parseReleaseList, renderCatalogFile, slugifyId, writeGeneratedCatalog } from "./catalog-content.mjs";
 
 function section(body, label, required = true) {
   const heading = `### ${label}`;
@@ -58,7 +58,7 @@ const metadata = {
   platforms: selectedPlatforms(section(body, "Supported platforms")),
   lifecycle: section(body, "Lifecycle"),
   icon: section(body, "Catalog tile"),
-  version: section(body, "Approved version"),
+  releases: parseReleaseList(section(body, "Approved releases"), `issue #${event.issue.number}`),
   updated: new Date(event.issue.updated_at ?? Date.now()).toISOString().slice(0, 10),
   description: section(body, "Short description"),
   support: {
@@ -67,7 +67,6 @@ const metadata = {
     initials: supportName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
     email: supportEmail,
   },
-  download: section(body, "Approved download URL"),
   tags: commaSeparated(section(body, "Tags")),
   facts: optionalFacts(section(body, "Optional facts", false)),
 };

@@ -31,9 +31,12 @@ catalog-approved label before the manual CI job can create a merge request.
 
 <!-- One or two letters shown when there is no local image. Required. -->
 
-### Approved version
+### Approved releases
 
-<!-- Required. -->
+<!-- Required. One per line, newest first: version | HTTPS download URL. -->
+
+26 | https://downloads.example.com/product-26.exe
+25 | https://downloads.example.com/product-25.exe
 
 ### Short description
 
@@ -50,10 +53,6 @@ catalog-approved label before the manual CI job can create a merge request.
 ### Support email
 
 <!-- Required. -->
-
-### Approved download URL
-
-<!-- HTTPS only. Required. -->
 
 ### Tags
 

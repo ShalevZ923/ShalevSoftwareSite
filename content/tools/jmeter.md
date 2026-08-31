@@ -8,11 +8,13 @@
   "platforms": ["Windows", "Linux", "macOS"],
   "lifecycle": "Legacy",
   "icon": "JM",
-  "version": "5.6.3",
+  "releases": [
+    { "version": "5.6.3", "download": "https://jmeter.apache.org/download_jmeter.cgi" }
+  ],
   "updated": "Aug 02",
   "description": "A mature open-source tool for load testing, functional testing, and protocol-level performance analysis.",
   "support": {"name": "Rina Bar", "team": "Quality Engineering", "initials": "RB", "email": "quality@atlas.local"},
-  "download": "https://jmeter.apache.org/download_jmeter.cgi",
+
   "tags": ["Load testing", "Performance", "Apache"]
 }
 ---

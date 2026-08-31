@@ -8,11 +8,13 @@
   "platforms": ["Windows", "Linux", "macOS", "Web"],
   "lifecycle": "Current",
   "icon": "PM",
-  "version": "11.60",
+  "releases": [
+    { "version": "11.60", "download": "https://www.postman.com/downloads/" }
+  ],
   "updated": "5 days ago",
   "description": "An API collaboration workspace for testing requests, sharing collections, and documenting integrations.",
   "support": {"name": "Rina Bar", "team": "Quality Engineering", "initials": "RB", "email": "quality@atlas.local"},
-  "download": "https://www.postman.com/downloads/",
+
   "tags": ["API", "Testing", "Collections"]
 }
 ---

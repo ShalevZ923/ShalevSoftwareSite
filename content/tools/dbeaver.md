@@ -8,11 +8,13 @@
   "platforms": ["Windows", "Linux", "macOS"],
   "lifecycle": "New",
   "icon": "DB",
-  "version": "25.1",
+  "releases": [
+    { "version": "25.1", "download": "https://dbeaver.io/download/" }
+  ],
   "updated": "Jul 29",
   "description": "Universal database management for exploring data, editing schemas, and running SQL across common engines.",
   "support": {"name": "Tomer Gil", "team": "Data Platform", "initials": "TG", "email": "data@atlas.local"},
-  "download": "https://dbeaver.io/download/",
+
   "tags": ["Database", "SQL", "New"]
 }
 ---

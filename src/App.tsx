@@ -406,7 +406,13 @@ function ToolRow({
   saved: boolean;
   onToggleSaved: () => void;
 }) {
-  const downloadUrl = getTrustedHttpsUrl(tool.download);
+  const [selectedVersion, setSelectedVersion] = useState(
+    () => tool.releases[0].version,
+  );
+  const selectedRelease =
+    tool.releases.find((release) => release.version === selectedVersion) ??
+    tool.releases[0];
+  const downloadUrl = getTrustedHttpsUrl(selectedRelease.download);
 
   return (
     <article
@@ -427,7 +433,7 @@ function ToolRow({
           <span>
             <strong>{tool.name}</strong>
             <small>
-              {tool.company} · {tool.version}
+              {tool.company} · {tool.releases[0].version}
             </small>
           </span>
         </span>
@@ -475,6 +481,20 @@ function ToolRow({
                 </dl>
               )}
               <div className="detail-actions">
+                <label className="release-picker">
+                  <span>Version</span>
+                  <select
+                    aria-label={`Download version for ${tool.name}`}
+                    value={selectedRelease.version}
+                    onChange={(event) => setSelectedVersion(event.target.value)}
+                  >
+                    {tool.releases.map((release) => (
+                      <option key={release.version} value={release.version}>
+                        {release.version}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 {downloadUrl && (
                   <a
                     className="text-action"
@@ -483,7 +503,7 @@ function ToolRow({
                     rel="noopener noreferrer"
                   >
                     <Icon name="download" />
-                    Download <Icon name="external" size={15} />
+                    Download {selectedRelease.version} <Icon name="external" size={15} />
                   </a>
                 )}
                 <button className="secondary-button" onClick={onDocs}>
@@ -532,7 +552,7 @@ function Updates() {
           <span />
           <div>
             <strong>
-              {tool.name} {tool.version}
+              {tool.name} {tool.releases[0].version}
             </strong>
             <small>{tool.updated}</small>
           </div>

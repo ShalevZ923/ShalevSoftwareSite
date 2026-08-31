@@ -8,11 +8,13 @@
   "platforms": ["Linux"],
   "lifecycle": "Current",
   "icon": "NX",
-  "version": "1.28",
+  "releases": [
+    { "version": "1.28", "download": "https://nginx.org/en/download.html" }
+  ],
   "updated": "Jul 15",
   "description": "A high-performance web server, reverse proxy, and load balancer for internal application delivery.",
   "support": {"name": "Avi Shaham", "team": "Infrastructure", "initials": "AS", "email": "infra@atlas.local"},
-  "download": "https://nginx.org/en/download.html",
+
   "tags": ["Server", "Reverse proxy", "Linux"]
 }
 ---

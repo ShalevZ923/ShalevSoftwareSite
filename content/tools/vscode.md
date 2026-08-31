@@ -8,11 +8,13 @@
   "platforms": ["Windows", "Linux", "macOS"],
   "lifecycle": "Current",
   "icon": "VS",
-  "version": "1.103",
+  "releases": [
+    { "version": "1.103", "download": "https://code.visualstudio.com/download" }
+  ],
   "updated": "Yesterday",
   "description": "A lightweight, extensible code editor for everyday development, remote workspaces, and team-standard extensions.",
   "support": {"name": "Maya Cohen", "team": "Developer Experience", "initials": "MC", "email": "devex@atlas.local"},
-  "download": "https://code.visualstudio.com/download",
+
   "tags": ["IDE", "Editor", "Remote development", "Microsoft"]
 }
 ---
