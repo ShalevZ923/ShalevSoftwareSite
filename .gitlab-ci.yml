@@ -17,7 +17,7 @@ create_catalog_merge_request:
   stage: catalog
   needs: ["verify"]
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "web" && $CATALOG_ISSUE_IID'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CATALOG_ISSUE_IID'
       when: manual
       allow_failure: false
     - when: never
