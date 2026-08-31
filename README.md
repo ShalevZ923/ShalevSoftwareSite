@@ -13,9 +13,11 @@ pnpm dev
 
 ## Content model
 
-Update `src/data.ts` to add or change catalog records. Every tool needs a stable `id`, ownership details, platform/lifecycle metadata, a trusted download URL, tags, and a corresponding Markdown guide in `docs`.
+Each tool lives in one file under [`content/tools`](./content/tools): JSON metadata followed by its Markdown guide. Add a tool interactively with `pnpm catalog:add`, or edit one existing file and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` is checked into Git and must not be edited by hand.
 
-Each Markdown guide must include `## Install` and `## Support`; the documentation rail links to those sections.
+Every entry has a stable ID, ownership details, platform/lifecycle metadata, a trusted HTTPS download URL, tags, and a guide containing `## Install` and `## Support`. The content validator rejects duplicate IDs/orders, unsafe download URLs, remote guide images, invalid support details, and credential-like fact labels.
+
+For browser-based contribution, open the **Add software to the catalog** GitHub Issue Form. A maintainer reviews the submission and applies the `catalog-approved` label; only then does the workflow create a validated pull request for normal review and merge. See [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md) for both paths.
 
 For copy-paste examples, images, optional catalog facts such as license references, and the safety boundary for sensitive values, see [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md).
 

@@ -1,0 +1,93 @@
+name: Add software to the catalog
+description: Propose a validated software entry for Tool Atlas.
+title: "Catalog: "
+labels: ["catalog-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use only non-sensitive catalog information. Do not include credentials, license keys, activation codes, personal data, or private contracts.
+  - type: input
+    id: software_name
+    attributes: { label: Software name }
+    validations: { required: true }
+  - type: input
+    id: company
+    attributes: { label: Vendor or company }
+    validations: { required: true }
+  - type: input
+    id: category
+    attributes: { label: Category, placeholder: IDE, Containers, Database }
+    validations: { required: true }
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Supported platforms
+      options:
+        - label: Windows
+        - label: Linux
+        - label: macOS
+        - label: Web
+    validations: { required: true }
+  - type: dropdown
+    id: lifecycle
+    attributes:
+      label: Lifecycle
+      options: [Current, New, Legacy]
+    validations: { required: true }
+  - type: input
+    id: catalog_tile
+    attributes: { label: Catalog tile, description: One or two letters shown when there is no local image, placeholder: PC }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Approved version }
+    validations: { required: true }
+  - type: textarea
+    id: description
+    attributes: { label: Short description }
+    validations: { required: true }
+  - type: input
+    id: support_owner
+    attributes: { label: Support owner }
+    validations: { required: true }
+  - type: input
+    id: support_team
+    attributes: { label: Support team }
+    validations: { required: true }
+  - type: input
+    id: support_email
+    attributes: { label: Support email, placeholder: owner@example.com }
+    validations: { required: true }
+  - type: input
+    id: download_url
+    attributes: { label: Approved download URL, description: HTTPS URL only, placeholder: https://example.com/download }
+    validations: { required: true }
+  - type: input
+    id: tags
+    attributes: { label: Tags, description: Comma-separated, placeholder: Python, IDE, JetBrains }
+    validations: { required: true }
+  - type: textarea
+    id: optional_facts
+    attributes: { label: Optional facts, description: One non-sensitive Label: value pair per line }
+  - type: textarea
+    id: guide
+    attributes:
+      label: Installation and support guide
+      description: Markdown must include both ## Install and ## Support headings.
+      value: |
+        ## Install
+
+        Describe the approved installation path.
+
+        ## Support
+
+        State the support route.
+    validations: { required: true }
+  - type: checkboxes
+    id: safety_check
+    attributes:
+      label: Safety check
+      options:
+        - label: I confirmed the download URL is trusted and this submission contains no sensitive information.
+          required: true

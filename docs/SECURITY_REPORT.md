@@ -21,6 +21,7 @@ The previous direct-container pattern published plaintext HTTP on port 8080. It 
 | Proxy to static origin | Caddy reverse-proxies to `app:8080` on the internal network. | `Caddyfile` |
 | Origin process | NGINX runs as `nginx`, has a read-only root filesystem in Compose, a small `/tmp` tmpfs, no capabilities, and no host port. | `Dockerfile`, `compose.yaml` |
 | Browser rendering | CSP, no-sniff, anti-framing, restrictive permissions/referrer policies, COOP/CORP, safe Markdown links, and local-only guide images. | `nginx.conf`, `src/markdown.tsx` |
+| Catalog contribution | Local content is schema-validated before generation; public Issue Form data can create a PR only after a trusted maintainer applies `catalog-approved`. | `scripts/catalog-content.mjs`, `.github/workflows/catalog-issue-to-pr.yml` |
 
 ## Findings
 
@@ -33,6 +34,12 @@ The former README instructed operators to map host port 8080 directly to an HTTP
 The original Docker build used mutable Node and NGINX tags. The deployment now pins Node, NGINX, and Caddy to exact `@sha256:` digests, so an unchanged repository resolves the same image bytes. JavaScript installation also uses `pnpm install --frozen-lockfile`.
 
 **Ongoing release control:** record review of every new digest and verify image signatures/provenance plus current CVEs before replacing a pin. Digest pinning prevents tag drift; it does not establish that a reviewed digest is vulnerability-free or signed by a trusted publisher.
+
+### Controlled: catalog Issue Form automation
+
+Catalog submissions from the public Issue Form are untrusted input. They receive only the `catalog-submission` label and cannot start the write-capable workflow. A maintainer must apply `catalog-approved`; the workflow then parses the structured issue body, validates the same content rules used locally, runs `pnpm verify`, and opens a pull request instead of publishing directly. The workflow uses a commit-pinned checkout action.
+
+**Required operating control:** restrict the `catalog-approved` label to trusted maintainers, keep GitHub Actions' token permission able to create branches and pull requests, and review the generated PR normally. Never add a label-triggered workflow that runs unreviewed issue text as shell code.
 
 ## Verified non-findings
 
@@ -55,6 +62,7 @@ The original Docker build used mutable Node and NGINX tags. The deployment now p
 
 - `pnpm verify` passed: 9 unit tests, TypeScript/Vite production build, and generated-artifact checks.
 - `pnpm audit --prod` reported no known production dependency vulnerabilities on the assessment date.
+- `pnpm catalog:check` validated all content files and confirmed the generated catalog module is current; `pnpm verify` confirmed the migrated catalog still renders and tests successfully.
 - `docker compose --env-file .env.example config` rendered successfully with the required domain/contact variables and no public app port.
 - The app image rebuilt successfully using the pinned Node and NGINX base-image digests.
 - Caddy accepted the final Caddyfile with example values and confirmed automatic HTTPS plus HTTP-to-HTTPS redirect configuration.
