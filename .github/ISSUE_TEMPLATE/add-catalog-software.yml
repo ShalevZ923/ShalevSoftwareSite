@@ -39,9 +39,14 @@ body:
     id: catalog_tile
     attributes: { label: Catalog tile, description: One or two letters shown when there is no local image, placeholder: PC }
     validations: { required: true }
-  - type: input
-    id: version
-    attributes: { label: Approved version }
+  - type: textarea
+    id: releases
+    attributes:
+      label: Approved releases
+      description: One per line, newest first: version | HTTPS download URL
+      placeholder: |
+        26 | https://downloads.example.com/product-26.exe
+        25 | https://downloads.example.com/product-25.exe
     validations: { required: true }
   - type: textarea
     id: description
@@ -58,10 +63,6 @@ body:
   - type: input
     id: support_email
     attributes: { label: Support email, placeholder: owner@example.com }
-    validations: { required: true }
-  - type: input
-    id: download_url
-    attributes: { label: Approved download URL, description: HTTPS URL only, placeholder: https://example.com/download }
     validations: { required: true }
   - type: input
     id: tags

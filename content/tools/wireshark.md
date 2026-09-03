@@ -8,11 +8,13 @@
   "platforms": ["Windows", "Linux", "macOS"],
   "lifecycle": "Current",
   "icon": "WS",
-  "version": "4.4",
+  "releases": [
+    { "version": "4.4", "download": "https://www.wireshark.org/download.html" }
+  ],
   "updated": "Aug 18",
   "description": "Network protocol analyzer for capture, inspection, and troubleshooting across common protocols.",
   "support": {"name": "Avi Shaham", "team": "Infrastructure", "initials": "AS", "email": "infra@atlas.local"},
-  "download": "https://www.wireshark.org/download.html",
+
   "tags": ["Network", "Debugging", "Security"]
 }
 ---

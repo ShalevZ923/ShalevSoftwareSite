@@ -16,7 +16,12 @@ describe('catalog filters', () => {
       expect(tool.id).toMatch(/^[a-z0-9-]+$/)
       expect(tool.name).not.toHaveLength(0)
       expect(tool.support.email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
-      expect(new URL(tool.download).protocol).toBe('https:')
+      expect(tool.releases).not.toHaveLength(0)
+      expect(new Set(tool.releases.map((release) => release.version)).size).toBe(tool.releases.length)
+      for (const release of tool.releases) {
+        expect(release.version).not.toHaveLength(0)
+        expect(new URL(release.download).protocol).toBe('https:')
+      }
       expect(tool.facts?.some((fact) => /key|activation|password|token/i.test(fact.label))).not.toBe(true)
     }
   })

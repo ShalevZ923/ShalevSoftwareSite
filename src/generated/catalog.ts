@@ -13,7 +13,12 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "IJ",
-    "version": "2025.1",
+    "releases": [
+      {
+        "version": "2025.1",
+        "download": "https://www.jetbrains.com/idea/download/"
+      }
+    ],
     "updated": "Today",
     "description": "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
     "support": {
@@ -22,7 +27,6 @@ export const tools = [
       "initials": "MC",
       "email": "devex@atlas.local"
     },
-    "download": "https://www.jetbrains.com/idea/download/",
     "tags": [
       "Java",
       "Kotlin",
@@ -56,7 +60,12 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "VS",
-    "version": "1.103",
+    "releases": [
+      {
+        "version": "1.103",
+        "download": "https://code.visualstudio.com/download"
+      }
+    ],
     "updated": "Yesterday",
     "description": "A lightweight, extensible code editor for everyday development, remote workspaces, and team-standard extensions.",
     "support": {
@@ -65,7 +74,6 @@ export const tools = [
       "initials": "MC",
       "email": "devex@atlas.local"
     },
-    "download": "https://code.visualstudio.com/download",
     "tags": [
       "IDE",
       "Editor",
@@ -85,7 +93,12 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "DK",
-    "version": "4.45",
+    "releases": [
+      {
+        "version": "4.45",
+        "download": "https://www.docker.com/products/docker-desktop/"
+      }
+    ],
     "updated": "3 days ago",
     "description": "Local container development with Docker Compose, image management, and a desktop dashboard for runtime inspection.",
     "support": {
@@ -94,7 +107,6 @@ export const tools = [
       "initials": "NL",
       "email": "platform@atlas.local"
     },
-    "download": "https://www.docker.com/products/docker-desktop/",
     "tags": [
       "Containers",
       "Runtime",
@@ -114,7 +126,12 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "PM",
-    "version": "11.60",
+    "releases": [
+      {
+        "version": "11.60",
+        "download": "https://www.postman.com/downloads/"
+      }
+    ],
     "updated": "5 days ago",
     "description": "An API collaboration workspace for testing requests, sharing collections, and documenting integrations.",
     "support": {
@@ -123,7 +140,6 @@ export const tools = [
       "initials": "RB",
       "email": "quality@atlas.local"
     },
-    "download": "https://www.postman.com/downloads/",
     "tags": [
       "API",
       "Testing",
@@ -142,7 +158,12 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "WS",
-    "version": "4.4",
+    "releases": [
+      {
+        "version": "4.4",
+        "download": "https://www.wireshark.org/download.html"
+      }
+    ],
     "updated": "Aug 18",
     "description": "Network protocol analyzer for capture, inspection, and troubleshooting across common protocols.",
     "support": {
@@ -151,7 +172,6 @@ export const tools = [
       "initials": "AS",
       "email": "infra@atlas.local"
     },
-    "download": "https://www.wireshark.org/download.html",
     "tags": [
       "Network",
       "Debugging",
@@ -170,7 +190,12 @@ export const tools = [
     ],
     "lifecycle": "Legacy",
     "icon": "JM",
-    "version": "5.6.3",
+    "releases": [
+      {
+        "version": "5.6.3",
+        "download": "https://jmeter.apache.org/download_jmeter.cgi"
+      }
+    ],
     "updated": "Aug 02",
     "description": "A mature open-source tool for load testing, functional testing, and protocol-level performance analysis.",
     "support": {
@@ -179,7 +204,6 @@ export const tools = [
       "initials": "RB",
       "email": "quality@atlas.local"
     },
-    "download": "https://jmeter.apache.org/download_jmeter.cgi",
     "tags": [
       "Load testing",
       "Performance",
@@ -198,7 +222,12 @@ export const tools = [
     ],
     "lifecycle": "New",
     "icon": "DB",
-    "version": "25.1",
+    "releases": [
+      {
+        "version": "25.1",
+        "download": "https://dbeaver.io/download/"
+      }
+    ],
     "updated": "Jul 29",
     "description": "Universal database management for exploring data, editing schemas, and running SQL across common engines.",
     "support": {
@@ -207,7 +236,6 @@ export const tools = [
       "initials": "TG",
       "email": "data@atlas.local"
     },
-    "download": "https://dbeaver.io/download/",
     "tags": [
       "Database",
       "SQL",
@@ -224,7 +252,12 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "NX",
-    "version": "1.28",
+    "releases": [
+      {
+        "version": "1.28",
+        "download": "https://nginx.org/en/download.html"
+      }
+    ],
     "updated": "Jul 15",
     "description": "A high-performance web server, reverse proxy, and load balancer for internal application delivery.",
     "support": {
@@ -233,7 +266,6 @@ export const tools = [
       "initials": "AS",
       "email": "infra@atlas.local"
     },
-    "download": "https://nginx.org/en/download.html",
     "tags": [
       "Server",
       "Reverse proxy",

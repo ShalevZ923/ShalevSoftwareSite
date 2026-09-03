@@ -36,6 +36,10 @@ The original Docker build used mutable Node and NGINX tags. The deployment now p
 
 **Ongoing release control:** record review of every new digest and verify image signatures/provenance plus current CVEs before replacing a pin. Digest pinning prevents tag drift; it does not establish that a reviewed digest is vulnerability-free or signed by a trusted publisher.
 
+### Resolved: cache locations dropped NGINX security headers — Low (CWE-693)
+
+NGINX does not inherit server-level `add_header` directives into a location that defines another `add_header`. The previous HTML and asset locations set only `Cache-Control`, so real responses omitted CSP, anti-framing, no-sniff, and the other server-level protections. Cache selection now uses one server-level mapped value, keeping every security header on HTML and assets while preserving `no-store` for application routes and immutable caching for fingerprinted assets.
+
 ### Controlled: catalog Issue Form automation
 
 Catalog submissions from the public Issue Form are untrusted input. They receive only the `catalog-submission` label and cannot start the write-capable workflow. A maintainer must apply `catalog-approved`; the workflow then parses the structured issue body, validates the same content rules used locally, runs `pnpm verify`, and opens a pull request instead of publishing directly. The workflow uses a commit-pinned checkout action.
@@ -72,6 +76,7 @@ GitLab issue templates standardize the same untrusted submission fields. Because
 - `pnpm catalog:check` validated all content files and confirmed the generated catalog module is current; `pnpm verify` confirmed the migrated catalog still renders and tests successfully.
 - `docker compose --env-file .env.example config` rendered successfully with the required domain/contact variables and no public app port.
 - The app image rebuilt successfully using the pinned Node and NGINX base-image digests.
+- A live production-image probe returned the complete security-header set with `Cache-Control: no-store` for `/` and `/index.html`, immutable caching for a fingerprinted JavaScript asset, and a healthy container under the Compose-equivalent read-only/capability restrictions.
 - Caddy accepted the final Caddyfile with example values and confirmed automatic HTTPS plus HTTP-to-HTTPS redirect configuration.
 - NGINX passed `nginx -t` while run with the Compose-equivalent read-only filesystem, `/tmp` tmpfs, no capabilities, and no-new-privileges setting.
 

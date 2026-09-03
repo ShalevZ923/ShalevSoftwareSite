@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { loadCatalogEntries, renderCatalogFile, renderGeneratedCatalog, slugifyId } from "./catalog-content.mjs";
+import { loadCatalogEntries, parseReleaseList, renderCatalogFile, renderGeneratedCatalog, slugifyId } from "./catalog-content.mjs";
 import { descriptionSha256, requireApprovedDescription, trustedGitLabApiBase } from "./gitlab-catalog-security.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -61,7 +61,7 @@ function parseEntry(issue, order) {
       platforms: selectedPlatforms(section(body, "Supported platforms")),
       lifecycle: section(body, "Lifecycle"),
       icon: section(body, "Catalog tile"),
-      version: section(body, "Approved version"),
+      releases: parseReleaseList(section(body, "Approved releases"), `GitLab issue #${issue.iid}`),
       updated: new Date(issue.updated_at ?? Date.now()).toISOString().slice(0, 10),
       description: section(body, "Short description"),
       support: {
@@ -70,7 +70,6 @@ function parseEntry(issue, order) {
         initials: supportName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
         email: section(body, "Support email"),
       },
-      download: section(body, "Approved download URL"),
       tags: section(body, "Tags").split(",").map((item) => item.trim()).filter(Boolean),
       facts: optionalFacts(section(body, "Optional facts", false)),
     },

@@ -8,11 +8,13 @@
   "platforms": ["Windows", "Linux", "macOS"],
   "lifecycle": "Current",
   "icon": "DK",
-  "version": "4.45",
+  "releases": [
+    { "version": "4.45", "download": "https://www.docker.com/products/docker-desktop/" }
+  ],
   "updated": "3 days ago",
   "description": "Local container development with Docker Compose, image management, and a desktop dashboard for runtime inspection.",
   "support": {"name": "Noam Levi", "team": "Platform Engineering", "initials": "NL", "email": "platform@atlas.local"},
-  "download": "https://www.docker.com/products/docker-desktop/",
+
   "tags": ["Containers", "Runtime", "DevOps"]
 }
 ---

@@ -8,11 +8,13 @@
   "platforms": ["Windows", "Linux", "macOS"],
   "lifecycle": "Current",
   "icon": "IJ",
-  "version": "2025.1",
+  "releases": [
+    { "version": "2025.1", "download": "https://www.jetbrains.com/idea/download/" }
+  ],
   "updated": "Today",
   "description": "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
   "support": {"name": "Maya Cohen", "team": "Developer Experience", "initials": "MC", "email": "devex@atlas.local"},
-  "download": "https://www.jetbrains.com/idea/download/",
+
   "tags": ["Java", "Kotlin", "IDE", "JetBrains"],
   "facts": [
     {"label": "License", "value": "Named-user subscription"},

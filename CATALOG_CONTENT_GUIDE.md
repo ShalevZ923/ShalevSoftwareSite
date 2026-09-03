@@ -29,10 +29,19 @@ pnpm verify
 
 - File names and `id` values use lowercase kebab-case and must match, for example `pycharm.md` and `"id": "pycharm"`.
 - `order` is a unique positive integer that preserves the catalog's curated “recently updated” ordering. The helper assigns the next value automatically.
-- Download links must be trusted HTTPS URLs without embedded credentials.
+- Releases must be listed newest first. Each release has a unique version and a trusted HTTPS download URL without embedded credentials.
 - Guides must include `## Install` and `## Support`.
 - Product images must be local files below `public/tool-images/`, referenced as `/tool-images/...`. Remote guide images are deliberately ignored.
 - Facts are small, non-sensitive `label`/`value` pairs. Never add license keys, activation codes, passwords, tokens, personal data, or contract documents.
+- A tool can optionally have a visible, tool-specific notice. Use it only for actionable information such as an approved retirement date or planned maintenance; it is omitted from every tool that does not define it:
+
+  ```json
+  "notice": {
+    "tone": "warning",
+    "title": "Retires 31 December 2026",
+    "message": "Move to the supported replacement before this date."
+  }
+  ```
 
 ## GitHub Issue Form path
 

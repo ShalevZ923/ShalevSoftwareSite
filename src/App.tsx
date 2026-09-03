@@ -13,7 +13,7 @@ import { DocumentationPicker } from "./components/DocumentationPicker";
 import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from "./components/ui";
 import { MarkdownDocument, getTrustedHttpsUrl } from "./markdown";
 
-type Page = "catalog" | "documentation" | "about";
+type Page = "catalog" | "documentation" | "updates" | "about";
 
 const categories = [
   "All categories",
@@ -29,20 +29,33 @@ const platforms: Array<"All platforms" | Platform> = [
 const lifecycles = ["All lifecycles", "Current", "New", "Legacy"];
 const toolIds = new Set(tools.map((tool) => tool.id));
 
+function pageFromSearch(search: string): Page {
+  const page = new URLSearchParams(search).get("page");
+  return page === "documentation" || page === "updates" || page === "about"
+    ? page
+    : "catalog";
+}
+
+function selectedToolFromSearch(search: string) {
+  const tool = new URLSearchParams(search).get("tool");
+  return tool && toolIds.has(tool) ? tool : tools[0].id;
+}
+
 function Sidebar({
   page,
-  setPage,
+  navigate,
   isOpen,
   close,
 }: {
   page: Page;
-  setPage: (page: Page) => void;
+  navigate: (page: Page) => void;
   isOpen: boolean;
   close: () => void;
 }) {
   const links: Array<[Page, string, IconName]> = [
     ["catalog", "Catalog", "catalog"],
     ["documentation", "Documentation", "book"],
+    ["updates", "Updates", "document"],
     ["about", "About", "info"],
   ];
   return (
@@ -64,7 +77,7 @@ function Sidebar({
             key={id}
             className={page === id ? "nav-link active" : "nav-link"}
             onClick={() => {
-              setPage(id);
+              navigate(id);
               close();
             }}
           >
@@ -86,10 +99,23 @@ function Sidebar({
 }
 
 function App() {
-  const [page, setPage] = useState<Page>("catalog");
+  const [page, setPage] = useState<Page>(() => pageFromSearch(window.location.search));
   const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState("intellij");
+  const [selectedDoc, setSelectedDoc] = useState(() => selectedToolFromSearch(window.location.search));
   const initialPageRender = useRef(true);
+
+  const navigate = (nextPage: Page, nextTool = selectedDoc) => {
+    const url = new URL(window.location.href);
+    if (nextPage === "catalog") url.searchParams.delete("page");
+    else url.searchParams.set("page", nextPage);
+
+    if (nextPage === "documentation") url.searchParams.set("tool", nextTool);
+    else url.searchParams.delete("tool");
+
+    window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    setPage(nextPage);
+    if (nextPage === "documentation") setSelectedDoc(nextTool);
+  };
 
   useEffect(() => {
     if (initialPageRender.current) {
@@ -108,6 +134,15 @@ function App() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [menuOpen]);
 
+  useEffect(() => {
+    const restoreRoute = () => {
+      setPage(pageFromSearch(window.location.search));
+      setSelectedDoc(selectedToolFromSearch(window.location.search));
+    };
+    window.addEventListener("popstate", restoreRoute);
+    return () => window.removeEventListener("popstate", restoreRoute);
+  }, []);
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -115,7 +150,7 @@ function App() {
       </a>
       <Sidebar
         page={page}
-        setPage={setPage}
+        navigate={navigate}
         isOpen={menuOpen}
         close={() => setMenuOpen(false)}
       />
@@ -140,21 +175,25 @@ function App() {
         {page === "catalog" && (
           <Catalog
             onDocs={(tool) => {
-              setSelectedDoc(tool.id);
-              setPage("documentation");
+              navigate("documentation", tool.id);
             }}
+            onUpdates={() => navigate("updates")}
           />
         )}
         {page === "documentation" && (
-          <Documentation selected={selectedDoc} setSelected={setSelectedDoc} />
+          <Documentation
+            selected={selectedDoc}
+            setSelected={(toolId) => navigate("documentation", toolId)}
+          />
         )}
+        {page === "updates" && <UpdatesPage onDocs={(tool) => navigate("documentation", tool.id)} />}
         {page === "about" && <About />}
       </main>
     </div>
   );
 }
 
-function Catalog({ onDocs }: { onDocs: (tool: Tool) => void }) {
+function Catalog({ onDocs, onUpdates }: { onDocs: (tool: Tool) => void; onUpdates: () => void }) {
   const [filters, setFilters] = useState<CatalogFilters>(() =>
     catalogFiltersFromSearch(window.location.search, categories),
   );
@@ -385,7 +424,7 @@ function Catalog({ onDocs }: { onDocs: (tool: Tool) => void }) {
             )}
           </div>
         </div>
-        <Updates />
+        <Updates onViewAll={onUpdates} />
       </div>
     </section>
   );
@@ -406,7 +445,13 @@ function ToolRow({
   saved: boolean;
   onToggleSaved: () => void;
 }) {
-  const downloadUrl = getTrustedHttpsUrl(tool.download);
+  const [selectedVersion, setSelectedVersion] = useState(
+    () => tool.releases[0].version,
+  );
+  const selectedRelease =
+    tool.releases.find((release) => release.version === selectedVersion) ??
+    tool.releases[0];
+  const downloadUrl = getTrustedHttpsUrl(selectedRelease.download);
 
   return (
     <article
@@ -427,7 +472,7 @@ function ToolRow({
           <span>
             <strong>{tool.name}</strong>
             <small>
-              {tool.company} · {tool.version}
+              {tool.company} · {tool.releases[0].version}
             </small>
           </span>
         </span>
@@ -464,6 +509,12 @@ function ToolRow({
                   </span>
                 ))}
               </div>
+              {tool.notice && (
+                <aside className={`tool-notice ${tool.notice.tone}`}>
+                  <strong>{tool.notice.title}</strong>
+                  <p>{tool.notice.message}</p>
+                </aside>
+              )}
               {tool.facts && tool.facts.length > 0 && (
                 <dl className="tool-facts">
                   {tool.facts.map((fact) => (
@@ -475,6 +526,20 @@ function ToolRow({
                 </dl>
               )}
               <div className="detail-actions">
+                <label className="release-picker">
+                  <span>Version</span>
+                  <select
+                    aria-label={`Download version for ${tool.name}`}
+                    value={selectedRelease.version}
+                    onChange={(event) => setSelectedVersion(event.target.value)}
+                  >
+                    {tool.releases.map((release) => (
+                      <option key={release.version} value={release.version}>
+                        {release.version}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 {downloadUrl && (
                   <a
                     className="text-action"
@@ -483,7 +548,7 @@ function ToolRow({
                     rel="noopener noreferrer"
                   >
                     <Icon name="download" />
-                    Download <Icon name="external" size={15} />
+                    Download {selectedRelease.version} <Icon name="external" size={15} />
                   </a>
                 )}
                 <button className="secondary-button" onClick={onDocs}>
@@ -523,7 +588,7 @@ function ToolRow({
   );
 }
 
-function Updates() {
+function Updates({ onViewAll }: { onViewAll: () => void }) {
   return (
     <aside className="updates">
       <h2>Recent updates</h2>
@@ -532,16 +597,49 @@ function Updates() {
           <span />
           <div>
             <strong>
-              {tool.name} {tool.version}
+              {tool.name} {tool.releases[0].version}
             </strong>
             <small>{tool.updated}</small>
           </div>
         </div>
       ))}
-      <button className="updates-link">
+      <button className="updates-link" onClick={onViewAll}>
         View all updates <Icon name="arrow" size={17} />
       </button>
     </aside>
+  );
+}
+
+function UpdatesPage({ onDocs }: { onDocs: (tool: Tool) => void }) {
+  return (
+    <section className="page updates-page">
+      <PageHeader
+        title="Recent updates"
+        copy="The latest approved software releases and catalog changes."
+      />
+      <div className="updates-list" aria-label="Recent catalog updates">
+        {tools.map((tool) => (
+          <article className="update-card" key={tool.id}>
+            <ToolGlyph tool={tool} />
+            <div>
+              <span className="update-kind">CATALOG UPDATE</span>
+              <h2>{tool.name} {tool.releases[0].version}</h2>
+              <p>
+                The approved release and catalog entry were updated {tool.updated.toLocaleLowerCase()}.
+              </p>
+              {tool.notice && (
+                <p className={`update-notice ${tool.notice.tone}`}>
+                  <strong>{tool.notice.title}.</strong> {tool.notice.message}
+                </p>
+              )}
+              <button className="text-action" onClick={() => onDocs(tool)}>
+                View documentation <Icon name="arrow" size={15} />
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -11,6 +11,7 @@ const lifecycles = new Set(["Current", "New", "Legacy"]);
 const idPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const localImagePattern = /^\/tool-images\/[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 const sensitiveFactPattern = /key|activation|password|token/i;
+const noticeTones = new Set(["info", "warning"]);
 
 function fail(source, message) {
   throw new Error(`${source}: ${message}`);
@@ -26,6 +27,42 @@ function requireStringList(value, field, source) {
     fail(source, `${field} must be a non-empty list of strings`);
   }
   return value.map((item) => item.trim());
+}
+
+function requiredHttpsUrl(value, field, source) {
+  const download = requiredString(value, field, source);
+  try {
+    const url = new URL(download);
+    if (url.protocol !== "https:" || url.username || url.password) {
+      fail(source, `${field} must be a credential-free HTTPS URL`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith(`${source}:`)) throw error;
+    fail(source, `${field} must be a valid HTTPS URL`);
+  }
+  return download;
+}
+
+export function parseReleaseList(value, source) {
+  const releases = value
+    .split(/\r?\n|;/u)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const separator = line.indexOf("|");
+      if (separator < 1) {
+        fail(source, "each approved release must use: version | HTTPS download URL");
+      }
+      return {
+        version: requiredString(line.slice(0, separator), "releases.version", source),
+        download: requiredHttpsUrl(line.slice(separator + 1), "releases.download", source),
+      };
+    });
+  if (releases.length === 0) fail(source, "releases must contain at least one approved release");
+  if (new Set(releases.map((release) => release.version)).size !== releases.length) {
+    fail(source, "releases must not repeat a version");
+  }
+  return releases;
 }
 
 export function slugifyId(value) {
@@ -61,7 +98,7 @@ export function validateCatalogEntry(source, metadata, guide) {
   const order = metadata.order;
   if (!Number.isSafeInteger(order) || order < 1) fail(source, "order must be a positive integer");
 
-  for (const field of ["name", "company", "category", "description", "version", "updated", "icon"]) {
+  for (const field of ["name", "company", "category", "description", "updated", "icon"]) {
     requiredString(metadata[field], field, source);
   }
 
@@ -77,14 +114,18 @@ export function validateCatalogEntry(source, metadata, guide) {
   for (const field of ["name", "team", "initials", "email"]) requiredString(metadata.support[field], `support.${field}`, source);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(metadata.support.email)) fail(source, "support.email must be an email address");
 
-  const download = requiredString(metadata.download, "download", source);
-  try {
-    const url = new URL(download);
-    if (url.protocol !== "https:" || url.username || url.password) fail(source, "download must be a credential-free HTTPS URL");
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith(`${source}:`)) throw error;
-    fail(source, "download must be a valid HTTPS URL");
+  if (!Array.isArray(metadata.releases)) fail(source, "releases must be a list");
+  const releaseVersions = new Set();
+  for (const release of metadata.releases) {
+    if (!release || typeof release !== "object" || Array.isArray(release)) {
+      fail(source, "each release must be an object");
+    }
+    const version = requiredString(release.version, "releases.version", source);
+    if (releaseVersions.has(version)) fail(source, "releases must not repeat a version");
+    releaseVersions.add(version);
+    requiredHttpsUrl(release.download, "releases.download", source);
   }
+  if (releaseVersions.size === 0) fail(source, "releases must contain at least one approved release");
 
   requireStringList(metadata.tags, "tags", source);
   if (metadata.facts !== undefined) {
@@ -95,6 +136,16 @@ export function validateCatalogEntry(source, metadata, guide) {
       requiredString(fact.value, "facts.value", source);
       if (sensitiveFactPattern.test(label)) fail(source, "fact labels cannot describe credentials or activation material");
     }
+  }
+  if (metadata.notice !== undefined) {
+    if (!metadata.notice || typeof metadata.notice !== "object" || Array.isArray(metadata.notice)) {
+      fail(source, "notice must be an object when supplied");
+    }
+    if (!noticeTones.has(metadata.notice.tone)) {
+      fail(source, "notice.tone must be info or warning");
+    }
+    requiredString(metadata.notice.title, "notice.title", source);
+    requiredString(metadata.notice.message, "notice.message", source);
   }
   if (metadata.image !== undefined) {
     if (!metadata.image || typeof metadata.image !== "object" || Array.isArray(metadata.image)) fail(source, "image must be an object when supplied");

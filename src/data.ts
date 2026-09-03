@@ -9,6 +9,19 @@ export type CatalogFact = {
   value: string;
 };
 
+/** An optional, tool-specific message such as a retirement or maintenance notice. */
+export type ToolNotice = {
+  tone: "info" | "warning";
+  title: string;
+  message: string;
+};
+
+/** A reviewed downloadable software release, ordered newest to oldest. */
+export type ToolRelease = {
+  version: string;
+  download: string;
+};
+
 /** A local image placed under public/. It is decorative in catalog lists. */
 export type ToolImage = {
   src: string;
@@ -24,13 +37,13 @@ export type Tool = {
   lifecycle: Lifecycle;
   description: string;
   support: { name: string; team: string; initials: string; email: string };
-  download: string;
-  version: string;
+  releases: ToolRelease[];
   updated: string;
   icon: string;
   tags: string[];
   image?: ToolImage;
   facts?: CatalogFact[];
+  notice?: ToolNotice;
 };
 
 // The generator validates every field before emitting this JSON-shaped module.
