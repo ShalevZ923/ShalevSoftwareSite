@@ -1,5 +1,16 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
 import { loadCatalogEntries, renderCatalogFile, renderGeneratedCatalog, slugifyId } from "./catalog-content.mjs";
+import { descriptionSha256, requireApprovedDescription, trustedGitLabApiBase } from "./gitlab-catalog-security.mjs";
+
+const execFileAsync = promisify(execFile);
+
+async function readStandardInput() {
+  let input = "";
+  for await (const chunk of process.stdin) input += chunk;
+  return input;
+}
 
 function section(body, label, required = true) {
   const heading = `### ${label}`;
@@ -67,6 +78,12 @@ function parseEntry(issue, order) {
   };
 }
 
+if (process.argv.includes("--description-sha256")) {
+  const issue = JSON.parse(await readStandardInput());
+  process.stdout.write(`${descriptionSha256(issue.description)}\n`);
+  process.exit(0);
+}
+
 if (process.argv.includes("--dry-run")) {
   const issuePath = process.env.GITLAB_ISSUE_JSON;
   if (!issuePath) throw new Error("GITLAB_ISSUE_JSON is required for a dry run");
@@ -79,12 +96,20 @@ if (process.argv.includes("--dry-run")) {
   process.exit(0);
 }
 
-const requiredEnvironment = ["CI_API_V4_URL", "CI_PROJECT_ID", "CATALOG_ISSUE_IID", "GITLAB_CATALOG_MR_TOKEN"];
+const requiredEnvironment = [
+  "CI_API_V4_URL",
+  "CI_PROJECT_ID",
+  "CATALOG_ISSUE_IID",
+  "CATALOG_APPROVED_DESCRIPTION_SHA256",
+  "GITLAB_CATALOG_MR_TOKEN",
+];
 for (const name of requiredEnvironment) {
   if (!process.env[name]) throw new Error(`${name} is required`);
 }
 
-const apiBase = `${process.env.CI_API_V4_URL}/projects/${encodeURIComponent(process.env.CI_PROJECT_ID)}`;
+const { stdout: repositoryRemote } = await execFileAsync("git", ["remote", "get-url", "origin"]);
+const trustedApiBase = trustedGitLabApiBase(process.env.CI_API_V4_URL, repositoryRemote.trim());
+const apiBase = `${trustedApiBase}/projects/${encodeURIComponent(process.env.CI_PROJECT_ID)}`;
 const headers = {
   "PRIVATE-TOKEN": process.env.GITLAB_CATALOG_MR_TOKEN,
   "Content-Type": "application/json",
@@ -99,6 +124,7 @@ async function api(path, options = {}) {
 const issue = await api(`/issues/${encodeURIComponent(process.env.CATALOG_ISSUE_IID)}`);
 if (!issue.labels?.includes("catalog-approved")) throw new Error("Issue must have the catalog-approved label");
 if (issue.state !== "opened") throw new Error("Issue must be open");
+requireApprovedDescription(issue.description, process.env.CATALOG_APPROVED_DESCRIPTION_SHA256);
 
 const existingEntries = await loadCatalogEntries();
 const entry = parseEntry(issue, Math.max(...existingEntries.map(({ metadata }) => metadata.order)) + 1);
