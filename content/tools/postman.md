@@ -1,0 +1,31 @@
+---
+{
+  "id": "postman",
+  "order": 4,
+  "name": "Postman",
+  "company": "Postman, Inc.",
+  "category": "API testing",
+  "platforms": ["Windows", "Linux", "macOS", "Web"],
+  "lifecycle": "Current",
+  "icon": "PM",
+  "version": "11.60",
+  "updated": "5 days ago",
+  "description": "An API collaboration workspace for testing requests, sharing collections, and documenting integrations.",
+  "support": {"name": "Rina Bar", "team": "Quality Engineering", "initials": "RB", "email": "quality@atlas.local"},
+  "download": "https://www.postman.com/downloads/",
+  "tags": ["API", "Testing", "Collections"]
+}
+---
+# Postman
+
+Postman is used for API exploration and team-shared test collections. Keep secrets in the approved secret manager; do not save tokens in shared environments.
+
+## Install
+
+Install the current stable release and use the approved workspace for shared collections.
+
+## Support
+
+- Use environment variables for credentials.
+- Keep shared collections free of personal data.
+- Review imported collections before sending requests.

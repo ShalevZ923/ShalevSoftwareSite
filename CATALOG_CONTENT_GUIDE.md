@@ -1,75 +1,56 @@
 # Maintaining the catalog
 
-Tool Atlas keeps catalog content in one place: [`src/data.ts`](./src/data.ts). The UI, search, filters, saved tools, and documentation library all read from that file, so adding a tool does not require editing components.
+Every software record is one Markdown file in [`content/tools`](./content/tools). The file begins with JSON front matter for catalog-card data and continues with the guide shown in the documentation view. The UI itself reads the generated `src/generated/catalog.ts`; do not edit that generated file directly.
 
-## Add a tool
+## Local contributor path
 
-1. Copy an existing entry in `tools` and give it a unique, lowercase `id` such as `pycharm`.
-2. Update the visible product fields: name, vendor, category, platforms, lifecycle, version, support owner, trusted HTTPS download URL, description, and tags.
-3. Add a Markdown guide under the same id in `docs`.
-4. Run `pnpm verify`. The tests check that every catalog item has a guide and that every guide includes `## Install` and `## Support`.
+For a new tool, run:
 
-```ts
-{
-  id: "pycharm",
-  name: "PyCharm",
-  company: "JetBrains",
-  category: "IDE",
-  platforms: ["Windows", "Linux", "macOS"],
-  lifecycle: "Current",
-  icon: "PC",
-  version: "2025.2",
-  updated: "2026-08-30",
-  description: "Python IDE with project tooling and debugger support.",
-  support: {
-    name: "Maya Cohen",
-    team: "Developer Experience",
-    initials: "MC",
-    email: "devex@atlas.local",
-  },
-  download: "https://www.jetbrains.com/pycharm/download/",
-  tags: ["Python", "IDE", "JetBrains"],
-  facts: [
-    { label: "License", value: "Named-user subscription" },
-    { label: "Asset record", value: "DEV-IDE-042" },
-    { label: "Renewal review", value: "2027-01" },
-  ],
-}
-
-docs.pycharm = `# PyCharm
-
-## Install
-
-Install the approved release from the vendor download page.
-
-## Support
-
-Contact Developer Experience for setup and licensing support.`
+```bash
+pnpm catalog:add
 ```
 
-## Add images
+The helper asks for the required visible metadata and creates one file with a safe guide template. Replace the placeholder installation text, then validate the complete app:
 
-Place product images in `public/tool-images/`, for example `public/tool-images/pycharm.svg`. Reference them with a root-relative path:
-
-```ts
-image: {
-  src: "/tool-images/pycharm.svg",
-  alt: "PyCharm product mark",
-},
+```bash
+pnpm verify
 ```
 
-The image replaces the small text tile in catalog rows. To show an image inside a guide, use standard Markdown and the same local path:
+For an existing tool, edit only its corresponding `content/tools/<id>.md` file and run:
 
-```md
-![PyCharm welcome screen](/tool-images/pycharm-welcome.png)
+```bash
+pnpm catalog:build
+pnpm verify
 ```
 
-Use local, appropriately licensed images. The viewer deliberately renders only paths below `/tool-images/`; remote image URLs are ignored so the static site has no third-party runtime requests or referrer leakage.
+`pnpm catalog:build` validates all entries and regenerates `src/generated/catalog.ts`. `pnpm catalog:check`, which runs before unit tests, fails if generated output is stale.
 
-## Add more information
+## Content rules
 
-Use `facts` for concise fields that belong in the expanded catalog card: internal asset record, license model, renewal review, contract owner, standard configuration, or approved version policy. Each fact is a `{ label, value }` pair, so new types do not need component changes.
+- File names and `id` values use lowercase kebab-case and must match, for example `pycharm.md` and `"id": "pycharm"`.
+- `order` is a unique positive integer that preserves the catalog's curated “recently updated” ordering. The helper assigns the next value automatically.
+- Download links must be trusted HTTPS URLs without embedded credentials.
+- Guides must include `## Install` and `## Support`.
+- Product images must be local files below `public/tool-images/`, referenced as `/tool-images/...`. Remote guide images are deliberately ignored.
+- Facts are small, non-sensitive `label`/`value` pairs. Never add license keys, activation codes, passwords, tokens, personal data, or contract documents.
 
-Do **not** put license keys, activation codes, passwords, API tokens, personal data, or contract documents in this static repository or site. Link to an approved private system or store a non-sensitive inventory reference instead.
+## GitHub Issue Form path
 
-For longer procedures, tables, screenshots, and embedded links, use the tool's Markdown guide in `docs`.
+Non-code contributors can use GitHub’s **Add software to the catalog** Issue Form. It collects the same validated fields and applies the `catalog-submission` label.
+
+This form never changes the site on its own. A maintainer must verify the owner, download URL, guide, and absence of sensitive information, then apply the `catalog-approved` label. The repository workflow then:
+
+1. Creates an isolated branch for that issue.
+2. Converts the approved form into one `content/tools/<id>.md` file.
+3. Regenerates the catalog, installs locked dependencies, and runs `pnpm verify`.
+4. Opens a pull request for normal review and merge.
+
+The approval label is the trust boundary: only people with repository label-management permission should apply it. If validation fails, the workflow does not create a PR; correct the issue and re-apply the label after review.
+
+## GitLab path
+
+GitLab users can select the **Add catalog software** description template from [`.gitlab/issue_templates`](./.gitlab/issue_templates). A maintainer reviews the issue, then applies the `catalog-approved` label.
+
+GitLab CI does not have a pipeline event for an issue label, so the maintainer then starts a pipeline on the default branch with the non-secret variables `CATALOG_ISSUE_IID` and `CATALOG_APPROVED_DESCRIPTION_SHA256` set to the issue IID and the exact reviewed description digest. The manual `create_catalog_merge_request` job verifies the label and digest again, creates an isolated branch through GitLab’s API, adds the content file and generated catalog, then opens a merge request.
+
+Before enabling this path, create a short-lived, **Developer** project access token with the `api` scope and save it as the `GITLAB_CATALOG_MR_TOKEN` CI/CD variable. Mark the variable **masked**, **hidden**, and **protected**, restrict pipeline variables and the manual job to maintainers, and run the job only from the protected default branch. Never put this token in the issue, repository, or pipeline variables. GitLab.com project access tokens require Premium or Ultimate; use the local contributor path if that feature is unavailable. For the exact setup, digest command, approval, recovery, and rotation steps, see the [GitLab catalog contribution guide](./docs/GITLAB_CATALOG_CONTRIBUTION.md).
