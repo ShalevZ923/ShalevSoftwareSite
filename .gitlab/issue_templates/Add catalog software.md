@@ -33,10 +33,10 @@ catalog-approved label before the manual CI job can create a merge request.
 
 ### Approved releases
 
-<!-- Required. One per line, newest first: version | HTTPS download URL. -->
+<!-- Required. One per line, newest first: version | HTTPS URL or artifact:tool-id/version/filename. -->
 
 26 | https://downloads.example.com/product-26.exe
-25 | https://downloads.example.com/product-25.exe
+25 | artifact:example-tool/25/example-tool-25-x64.msi
 
 ### Short description
 

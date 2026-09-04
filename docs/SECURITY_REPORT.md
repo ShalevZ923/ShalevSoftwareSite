@@ -1,7 +1,7 @@
 # Security report
 
-**Assessment date:** 2026-08-31  
-**Scope:** the current static React application, its NGINX container, the Docker Compose/Caddy deployment, and documented operating procedure.  
+**Assessment date:** 2026-09-04
+**Scope:** the current static React application, hosted-release metadata, its NGINX container, the Docker Compose/Caddy deployment, the Windows IIS deployment, and documented operating procedures.
 **Method:** source-backed static review and local configuration validation. No public hostname, DNS record, live certificate, running production container, or external vulnerability feed was tested.
 
 ## Executive summary
@@ -21,6 +21,8 @@ The previous direct-container pattern published plaintext HTTP on port 8080. It 
 | Proxy to static origin | Caddy reverse-proxies to `app:8080` on the internal network. | `Caddyfile` |
 | Origin process | NGINX runs as `nginx`, has a read-only root filesystem in Compose, a small `/tmp` tmpfs, no capabilities, and no host port. | `Dockerfile`, `compose.yaml` |
 | Browser rendering | CSP, no-sniff, anti-framing, restrictive permissions/referrer policies, COOP/CORP, safe Markdown links, and local-only guide images. | `nginx.conf`, `src/markdown.tsx` |
+| Hosted installers | Catalog pointers are restricted to `tool-id/version/filename`; IIS/NGINX map those public identifiers to a separate read-only package directory, disable listing, allow reviewed extensions, and force attachment responses. | `scripts/catalog-content.mjs`, `src/downloads.ts`, `windows/downloads.web.config`, `nginx.conf` |
+| Windows lifecycle and logs | IIS uses an isolated application-pool identity, W3SVC automatic startup/recovery, W3C file logs, and Windows Event Log diagnostics without a remote logging API. | `windows/Install-ToolAtlas.ps1`, `windows/Get-ToolAtlasLogs.ps1` |
 | Catalog contribution | Local content is schema-validated before generation; public Issue Form data can create a PR only after a trusted maintainer applies `catalog-approved`. | `scripts/catalog-content.mjs`, `.github/workflows/catalog-issue-to-pr.yml` |
 | GitLab catalog contribution | A GitLab template is untrusted input; a manually triggered default-branch job rechecks `catalog-approved` before a protected project token can create a branch and merge request. | `.gitlab/issue_templates/Add catalog software.md`, `.gitlab-ci.yml` |
 
@@ -52,12 +54,21 @@ GitLab issue templates standardize the same untrusted submission fields. Because
 
 **Required operating control:** use a short-lived Developer project access token with only the `api` scope, mark it masked, hidden, and protected, and never set it as a manual pipeline variable. Restrict manual-pipeline execution and the approval label to maintainers.
 
+### Controlled: same-server installer downloads
+
+Hosted artifact pointers are public relative identifiers compiled into the static JavaScript bundle. Validation rejects traversal, arbitrary paths, mismatched tool/version segments, and releases containing both target forms. IIS and NGINX disable directory listing and use attachment responses, but anyone who can download a package can observe and reuse its request URL.
+
+**Required operating control:** approve and hash every installer before publishing, grant the web-service identity read-only access, expose downloads only over HTTPS, and remove obsolete packages after their catalog references and rollback window are closed. If per-user authorization, expiring links, download auditing by identity, or hidden object identifiers become requirements, introduce a reviewed authenticated backend rather than treating path obscurity as access control.
+
+The Windows installer defaults its initial HTTP binding to loopback, avoids granting the machine-wide `IIS_IUSRS` group write access to Tool Atlas logs, and requires an independently supplied SHA-256 digest before package publication. A user-facing IIS HTTPS binding remains an explicit production acceptance gate.
+
 ## Verified non-findings
 
 - Query-string filters are allowlisted and rendered as React text, not HTML (`src/catalog.ts`).
 - Browser-local saved tools are parsed defensively and restricted to known static IDs (`src/catalogStorage.ts`).
 - Markdown does not enable raw HTML; links are limited to HTTPS, `mailto:`, and local fragments, while images are limited to local `/tool-images/` paths (`src/markdown.tsx`).
 - There is no server-side request handling, database, authentication path, upload, command execution, or secret storage in the reviewed application source.
+- Hosted files are published only by an administrator-run PowerShell command; the public site has no upload or filesystem-write path.
 - The static origin returns a CSP, nosniff, anti-framing, referrer, permissions, COOP, and CORP headers (`nginx.conf`). It accepts only GET and HEAD requests and does not expose the static-host `_headers` file.
 
 ## Required production evidence
@@ -68,18 +79,21 @@ GitLab issue templates standardize the same untrusted submission fields. Because
 4. Repeat `pnpm verify` and `pnpm audit --prod` for each release, and run a current vulnerability/provenance scan for the exact pinned image digests. This report does **not** assert current image-CVE status.
 5. Back up and test restoration of `tool-atlas_caddy_data` and `tool-atlas_caddy_config`; loss can force new issuance and hit ACME rate limits.
 6. Keep `.env` mode 0600, never commit it, and use a server-side secret manager if future backend credentials are introduced.
+7. For Windows, configure and externally verify an approved HTTPS binding, patch level, firewall scope, read-only application-pool ACL, service recovery, W3C logging, package checksum, and rollback before acceptance.
 
 ## Validation performed
 
-- `pnpm verify` passed: 9 unit tests, TypeScript/Vite production build, and generated-artifact checks.
+- `pnpm verify` passed: 5 test files and 19 tests, TypeScript/Vite production build, and generated-artifact checks.
 - `pnpm audit --prod` reported no known production dependency vulnerabilities on the assessment date.
 - `pnpm catalog:check` validated all content files and confirmed the generated catalog module is current; `pnpm verify` confirmed the migrated catalog still renders and tests successfully.
 - `docker compose --env-file .env.example config` rendered successfully with the required domain/contact variables and no public app port.
 - The app image rebuilt successfully using the pinned Node and NGINX base-image digests.
 - A live production-image probe returned the complete security-header set with `Cache-Control: no-store` for `/` and `/index.html`, immutable caching for a fingerprinted JavaScript asset, and a healthy container under the Compose-equivalent read-only/capability restrictions.
+- A mounted hosted-package probe returned the exact SHA-256-reviewed bytes with `Content-Disposition: attachment`, `Cache-Control: private, no-store`, and the full security-header set. Directory, sidecar, missing-file, and unsupported-extension requests returned 404.
 - Caddy accepted the final Caddyfile with example values and confirmed automatic HTTPS plus HTTP-to-HTTPS redirect configuration.
 - NGINX passed `nginx -t` while run with the Compose-equivalent read-only filesystem, `/tmp` tmpfs, no capabilities, and no-new-privileges setting.
+- Both IIS XML configuration files passed strict XML parsing. All PowerShell files passed the PowerShell parser, and the package publisher passed SHA-256 copy verification plus refusal of an overwrite without explicit `-Force`. IIS-specific commands still require validation on Windows.
 
 ## Residual risk
 
-This is a source-and-configuration assessment, not a live penetration test. DNS control, host patching, firewall rules, Docker daemon access, certificate authority reachability, registry provenance, and actual response headers remain deployment-owner responsibilities.
+This is a source-and-configuration assessment, not a live penetration test. DNS control, host patching, firewall rules, Docker daemon or Windows administrator access, certificate authority reachability, registry/package provenance, and actual response headers remain deployment-owner responsibilities. The Windows scripts were not executed on a Windows host during this assessment.

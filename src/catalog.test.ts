@@ -20,7 +20,11 @@ describe('catalog filters', () => {
       expect(new Set(tool.releases.map((release) => release.version)).size).toBe(tool.releases.length)
       for (const release of tool.releases) {
         expect(release.version).not.toHaveLength(0)
-        expect(new URL(release.download).protocol).toBe('https:')
+        if (release.download !== undefined) {
+          expect(new URL(release.download).protocol).toBe('https:')
+        } else {
+          expect(release.artifact).toMatch(new RegExp(`^${tool.id}/${release.version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/[A-Za-z0-9][A-Za-z0-9._-]*$`))
+        }
       }
       expect(tool.facts?.some((fact) => /key|activation|password|token/i.test(fact.label))).not.toBe(true)
     }

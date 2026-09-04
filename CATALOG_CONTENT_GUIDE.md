@@ -29,7 +29,10 @@ pnpm verify
 
 - File names and `id` values use lowercase kebab-case and must match, for example `pycharm.md` and `"id": "pycharm"`.
 - `order` is a unique positive integer that preserves the catalog's curated “recently updated” ordering. The helper assigns the next value automatically.
-- Releases must be listed newest first. Each release has a unique version and a trusted HTTPS download URL without embedded credentials.
+- Releases must be listed newest first. Each release has a unique version and exactly one approved target:
+  - A credential-free HTTPS URL in `download` for an external vendor download.
+  - An `artifact` pointer in the exact form `tool-id/version/filename` for an installer published on the same server. The tool and version path segments must match the catalog entry and release. Example: `example-tool/26.1/example-tool-26.1-x64.msi`.
+- Hosted artifact pointers are public catalog metadata, not secret or authorization controls. The web server maps them below `/downloads/`, forces attachment download, and disables directory browsing. See [Windows deployment](./docs/WINDOWS_DEPLOYMENT.md) for publishing, checksums, permissions, logging, and recovery.
 - Guides must include `## Install` and `## Support`.
 - Product images must be local files below `public/tool-images/`, referenced as `/tool-images/...`. Remote guide images are deliberately ignored.
 - Facts are small, non-sensitive `label`/`value` pairs. Never add license keys, activation codes, passwords, tokens, personal data, or contract documents.
@@ -47,7 +50,7 @@ pnpm verify
 
 Non-code contributors can use GitHub’s **Add software to the catalog** Issue Form. It collects the same validated fields and applies the `catalog-submission` label.
 
-This form never changes the site on its own. A maintainer must verify the owner, download URL, guide, and absence of sensitive information, then apply the `catalog-approved` label. The repository workflow then:
+This form never changes the site on its own. A maintainer must verify the owner, release target, guide, and absence of sensitive information, then apply the `catalog-approved` label. The repository workflow then:
 
 1. Creates an isolated branch for that issue.
 2. Converts the approved form into one `content/tools/<id>.md` file.

@@ -2,6 +2,9 @@ import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { slugifyHeading } from "./catalog";
+import { getTrustedHttpsUrl } from "./downloads";
+
+export { getTrustedHttpsUrl } from "./downloads";
 
 const localImagePath = /^\/tool-images\/[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 
@@ -23,11 +26,6 @@ export function getTrustedLinkTarget(href?: string) {
   } catch {
     return undefined;
   }
-}
-
-export function getTrustedHttpsUrl(href?: string) {
-  const target = getTrustedLinkTarget(href);
-  return target?.startsWith("https:") ? target : undefined;
 }
 
 function MarkdownLink({

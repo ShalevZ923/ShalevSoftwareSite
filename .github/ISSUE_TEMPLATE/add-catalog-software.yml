@@ -43,10 +43,10 @@ body:
     id: releases
     attributes:
       label: Approved releases
-      description: One per line, newest first: version | HTTPS download URL
+      description: "One per line, newest first: version | HTTPS URL or artifact:tool-id/version/filename"
       placeholder: |
         26 | https://downloads.example.com/product-26.exe
-        25 | https://downloads.example.com/product-25.exe
+        25 | artifact:example-tool/25/example-tool-25-x64.msi
     validations: { required: true }
   - type: textarea
     id: description
@@ -90,5 +90,5 @@ body:
     attributes:
       label: Safety check
       options:
-        - label: I confirmed the download URL is trusted and this submission contains no sensitive information.
+        - label: I confirmed each URL or hosted artifact is approved and this submission contains no sensitive information.
           required: true

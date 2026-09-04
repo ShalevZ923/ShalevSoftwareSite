@@ -18,7 +18,7 @@ try {
   const category = await ask("Category");
   const platforms = (await ask("Platforms (comma-separated: Windows, Linux, macOS, Web)")).split(",").map((value) => value.trim()).filter(Boolean);
   const lifecycle = await ask("Lifecycle (Current, New, or Legacy)", "Current");
-  const releases = parseReleaseList(await ask("Approved releases (version | HTTPS URL; separate releases with ; )"), "interactive input");
+  const releases = parseReleaseList(await ask("Approved releases (version | HTTPS URL or artifact:tool-id/version/filename; separate with ; )"), "interactive input");
   const description = await ask("Short description");
   const supportName = await ask("Support owner name");
   const supportTeam = await ask("Support team");
