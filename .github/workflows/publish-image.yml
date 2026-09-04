@@ -30,7 +30,9 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
       - name: Verify tag matches package version
-        run: test "${GITHUB_REF_NAME#v}" = "$(node -p \"require('./package.json').version\")"
+        run: |
+          package_version="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")"
+          test "${GITHUB_REF_NAME#v}" = "$package_version"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Verify
