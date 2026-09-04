@@ -1,0 +1,42 @@
+name: tool-atlas-poc
+
+services:
+  publisher:
+    image: mcr.microsoft.com/powershell:lts-alpine-3.20@sha256:6827da316115b10df9ce9435b89abbf1f062909db0e1a8a24472b05dee704fd6
+    user: "${POC_UID:-1000}:${POC_GID:-1000}"
+    working_dir: /workspace
+    environment:
+      XDG_CACHE_HOME: /tmp/.cache
+      XDG_CONFIG_HOME: /tmp/.config
+      XDG_DATA_HOME: /tmp/.local/share
+    command: ["pwsh", "-NoLogo", "-NoProfile", "-File", "/workspace/poc/Publish-Jq.ps1"]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=8m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./:/workspace:ro
+      - ./packages:/server/packages
+
+  app:
+    build:
+      context: .
+    image: tool-atlas:poc
+    depends_on:
+      publisher:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./packages:/srv/tool-atlas-packages:ro

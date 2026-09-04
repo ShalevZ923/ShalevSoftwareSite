@@ -16,11 +16,22 @@ export type ToolNotice = {
   message: string;
 };
 
-/** A reviewed downloadable software release, ordered newest to oldest. */
-export type ToolRelease = {
+/** A reviewed external release destination. */
+export type ExternalToolRelease = {
   version: string;
   download: string;
+  artifact?: never;
 };
+
+/** A same-server installer stored outside the application bundle. */
+export type HostedToolRelease = {
+  version: string;
+  artifact: string;
+  download?: never;
+};
+
+/** A reviewed downloadable software release, ordered newest to oldest. */
+export type ToolRelease = ExternalToolRelease | HostedToolRelease;
 
 /** A local image placed under public/. It is decorative in catalog lists. */
 export type ToolImage = {

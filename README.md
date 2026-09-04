@@ -1,6 +1,6 @@
 # Tool Atlas
 
-Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, trusted download links, and browser-rendered Markdown guides. It has no backend, account system, or application secrets.
+Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. It has no backend, account system, or application secrets.
 
 The catalog supports shareable filter URLs and a saved-tools list. Saved tools are stored only in the visitor's browser; they are never sent to a server or included in shared links.
 
@@ -15,7 +15,7 @@ pnpm dev
 
 Each tool lives in one file under [`content/tools`](./content/tools): JSON metadata followed by its Markdown guide. Add a tool interactively with `pnpm catalog:add`, or edit one existing file and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` is checked into Git and must not be edited by hand.
 
-Every entry has a stable ID, ownership details, platform/lifecycle metadata, a trusted HTTPS download URL, tags, and a guide containing `## Install` and `## Support`. The content validator rejects duplicate IDs/orders, unsafe download URLs, remote guide images, invalid support details, and credential-like fact labels.
+Every entry has a stable ID, ownership details, platform/lifecycle metadata, one approved target per release, tags, and a guide containing `## Install` and `## Support`. A target can be a trusted HTTPS URL or a same-server artifact pointer such as `intellij/2025.1/ideaIU-2025.1.exe`. The validator rejects duplicate IDs/orders, unsafe URLs or artifact paths, remote guide images, invalid support details, and credential-like fact labels.
 
 For browser-based contribution, open the **Add software to the catalog** GitHub Issue Form. A maintainer reviews the submission and applies the `catalog-approved` label; only then does the workflow create a validated pull request for normal review and merge. GitLab projects receive the matching Issue Template and an approval-gated manual CI job that creates a merge request. See [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md) for both paths and the [GitLab catalog contribution guide](./docs/GITLAB_CATALOG_CONTRIBUTION.md) for the one-time setup and operating steps.
 
@@ -85,6 +85,8 @@ docker compose --env-file .env up --build --detach
 docker compose --env-file .env ps
 ```
 
+For same-server installers, create `packages/<tool-id>/<version>/` on the host and put only reviewed files there. The directory is ignored by Git and mounted read-only into NGINX; catalog metadata uses `artifact:<tool-id>/<version>/<filename>`. Publish the file before deploying the catalog reference. NGINX disables directory listing, rejects unapproved path shapes/extensions, and forces successful file responses to download as attachments.
+
 Caddy requests the certificate after DNS and firewall access are correct. Follow its startup until it reports successful certificate management:
 
 ```bash
@@ -110,3 +112,9 @@ The HTTP check should redirect to HTTPS. The HTTPS response should include `Stri
 The app container runs as the unprivileged `nginx` user with a read-only filesystem, a small writable temporary filesystem, no Linux capabilities, and no host port. The proxy is the only public container; it has only the capability needed to bind HTTP(S) ports and persists certificate state in named volumes.
 
 See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
+
+To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download proof of concept](docs/HOSTED_DOWNLOAD_POC.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
+
+## Windows Server or workstation deployment
+
+The Windows deployment uses IIS as the operating-system-managed web service. The site and installer directory remain static: IIS provides service recovery, W3C access logs, Windows Event Log diagnostics, and forced attachment downloads without adding an application backend. Follow the complete [Windows deployment and operations guide](docs/WINDOWS_DEPLOYMENT.md).

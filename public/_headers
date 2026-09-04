@@ -6,3 +6,7 @@
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
   X-Frame-Options: DENY
+
+/downloads/*
+  Content-Disposition: attachment
+  Cache-Control: private, no-store

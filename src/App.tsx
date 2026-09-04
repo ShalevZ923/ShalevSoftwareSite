@@ -11,7 +11,8 @@ import {
 import { readSavedToolIds, writeSavedToolIds } from "./catalogStorage";
 import { DocumentationPicker } from "./components/DocumentationPicker";
 import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from "./components/ui";
-import { MarkdownDocument, getTrustedHttpsUrl } from "./markdown";
+import { getReleaseDownloadTarget } from "./downloads";
+import { MarkdownDocument } from "./markdown";
 
 type Page = "catalog" | "documentation" | "updates" | "about";
 
@@ -451,7 +452,7 @@ function ToolRow({
   const selectedRelease =
     tool.releases.find((release) => release.version === selectedVersion) ??
     tool.releases[0];
-  const downloadUrl = getTrustedHttpsUrl(selectedRelease.download);
+  const downloadTarget = getReleaseDownloadTarget(selectedRelease);
 
   return (
     <article
@@ -540,15 +541,17 @@ function ToolRow({
                     ))}
                   </select>
                 </label>
-                {downloadUrl && (
+                {downloadTarget && (
                   <a
                     className="text-action"
-                    href={downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={downloadTarget.href}
+                    target={downloadTarget.external ? "_blank" : undefined}
+                    rel={downloadTarget.external ? "noopener noreferrer" : undefined}
+                    download={downloadTarget.filename}
                   >
                     <Icon name="download" />
-                    Download {selectedRelease.version} <Icon name="external" size={15} />
+                    Download {selectedRelease.version}
+                    {downloadTarget.external && <Icon name="external" size={15} />}
                   </a>
                 )}
                 <button className="secondary-button" onClick={onDocs}>

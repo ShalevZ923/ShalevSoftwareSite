@@ -7,5 +7,6 @@ dist
 .playwright-mcp
 .playwright-cli
 output
+packages
 npm-debug.log*
 pnpm-debug.log*

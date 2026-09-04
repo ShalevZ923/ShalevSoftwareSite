@@ -14,6 +14,17 @@ describe("release list parsing", () => {
     ]);
   });
 
+  it("parses a same-server artifact pointer without turning it into an arbitrary URL", () => {
+    expect(
+      parseReleaseList(
+        "26.1 | artifact:test-tool/26.1/test-tool-26.1-x64.msi",
+        "test entry",
+      ),
+    ).toEqual([
+      { version: "26.1", artifact: "test-tool/26.1/test-tool-26.1-x64.msi" },
+    ]);
+  });
+
   it("rejects duplicate versions and non-HTTPS download URLs", () => {
     expect(() =>
       parseReleaseList(
@@ -23,6 +34,9 @@ describe("release list parsing", () => {
     ).toThrow("must not repeat a version");
     expect(() => parseReleaseList("25 | http://example.com/product.exe", "test entry")).toThrow(
       "credential-free HTTPS URL",
+    );
+    expect(() => parseReleaseList("25 | artifact:../private/product.exe", "test entry")).toThrow(
+      "safe path characters",
     );
   });
 });
@@ -54,5 +68,24 @@ describe("optional tool notices", () => {
       ...metadata,
       notice: { tone: "urgent", title: "Invalid", message: "Invalid tone." },
     }, guide)).toThrow("notice.tone must be info or warning");
+  });
+
+  it("accepts a matching artifact pointer and rejects cross-tool or mismatched-version pointers", () => {
+    expect(() => validateCatalogEntry("test-tool.md", {
+      ...metadata,
+      releases: [{ version: "1.0", artifact: "test-tool/1.0/test-tool.msi" }],
+    }, guide)).not.toThrow();
+    expect(() => validateCatalogEntry("test-tool.md", {
+      ...metadata,
+      releases: [{ version: "1.0", artifact: "other-tool/1.0/test-tool.msi" }],
+    }, guide)).toThrow("tool-id must match");
+    expect(() => validateCatalogEntry("test-tool.md", {
+      ...metadata,
+      releases: [{ version: "1.0", artifact: "test-tool/2.0/test-tool.msi" }],
+    }, guide)).toThrow("version must match");
+    expect(() => validateCatalogEntry("test-tool.md", {
+      ...metadata,
+      releases: [{ version: "1.0", download: "https://example.com", artifact: "test-tool/1.0/test-tool.msi" }],
+    }, guide)).toThrow("exactly one download or artifact");
   });
 });

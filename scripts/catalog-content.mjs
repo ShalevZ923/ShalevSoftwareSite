@@ -10,6 +10,7 @@ const platforms = new Set(["Windows", "Linux", "macOS", "Web"]);
 const lifecycles = new Set(["Current", "New", "Legacy"]);
 const idPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const localImagePattern = /^\/tool-images\/[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+const artifactPointerPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const sensitiveFactPattern = /key|activation|password|token/i;
 const noticeTones = new Set(["info", "warning"]);
 
@@ -43,6 +44,14 @@ function requiredHttpsUrl(value, field, source) {
   return download;
 }
 
+function requiredArtifactPointer(value, field, source) {
+  const artifact = requiredString(value, field, source);
+  if (!artifactPointerPattern.test(artifact)) {
+    fail(source, `${field} must use tool-id/version/filename with safe path characters`);
+  }
+  return artifact;
+}
+
 export function parseReleaseList(value, source) {
   const releases = value
     .split(/\r?\n|;/u)
@@ -51,11 +60,19 @@ export function parseReleaseList(value, source) {
     .map((line) => {
       const separator = line.indexOf("|");
       if (separator < 1) {
-        fail(source, "each approved release must use: version | HTTPS download URL");
+        fail(source, "each approved release must use: version | HTTPS URL or artifact:tool-id/version/filename");
+      }
+      const version = requiredString(line.slice(0, separator), "releases.version", source);
+      const target = requiredString(line.slice(separator + 1), "releases.target", source);
+      if (target.startsWith("artifact:")) {
+        return {
+          version,
+          artifact: requiredArtifactPointer(target.slice("artifact:".length), "releases.artifact", source),
+        };
       }
       return {
-        version: requiredString(line.slice(0, separator), "releases.version", source),
-        download: requiredHttpsUrl(line.slice(separator + 1), "releases.download", source),
+        version,
+        download: requiredHttpsUrl(target, "releases.download", source),
       };
     });
   if (releases.length === 0) fail(source, "releases must contain at least one approved release");
@@ -123,7 +140,19 @@ export function validateCatalogEntry(source, metadata, guide) {
     const version = requiredString(release.version, "releases.version", source);
     if (releaseVersions.has(version)) fail(source, "releases must not repeat a version");
     releaseVersions.add(version);
-    requiredHttpsUrl(release.download, "releases.download", source);
+    const hasDownload = release.download !== undefined;
+    const hasArtifact = release.artifact !== undefined;
+    if (hasDownload === hasArtifact) {
+      fail(source, "each release must define exactly one download or artifact target");
+    }
+    if (hasDownload) {
+      requiredHttpsUrl(release.download, "releases.download", source);
+    } else {
+      const artifact = requiredArtifactPointer(release.artifact, "releases.artifact", source);
+      const [artifactToolId, artifactVersion] = artifact.split("/");
+      if (artifactToolId !== id) fail(source, "releases.artifact tool-id must match the catalog id");
+      if (artifactVersion !== version) fail(source, "releases.artifact version must match the release version");
+    }
   }
   if (releaseVersions.size === 0) fail(source, "releases must contain at least one approved release");
 

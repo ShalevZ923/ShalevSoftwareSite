@@ -271,6 +271,37 @@ export const tools = [
       "Reverse proxy",
       "Linux"
     ]
+  },
+  {
+    "id": "jq",
+    "name": "jq",
+    "company": "jqlang",
+    "category": "Debugging",
+    "platforms": [
+      "Windows"
+    ],
+    "lifecycle": "New",
+    "icon": "JQ",
+    "releases": [
+      {
+        "version": "1.8.2",
+        "artifact": "jq/1.8.2/jq-windows-amd64.exe"
+      }
+    ],
+    "updated": "Today",
+    "description": "A lightweight command-line JSON processor, hosted here as the same-server download proof of concept.",
+    "support": {
+      "name": "Noam Levi",
+      "team": "Platform Engineering",
+      "initials": "NL",
+      "email": "platform@atlas.local"
+    },
+    "tags": [
+      "JSON",
+      "CLI",
+      "Windows",
+      "PoC"
+    ]
   }
 ];
 
@@ -282,5 +313,6 @@ export const docs = {
   "wireshark": "# Wireshark\n\nWireshark is approved for diagnostic packet capture. Capture only traffic you are authorized to inspect and follow the data-handling policy.\n\n## Install\n\nDownload the supported current release for your operating system from the vendor site.\n\n## Support\n\nInfrastructure supports approved diagnostic use and data-handling guidance.",
   "jmeter": "# Apache JMeter\n\nApache JMeter remains available for maintained load-test suites. For new browser-level performance checks, consult Quality Engineering for the preferred approach.\n\n## Install\n\nUse the current approved release for maintained test suites.\n\n## Support\n\nQuality Engineering supports the maintained load-test templates and performance-testing guidance.",
   "dbeaver": "# DBeaver Community\n\nDBeaver is the current recommended cross-platform database client. Store connection details in your local secure storage and request least-privileged accounts.\n\n## Install\n\nDownload the approved current release and use local secure storage for connections.\n\n## Support\n\nData Platform supports standard connection patterns and least-privileged access requests.",
-  "nginx": "# NGINX\n\nNGINX is supported for approved Linux web-delivery workloads. Platform Engineering owns base images, security updates, and common reverse-proxy patterns.\n\n## Install\n\nUse the Platform Engineering base image or approved package repository. Do not use unmaintained community images for production services.\n\n## Support\n\nPlatform Engineering supports base images, security updates, and standard reverse-proxy patterns."
+  "nginx": "# NGINX\n\nNGINX is supported for approved Linux web-delivery workloads. Platform Engineering owns base images, security updates, and common reverse-proxy patterns.\n\n## Install\n\nUse the Platform Engineering base image or approved package repository. Do not use unmaintained community images for production services.\n\n## Support\n\nPlatform Engineering supports base images, security updates, and standard reverse-proxy patterns.",
+  "jq": "# jq\n\nThis entry proves that Tool Atlas can serve a reviewed installer directly from its own package storage instead of redirecting to a vendor URL.\n\n## Install\n\n1. Select version **1.8.2** and choose **Download**.\n2. Save `jq-windows-amd64.exe` to an approved directory.\n3. Rename it to `jq.exe` if desired and add that directory to `PATH` according to workstation policy.\n4. Run `jq --version` and confirm it reports `jq-1.8.2`.\n\nThe proof-of-concept publisher validates the official SHA-256 digest before the file becomes visible under `/downloads/jq/1.8.2/`.\n\n## Support\n\nContact Platform Engineering if the checksum fails, the download is unavailable, or a different Windows architecture is required."
 };

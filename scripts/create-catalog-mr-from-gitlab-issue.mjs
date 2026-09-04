@@ -162,7 +162,7 @@ const mergeRequest = await api("/merge_requests", {
     source_branch: branch,
     target_branch: targetBranch,
     title: `Catalog entry from issue #${issue.iid}`,
-    description: `Created from approved catalog submission #${issue.iid}. Review the generated content, trusted download URL, and guide before merging.`,
+    description: `Created from approved catalog submission #${issue.iid}. Review the generated content, approved release target, and guide before merging.`,
   }),
 });
 process.stdout.write(`Created ${mergeRequest.web_url}.\n`);

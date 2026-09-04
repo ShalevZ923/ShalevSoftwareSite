@@ -46,4 +46,4 @@ jobs:
             --base "${{ github.event.repository.default_branch }}" \
             --head "$branch" \
             --title "Catalog entry from issue #${ISSUE_NUMBER}" \
-            --body "Created from approved catalog submission #${ISSUE_NUMBER}. Review the generated content, trusted download URL, and guide before merging."
+            --body "Created from approved catalog submission #${ISSUE_NUMBER}. Review the generated content, approved release target, and guide before merging."
