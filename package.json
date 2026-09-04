@@ -11,7 +11,9 @@
     "test": "pnpm catalog:check && vitest run",
     "build": "pnpm catalog:build && tsc -b && vite build",
     "verify": "pnpm test && pnpm build && node scripts/verify-dist.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve": "node scripts/server.mjs",
+    "start": "node scripts/server.mjs"
   },
   "dependencies": {
     "react": "19.2.8",

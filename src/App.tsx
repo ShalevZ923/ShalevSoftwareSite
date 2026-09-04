@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { docs, getToolById, tools, type Platform, type Tool } from "./data";
+import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "./data";
 import {
   catalogFiltersFromSearch,
   catalogFiltersToSearch,
@@ -10,16 +10,14 @@ import {
 } from "./catalog";
 import { readSavedToolIds, writeSavedToolIds } from "./catalogStorage";
 import { DocumentationPicker } from "./components/DocumentationPicker";
+import { DeveloperStudio } from "./components/DeveloperStudio";
+import { DeveloperLockGate } from "./components/DeveloperLockGate";
 import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from "./components/ui";
 import { getReleaseDownloadTarget } from "./downloads";
 import { MarkdownDocument } from "./markdown";
 
-type Page = "catalog" | "documentation" | "updates" | "about";
+type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
 
-const categories = [
-  "All categories",
-  ...Array.from(new Set(tools.map((tool) => tool.category))).sort(),
-];
 const platforms: Array<"All platforms" | Platform> = [
   "All platforms",
   "Windows",
@@ -28,18 +26,12 @@ const platforms: Array<"All platforms" | Platform> = [
   "Web",
 ];
 const lifecycles = ["All lifecycles", "Current", "New", "Legacy"];
-const toolIds = new Set(tools.map((tool) => tool.id));
 
 function pageFromSearch(search: string): Page {
   const page = new URLSearchParams(search).get("page");
-  return page === "documentation" || page === "updates" || page === "about"
+  return page === "documentation" || page === "updates" || page === "about" || page === "developer"
     ? page
     : "catalog";
-}
-
-function selectedToolFromSearch(search: string) {
-  const tool = new URLSearchParams(search).get("tool");
-  return tool && toolIds.has(tool) ? tool : tools[0].id;
 }
 
 function Sidebar({
@@ -102,8 +94,81 @@ function Sidebar({
 function App() {
   const [page, setPage] = useState<Page>(() => pageFromSearch(window.location.search));
   const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState(() => selectedToolFromSearch(window.location.search));
+  const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
+  const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
+  const [devToken, setDevToken] = useState<string>(() => {
+    try {
+      return window.sessionStorage.getItem("tool-atlas-dev-token") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [isDevAuthenticated, setIsDevAuthenticated] = useState(false);
+
+  const [selectedDoc, setSelectedDoc] = useState(() => {
+    const tool = new URLSearchParams(window.location.search).get("tool");
+    return tool && staticTools.some((t) => t.id === tool) ? tool : staticTools[0]?.id || "";
+  });
   const initialPageRender = useRef(true);
+
+  const refreshCatalog = async () => {
+    try {
+      const res = await fetch("/api/catalog");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.tools) && data.tools.length > 0) {
+          setCatalogTools(data.tools);
+        }
+        if (data.docs && typeof data.docs === "object") {
+          setCatalogDocs(data.docs);
+        }
+      }
+    } catch {
+      // Offline or static fallback
+    }
+  };
+
+  const verifyDeveloperToken = async (candidateToken: string) => {
+    if (!candidateToken) return false;
+    try {
+      const res = await fetch("/api/developer/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: candidateToken }),
+      });
+      if (res.ok) {
+        setDevToken(candidateToken);
+        setIsDevAuthenticated(true);
+        try {
+          window.sessionStorage.setItem("tool-atlas-dev-token", candidateToken);
+        } catch {
+          // ignore
+        }
+        return true;
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    refreshCatalog();
+
+    const url = new URL(window.location.href);
+    const tokenInUrl = url.searchParams.get("token");
+    if (tokenInUrl) {
+      verifyDeveloperToken(tokenInUrl).then((valid) => {
+        if (valid) {
+          // Strip token from address bar to prevent leaking in history/referer
+          url.searchParams.delete("token");
+          window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+        }
+      });
+    } else if (devToken) {
+      verifyDeveloperToken(devToken);
+    }
+  }, []);
 
   const navigate = (nextPage: Page, nextTool = selectedDoc) => {
     const url = new URL(window.location.href);
@@ -138,11 +203,27 @@ function App() {
   useEffect(() => {
     const restoreRoute = () => {
       setPage(pageFromSearch(window.location.search));
-      setSelectedDoc(selectedToolFromSearch(window.location.search));
+      const toolInSearch = new URLSearchParams(window.location.search).get("tool");
+      if (toolInSearch) setSelectedDoc(toolInSearch);
     };
     window.addEventListener("popstate", restoreRoute);
     return () => window.removeEventListener("popstate", restoreRoute);
   }, []);
+
+  if (page === "developer") {
+    return isDevAuthenticated ? (
+      <DeveloperStudio
+        token={devToken}
+        onExit={() => navigate("catalog")}
+        onCatalogUpdated={refreshCatalog}
+      />
+    ) : (
+      <DeveloperLockGate
+        onUnlock={verifyDeveloperToken}
+        onBack={() => navigate("catalog")}
+      />
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -175,6 +256,7 @@ function App() {
         </button>
         {page === "catalog" && (
           <Catalog
+            tools={catalogTools}
             onDocs={(tool) => {
               navigate("documentation", tool.id);
             }}
@@ -183,18 +265,38 @@ function App() {
         )}
         {page === "documentation" && (
           <Documentation
+            tools={catalogTools}
+            docs={catalogDocs}
             selected={selectedDoc}
             setSelected={(toolId) => navigate("documentation", toolId)}
           />
         )}
-        {page === "updates" && <UpdatesPage onDocs={(tool) => navigate("documentation", tool.id)} />}
+        {page === "updates" && (
+          <UpdatesPage
+            tools={catalogTools}
+            onDocs={(tool) => navigate("documentation", tool.id)}
+          />
+        )}
         {page === "about" && <About />}
       </main>
     </div>
   );
 }
 
-function Catalog({ onDocs, onUpdates }: { onDocs: (tool: Tool) => void; onUpdates: () => void }) {
+function Catalog({
+  tools,
+  onDocs,
+  onUpdates,
+}: {
+  tools: Tool[];
+  onDocs: (tool: Tool) => void;
+  onUpdates: () => void;
+}) {
+  const categories = useMemo(
+    () => ["All categories", ...Array.from(new Set(tools.map((tool) => tool.category))).sort()],
+    [tools],
+  );
+  const toolIds = useMemo(() => new Set(tools.map((tool) => tool.id)), [tools]);
   const [filters, setFilters] = useState<CatalogFilters>(() =>
     catalogFiltersFromSearch(window.location.search, categories),
   );
@@ -205,7 +307,7 @@ function Catalog({ onDocs, onUpdates }: { onDocs: (tool: Tool) => void; onUpdate
     "idle",
   );
   const searchRef = useRef<HTMLInputElement>(null);
-  const filtered = useMemo(() => getCatalogTools(tools, filters), [filters]);
+  const filtered = useMemo(() => getCatalogTools(tools, filters), [tools, filters]);
   const savedToolIdSet = useMemo(() => new Set(savedToolIds), [savedToolIds]);
   const visibleTools = useMemo(
     () =>
@@ -425,7 +527,7 @@ function Catalog({ onDocs, onUpdates }: { onDocs: (tool: Tool) => void; onUpdate
             )}
           </div>
         </div>
-        <Updates onViewAll={onUpdates} />
+        <Updates tools={tools} onViewAll={onUpdates} />
       </div>
     </section>
   );
@@ -591,7 +693,7 @@ function ToolRow({
   );
 }
 
-function Updates({ onViewAll }: { onViewAll: () => void }) {
+function Updates({ tools, onViewAll }: { tools: Tool[]; onViewAll: () => void }) {
   return (
     <aside className="updates">
       <h2>Recent updates</h2>
@@ -613,7 +715,7 @@ function Updates({ onViewAll }: { onViewAll: () => void }) {
   );
 }
 
-function UpdatesPage({ onDocs }: { onDocs: (tool: Tool) => void }) {
+function UpdatesPage({ tools, onDocs }: { tools: Tool[]; onDocs: (tool: Tool) => void }) {
   return (
     <section className="page updates-page">
       <PageHeader
@@ -647,9 +749,13 @@ function UpdatesPage({ onDocs }: { onDocs: (tool: Tool) => void }) {
 }
 
 function Documentation({
+  tools,
+  docs,
   selected,
   setSelected,
 }: {
+  tools: Tool[];
+  docs: Record<string, string>;
   selected: string;
   setSelected: (id: string) => void;
 }) {
@@ -657,9 +763,9 @@ function Documentation({
   const deferredQuery = useDeferredValue(query);
   const matchingTools = useMemo(
     () => getDocumentationTools(tools, deferredQuery),
-    [deferredQuery],
+    [tools, deferredQuery],
   );
-  const tool = getToolById(selected) ?? tools[0];
+  const tool = tools.find((t) => t.id === selected) ?? tools[0];
   return (
     <section className="page documentation-page">
       <PageHeader
@@ -682,24 +788,26 @@ function Documentation({
             role="status"
             aria-live="polite"
           >
-            Showing documentation for {tool.name}
+            Showing documentation for {tool ? tool.name : "selected tool"}
           </p>
-          <div className="doc-context">
-            <div>
-              <span>Owner</span>
-              <strong>{tool.support.team}</strong>
+          {tool && (
+            <div className="doc-context">
+              <div>
+                <span>Owner</span>
+                <strong>{tool.support.team}</strong>
+              </div>
+              <div>
+                <span>Support</span>
+                <a href={`mailto:${tool.support.email}`}>{tool.support.email}</a>
+              </div>
+              <div>
+                <span>In this guide</span>
+                <a href="#install">Install</a>
+                <a href="#support">Support</a>
+              </div>
             </div>
-            <div>
-              <span>Support</span>
-              <a href={`mailto:${tool.support.email}`}>{tool.support.email}</a>
-            </div>
-            <div>
-              <span>In this guide</span>
-              <a href="#install">Install</a>
-              <a href="#support">Support</a>
-            </div>
-          </div>
-          <MarkdownDocument content={docs[selected]} />
+          )}
+          <MarkdownDocument content={docs[selected] || (tool ? docs[tool.id] : "") || ""} />
         </article>
       </div>
     </section>
