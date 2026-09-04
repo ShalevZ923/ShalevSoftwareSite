@@ -149,6 +149,12 @@ function App() {
     } catch {
       // ignore
     }
+    setIsDevAuthenticated(false);
+    try {
+      window.sessionStorage.removeItem("tool-atlas-dev-token");
+    } catch {
+      // ignore
+    }
     return false;
   };
 
@@ -156,15 +162,18 @@ function App() {
     refreshCatalog();
 
     const url = new URL(window.location.href);
-    const tokenInUrl = url.searchParams.get("token");
+    if (url.searchParams.has("token")) {
+      // Never authenticate from a query token. Scrub legacy links immediately
+      // so the credential does not remain in subsequent history entries.
+      url.searchParams.delete("token");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    const tokenInUrl = new URLSearchParams(url.hash.slice(1)).get("token");
     if (tokenInUrl) {
-      verifyDeveloperToken(tokenInUrl).then((valid) => {
-        if (valid) {
-          // Strip token from address bar to prevent leaking in history/referer
-          url.searchParams.delete("token");
-          window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-        }
-      });
+      // Fragments are not sent in HTTP requests or Referer headers. Remove the
+      // bootstrap token before making the verification request.
+      window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+      verifyDeveloperToken(tokenInUrl);
     } else if (devToken) {
       verifyDeveloperToken(devToken);
     }
@@ -177,10 +186,22 @@ function App() {
 
     if (nextPage === "documentation") url.searchParams.set("tool", nextTool);
     else url.searchParams.delete("tool");
+    url.hash = "";
 
-    window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    window.history.pushState(null, "", `${url.pathname}${url.search}`);
     setPage(nextPage);
     if (nextPage === "documentation") setSelectedDoc(nextTool);
+  };
+
+  const exitDeveloperStudio = () => {
+    setDevToken("");
+    setIsDevAuthenticated(false);
+    try {
+      window.sessionStorage.removeItem("tool-atlas-dev-token");
+    } catch {
+      // ignore
+    }
+    navigate("catalog");
   };
 
   useEffect(() => {
@@ -214,7 +235,7 @@ function App() {
     return isDevAuthenticated ? (
       <DeveloperStudio
         token={devToken}
-        onExit={() => navigate("catalog")}
+        onExit={exitDeveloperStudio}
         onCatalogUpdated={refreshCatalog}
       />
     ) : (
@@ -300,7 +321,7 @@ function Catalog({
   const [filters, setFilters] = useState<CatalogFilters>(() =>
     catalogFiltersFromSearch(window.location.search, categories),
   );
-  const [expanded, setExpanded] = useState<string | null>("intellij");
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [savedToolIds, setSavedToolIds] = useState<string[]>(() => readSavedToolIds(toolIds));
   const [savedOnly, setSavedOnly] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "unavailable">(

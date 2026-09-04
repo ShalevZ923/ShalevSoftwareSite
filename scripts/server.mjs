@@ -1,10 +1,9 @@
 import { createServer } from "node:http";
-import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { existsSync, createReadStream } from "node:fs";
-import { basename, dirname, extname, join, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { networkInterfaces } from "node:os";
 import {
   contentDirectory,
   loadCatalogEntries,
@@ -20,7 +19,7 @@ const docsDir = join(rootDir, "docs");
 const packagesDir = join(rootDir, "packages");
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
-const HOST = process.env.HOST || "0.0.0.0";
+const HOST = process.env.HOST || "127.0.0.1";
 
 // Ephemeral single-session developer token generated on process startup
 export const developerToken = randomBytes(32).toString("hex");
@@ -44,7 +43,7 @@ const mimeTypes = {
 const safeDownloadRegex =
   /^\/downloads\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:exe|msi|msix|zip|dmg|pkg|deb|rpm))$/;
 
-function verifyToken(req, url) {
+function verifyToken(req) {
   let candidate = "";
 
   const authHeader = req.headers["authorization"];
@@ -54,10 +53,6 @@ function verifyToken(req, url) {
 
   if (!candidate && req.headers["x-developer-token"]) {
     candidate = String(req.headers["x-developer-token"]).trim();
-  }
-
-  if (!candidate && url.searchParams.has("token")) {
-    candidate = url.searchParams.get("token") || "";
   }
 
   if (!candidate) return false;
@@ -76,7 +71,7 @@ function applySecurityHeaders(res, isAsset = false) {
   );
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("Permissions-Policy", "camera=(), geolocation=(), microphone=(), payment=(), usb=()");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
@@ -122,10 +117,39 @@ function sendText(res, statusCode, text) {
   res.end(text);
 }
 
-export function createToolAtlasServer() {
+function isPathInside(root, candidate) {
+  const relativePath = relative(root, candidate);
+  return (
+    relativePath === "" ||
+    (relativePath !== ".." && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath))
+  );
+}
+
+function isLoopbackHost(host) {
+  return host === "127.0.0.1" || host === "localhost" || host === "::1";
+}
+
+export function assertSafeBindHost(host, behindTlsProxy = false) {
+  if (!isLoopbackHost(host) && !behindTlsProxy) {
+    throw new Error(
+      "Refusing a non-loopback bind without TOOL_ATLAS_BEHIND_TLS_PROXY=true. " +
+        "Terminate TLS at a trusted reverse proxy before exposing Developer Studio.",
+    );
+  }
+}
+
+export function createToolAtlasServer({ distDirectory = distDir } = {}) {
   return createServer(async (req, res) => {
-    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-    const pathname = decodeURIComponent(url.pathname);
+    let pathname;
+    try {
+      const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      pathname = decodeURIComponent(url.pathname);
+    } catch (error) {
+      if (error instanceof URIError || error instanceof TypeError) {
+        return sendJson(res, 400, { error: "Malformed request URL" });
+      }
+      throw error;
+    }
 
     try {
       // 1. Health check
@@ -173,7 +197,7 @@ export function createToolAtlasServer() {
 
       // 4. Protected Developer APIs
       if (pathname.startsWith("/api/developer/")) {
-        if (!verifyToken(req, url)) {
+        if (!verifyToken(req)) {
           return sendJson(res, 401, { error: "Unauthorized: Invalid or missing developer token" });
         }
 
@@ -327,11 +351,11 @@ export function createToolAtlasServer() {
         return sendText(res, 404, "Not Found");
       }
 
-      let candidatePath = join(distDir, pathname);
+      let candidatePath = resolve(distDirectory, `.${pathname}`);
       let isFile = false;
 
       // Prevent directory traversal
-      if (!candidatePath.startsWith(distDir)) {
+      if (!isPathInside(distDirectory, candidatePath)) {
         return sendText(res, 403, "Forbidden");
       }
 
@@ -350,7 +374,7 @@ export function createToolAtlasServer() {
 
       // SPA Fallback: if not found, serve dist/index.html
       if (!isFile) {
-        const fallbackIndex = join(distDir, "index.html");
+        const fallbackIndex = join(distDirectory, "index.html");
         if (existsSync(fallbackIndex)) {
           candidatePath = fallbackIndex;
           isFile = true;
@@ -362,6 +386,17 @@ export function createToolAtlasServer() {
           );
         }
       }
+
+      // stat() and createReadStream() follow symlinks. Validate the real path
+      // as well as the lexical path so a link inside dist cannot escape it.
+      const [realDistDirectory, realCandidatePath] = await Promise.all([
+        realpath(distDirectory),
+        realpath(candidatePath),
+      ]);
+      if (!isPathInside(realDistDirectory, realCandidatePath)) {
+        return sendText(res, 403, "Forbidden");
+      }
+      candidatePath = realCandidatePath;
 
       const ext = extname(candidatePath).toLowerCase();
       const contentType = mimeTypes[ext] || "application/octet-stream";
@@ -386,48 +421,40 @@ export function createToolAtlasServer() {
   });
 }
 
-function getNetworkIp() {
-  const nets = networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name] || []) {
-      if (net.family === "IPv4" && !net.internal) {
-        return net.address;
-      }
-    }
-  }
-  return "localhost";
-}
-
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const server = createToolAtlasServer();
-  server.listen(PORT, HOST, () => {
-    const networkIp = getNetworkIp();
-    const localUrl = `http://localhost:${PORT}/`;
-    const networkUrl = `http://${networkIp}:${PORT}/`;
-    const devUrl = `http://localhost:${PORT}/?page=developer&token=${developerToken}`;
-    const devNetworkUrl = `http://${networkIp}:${PORT}/?page=developer&token=${developerToken}`;
+  try {
+    assertSafeBindHost(HOST, process.env.TOOL_ATLAS_BEHIND_TLS_PROXY === "true");
+  } catch (error) {
+    process.stderr.write(`${error.message}\n`);
+    process.exitCode = 1;
+  }
 
-    process.stdout.write(`
+  if (process.exitCode !== 1) {
+    const server = createToolAtlasServer();
+    server.listen(PORT, HOST, () => {
+      const displayHost = HOST === "::1" ? "[::1]" : HOST;
+      const localUrl = `http://${displayHost}:${PORT}/`;
+      const developerAccess = isLoopbackHost(HOST)
+        ? `Developer Studio Access Link (Ephemeral startup token):\n  ${localUrl}?page=developer#token=${developerToken}`
+        : `Developer Studio Token (paste only through the configured HTTPS proxy):\n  ${developerToken}`;
+
+      process.stdout.write(`
 ========================================================================
   🚀 Tool Atlas Server is Running
   ----------------------------------------------------------------------
-  Local Public URL:      ${localUrl}
-  Network Public URL:    ${networkUrl}
+  Bound URL:             ${localUrl}
 
-  🔑 Developer Studio Access Link (Ephemeral startup token):
-  ${devUrl}
-
-  Network Developer Link:
-  ${devNetworkUrl}
+  🔑 ${developerAccess}
 ========================================================================
 `);
-  });
+    });
 
-  const handleShutdown = () => {
-    process.stdout.write("\nShutting down Tool Atlas Server...\n");
-    server.close(() => process.exit(0));
-  };
+    const handleShutdown = () => {
+      process.stdout.write("\nShutting down Tool Atlas Server...\n");
+      server.close(() => process.exit(0));
+    };
 
-  process.on("SIGINT", handleShutdown);
-  process.on("SIGTERM", handleShutdown);
+    process.on("SIGINT", handleShutdown);
+    process.on("SIGTERM", handleShutdown);
+  }
 }

@@ -4,18 +4,34 @@
   "order": 4,
   "name": "Postman",
   "company": "Postman, Inc.",
-  "category": "API testing",
-  "platforms": ["Windows", "Linux", "macOS", "Web"],
+  "category": "API Design",
+  "platforms": [
+    "Windows",
+    "Linux",
+    "macOS",
+    "Web"
+  ],
   "lifecycle": "Current",
   "icon": "PM",
   "releases": [
-    { "version": "11.60", "download": "https://www.postman.com/downloads/" }
+    {
+      "version": "11.60",
+      "download": "https://www.postman.com/downloads/"
+    }
   ],
   "updated": "5 days ago",
   "description": "An API collaboration workspace for testing requests, sharing collections, and documenting integrations.",
-  "support": {"name": "Rina Bar", "team": "Quality Engineering", "initials": "RB", "email": "quality@atlas.local"},
-
-  "tags": ["API", "Testing", "Collections"]
+  "support": {
+    "name": "Rina Bar",
+    "team": "Quality Engineering",
+    "initials": "RB",
+    "email": "quality@atlas.local"
+  },
+  "tags": [
+    "API",
+    "Testing",
+    "Collections"
+  ]
 }
 ---
 # Postman

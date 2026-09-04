@@ -117,7 +117,7 @@ export const tools = [
     "id": "postman",
     "name": "Postman",
     "company": "Postman, Inc.",
-    "category": "API testing",
+    "category": "API Design",
     "platforms": [
       "Windows",
       "Linux",

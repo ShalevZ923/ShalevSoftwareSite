@@ -1,12 +1,23 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { createToolAtlasServer, developerToken } from "./server.mjs";
+import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { request } from "node:http";
+import { assertSafeBindHost, createToolAtlasServer, developerToken } from "./server.mjs";
 
 describe("Tool Atlas Self-Contained Server", () => {
   let server;
   let baseUrl;
+  let fixtureRoot;
 
   beforeAll(async () => {
-    server = createToolAtlasServer();
+    fixtureRoot = await mkdtemp(join(tmpdir(), "tool-atlas-server-test-"));
+    const fixtureDist = join(fixtureRoot, "dist");
+    await mkdir(fixtureDist);
+    await writeFile(join(fixtureDist, "index.html"), '<div id="root"></div>', "utf8");
+    await writeFile(join(fixtureRoot, "dist-secret.txt"), "must not be served", "utf8");
+
+    server = createToolAtlasServer({ distDirectory: fixtureDist });
     await new Promise((resolve) => {
       server.listen(0, "127.0.0.1", () => {
         const address = server.address();
@@ -20,6 +31,7 @@ describe("Tool Atlas Self-Contained Server", () => {
     await new Promise((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
     });
+    await rm(fixtureRoot, { recursive: true, force: true });
   });
 
   it("serves health check on GET /api/health", async () => {
@@ -64,6 +76,17 @@ describe("Tool Atlas Self-Contained Server", () => {
   it("blocks protected developer routes when unauthenticated", async () => {
     const res = await fetch(`${baseUrl}/api/developer/tools`);
     expect(res.status).toBe(401);
+  });
+
+  it("does not accept developer tokens from query strings", async () => {
+    const res = await fetch(`${baseUrl}/api/developer/tools?token=${developerToken}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("requires an explicit TLS-proxy assertion for non-loopback binds", () => {
+    expect(() => assertSafeBindHost("127.0.0.1")).not.toThrow();
+    expect(() => assertSafeBindHost("0.0.0.0")).toThrow(/Refusing a non-loopback bind/);
+    expect(() => assertSafeBindHost("0.0.0.0", true)).not.toThrow();
   });
 
   it("allows access to developer tools with Bearer token", async () => {
@@ -122,12 +145,58 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(res.status).toBe(404);
   });
 
+  it.each(["%", "%G0", "%FF", "%E0%A4%A"])(
+    "rejects malformed URI encoding %s without terminating the server",
+    async (encoding) => {
+      const malformed = await fetch(`${baseUrl}/${encoding}`);
+      expect(malformed.status).toBe(400);
+
+      const health = await fetch(`${baseUrl}/api/health`);
+      expect(health.status).toBe(200);
+    },
+  );
+
+  it("rejects an invalid Host header without terminating the server", async () => {
+    const status = await new Promise((resolve, reject) => {
+      const req = request(`${baseUrl}/`, { headers: { Host: "[" } }, (res) => {
+        res.resume();
+        res.on("end", () => resolve(res.statusCode));
+      });
+      req.on("error", reject);
+      req.end();
+    });
+    expect(status).toBe(400);
+
+    const health = await fetch(`${baseUrl}/api/health`);
+    expect(health.status).toBe(200);
+  });
+
+  it("does not serve files from a dist-prefixed sibling directory", async () => {
+    const res = await fetch(`${baseUrl}/%2e%2e%2fdist-secret.txt`);
+    expect(res.status).toBe(403);
+    expect(await res.text()).not.toContain("must not be served");
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "does not follow static-file symlinks outside dist",
+    async () => {
+      const outsideFile = join(fixtureRoot, "outside-secret.txt");
+      await writeFile(outsideFile, "must not cross the static root", "utf8");
+      await symlink(outsideFile, join(fixtureRoot, "dist", "linked-secret.txt"));
+
+      const res = await fetch(`${baseUrl}/linked-secret.txt`);
+      expect(res.status).toBe(403);
+      expect(await res.text()).not.toContain("must not cross the static root");
+    },
+  );
+
   it("serves static index.html and SPA fallback with security headers", async () => {
     const res = await fetch(`${baseUrl}/some-random-route`);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("text/html");
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(res.headers.get("Referrer-Policy")).toBe("no-referrer");
     const html = await res.text();
     expect(html).toContain('<div id="root"></div>');
   });

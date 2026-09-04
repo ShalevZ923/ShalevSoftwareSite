@@ -1,6 +1,8 @@
 # Tool Atlas
 
-Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. It has no backend, account system, or application secrets.
+Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. The production Docker and IIS deployments remain backend-free and contain no application secrets.
+
+An optional local Node.js server provides the Developer Studio proof of concept. That mode has authenticated filesystem-write APIs and an ephemeral startup token, so it is not part of the public static deployment. See [the Developer Studio guide](./docs/DEVELOPER_STUDIO.md) before using it.
 
 The catalog supports shareable filter URLs and a saved-tools list. Saved tools are stored only in the visitor's browser; they are never sent to a server or included in shared links.
 
@@ -10,6 +12,15 @@ The catalog supports shareable filter URLs and a saved-tools list. Saved tools a
 pnpm install --frozen-lockfile
 pnpm dev
 ```
+
+To use the local Developer Studio, build and start the guarded loopback server instead:
+
+```bash
+pnpm build
+pnpm serve
+```
+
+Open the fragment-based access link printed at startup. The token is removed from the address bar before verification and is never accepted from a query string. Exiting the studio clears it from browser session storage.
 
 ## Content model
 
@@ -73,7 +84,7 @@ chmod 600 .env
 | `HTTP_PORT` | No | Host HTTP port; use `80` in production. |
 | `HTTPS_PORT` | No | Host HTTPS port; use `443` in production. |
 
-This static app has no application secrets and does not consume browser-visible runtime variables. Keep future credentials out of Vite variables (`VITE_*` values are compiled into public JavaScript); use a server-side secret mechanism if a backend is later introduced.
+The static production app has no application secrets and does not consume browser-visible runtime variables. Keep credentials out of Vite variables (`VITE_*` values are compiled into public JavaScript). The optional Developer Studio token belongs only to its local Node.js process and must not be added to a static deployment.
 
 ### 3. Build and start
 
@@ -112,6 +123,8 @@ The HTTP check should redirect to HTTPS. The HTTPS response should include `Stri
 The app container runs as the unprivileged `nginx` user with a read-only filesystem, a small writable temporary filesystem, no Linux capabilities, and no host port. The proxy is the only public container; it has only the capability needed to bind HTTP(S) ports and persists certificate state in named volumes.
 
 See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
+
+For the `v1.4.0-beta.1` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
 
 To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download proof of concept](docs/HOSTED_DOWNLOAD_POC.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
 

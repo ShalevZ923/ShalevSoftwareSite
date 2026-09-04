@@ -2,7 +2,8 @@
 param(
   [ValidateRange(1, 65535)]
   [int]$Port = 8080,
-  [string]$HostName = "0.0.0.0",
+  [string]$HostName = "127.0.0.1",
+  [switch]$BehindTlsProxy,
   [switch]$SkipBuild
 )
 
@@ -34,6 +35,11 @@ if (-not (Test-Path $distPath) -and -not $SkipBuild) {
 # 3. Launch the Server
 $env:PORT = $Port
 $env:HOST = $HostName
+if ($BehindTlsProxy) {
+  $env:TOOL_ATLAS_BEHIND_TLS_PROXY = "true"
+} else {
+  Remove-Item Env:TOOL_ATLAS_BEHIND_TLS_PROXY -ErrorAction SilentlyContinue
+}
 
 Write-Host "Starting Tool Atlas Server on port $Port..." -ForegroundColor Green
 & node scripts/server.mjs
