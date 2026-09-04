@@ -113,6 +113,8 @@ The app container runs as the unprivileged `nginx` user with a read-only filesys
 
 See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
 
+To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download proof of concept](docs/HOSTED_DOWNLOAD_POC.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
+
 ## Windows Server or workstation deployment
 
 The Windows deployment uses IIS as the operating-system-managed web service. The site and installer directory remain static: IIS provides service recovery, W3C access logs, Windows Event Log diagnostics, and forced attachment downloads without adding an application backend. Follow the complete [Windows deployment and operations guide](docs/WINDOWS_DEPLOYMENT.md).

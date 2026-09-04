@@ -32,7 +32,7 @@ describe('catalog filters', () => {
 
   it('combines filters and preserves a predictable sort order', () => {
     expect(getCatalogTools(tools, { ...defaultFilters, category: 'IDE', platform: 'Linux' }).map((tool) => tool.name)).toEqual(['IntelliJ IDEA', 'Visual Studio Code'])
-    expect(getCatalogTools(tools, { ...defaultFilters, lifecycle: 'New' }).map((tool) => tool.id)).toEqual(['dbeaver'])
+    expect(getCatalogTools(tools, { ...defaultFilters, lifecycle: 'New' }).map((tool) => tool.id)).toEqual(['dbeaver', 'jq'])
     expect(getCatalogTools(tools, { ...defaultFilters, sort: 'updated' }).map((tool) => tool.id).slice(0, 3)).toEqual(['intellij', 'vscode', 'docker'])
   })
 
