@@ -1,7 +1,8 @@
 {
   "name": "tool-atlas",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.4.0-beta.1",
+  "packageManager": "pnpm@10.30.2",
   "type": "module",
   "scripts": {
     "catalog:add": "node scripts/add-catalog-tool.mjs",
@@ -11,7 +12,9 @@
     "test": "pnpm catalog:check && vitest run",
     "build": "pnpm catalog:build && tsc -b && vite build",
     "verify": "pnpm test && pnpm build && node scripts/verify-dist.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve": "node scripts/server.mjs",
+    "start": "node scripts/server.mjs"
   },
   "dependencies": {
     "react": "19.2.8",

@@ -1,12 +1,12 @@
 # Security report
 
 **Assessment date:** 2026-09-04
-**Scope:** the current static React application, hosted-release metadata, its NGINX container, the Docker Compose/Caddy deployment, the Windows IIS deployment, and documented operating procedures.
+**Scope:** the current React application, the optional local Developer Studio Node.js server, hosted-release metadata, its NGINX container, the Docker Compose/Caddy deployment, the Windows IIS deployment, and documented operating procedures.
 **Method:** source-backed static review and local configuration validation. No public hostname, DNS record, live certificate, running production container, or external vulnerability feed was tested.
 
 ## Executive summary
 
-The application has a small public attack surface: it is a static catalog with no backend, login, API, upload, database, or application secret. The supplied deployment now terminates HTTPS at Caddy, keeps the NGINX app container off the public Docker network, and stores certificate state in named volumes for automatic renewal.
+The production application has a small public attack surface: its Docker and IIS deployments remain static, with no login, write API, database, or application secret. The optional Developer Studio is a separate local authoring mode with bearer-authenticated filesystem-write APIs and must not be treated as the public deployment.
 
 The previous direct-container pattern published plaintext HTTP on port 8080. It is remediated by the tracked Compose deployment; do not use the old `docker run -p 8080:8080` pattern in production.
 
@@ -25,6 +25,7 @@ The previous direct-container pattern published plaintext HTTP on port 8080. It 
 | Windows lifecycle and logs | IIS uses an isolated application-pool identity, W3SVC automatic startup/recovery, W3C file logs, and Windows Event Log diagnostics without a remote logging API. | `windows/Install-ToolAtlas.ps1`, `windows/Get-ToolAtlasLogs.ps1` |
 | Catalog contribution | Local content is schema-validated before generation; public Issue Form data can create a PR only after a trusted maintainer applies `catalog-approved`. | `scripts/catalog-content.mjs`, `.github/workflows/catalog-issue-to-pr.yml` |
 | GitLab catalog contribution | A GitLab template is untrusted input; a manually triggered default-branch job rechecks `catalog-approved` before a protected project token can create a branch and merge request. | `.gitlab/issue_templates/Add catalog software.md`, `.gitlab-ci.yml` |
+| Local Developer Studio | Loopback is the default; non-loopback startup requires an explicit TLS-proxy assertion; bootstrap credentials use a URL fragment and protected APIs accept headers rather than query tokens. | `scripts/server.mjs`, `src/App.tsx`, `windows/Start-ToolAtlas.ps1` |
 
 ## Findings
 
@@ -41,6 +42,10 @@ The original Docker build used mutable Node and NGINX tags. The deployment now p
 ### Resolved: cache locations dropped NGINX security headers — Low (CWE-693)
 
 NGINX does not inherit server-level `add_header` directives into a location that defines another `add_header`. The previous HTML and asset locations set only `Cache-Control`, so real responses omitted CSP, anti-framing, no-sniff, and the other server-level protections. Cache selection now uses one server-level mapped value, keeping every security header on HTML and assets while preserving `no-store` for application routes and immutable caching for fingerprinted assets.
+
+### Resolved: Developer Studio token and path handling — Medium/Low
+
+The local server previously printed its bearer token in a query-string URL, accepted query tokens on protected APIs, defaulted to all network interfaces, decoded malformed percent escapes outside its error boundary, and used a string-prefix check for static-root containment. The server now defaults to loopback, requires an explicit TLS-proxy assertion before non-loopback startup, bootstraps through a URL fragment, accepts protected-route tokens only in headers, returns 400 for malformed encodings, and uses path-segment-aware containment. Regression tests cover each original trigger and confirm the process remains healthy after malformed input.
 
 ### Controlled: catalog Issue Form automation
 
@@ -67,8 +72,8 @@ The Windows installer defaults its initial HTTP binding to loopback, avoids gran
 - Query-string filters are allowlisted and rendered as React text, not HTML (`src/catalog.ts`).
 - Browser-local saved tools are parsed defensively and restricted to known static IDs (`src/catalogStorage.ts`).
 - Markdown does not enable raw HTML; links are limited to HTTPS, `mailto:`, and local fragments, while images are limited to local `/tool-images/` paths (`src/markdown.tsx`).
-- There is no server-side request handling, database, authentication path, upload, command execution, or secret storage in the reviewed application source.
-- Hosted files are published only by an administrator-run PowerShell command; the public site has no upload or filesystem-write path.
+- The static production deployments have no server-side authentication or filesystem-write path. The optional Developer Studio does, and remains limited to trusted local authoring rather than production publication.
+- Hosted files are published only by an administrator-run PowerShell command; the public static site has no upload or filesystem-write path.
 - The static origin returns a CSP, nosniff, anti-framing, referrer, permissions, COOP, and CORP headers (`nginx.conf`). It accepts only GET and HEAD requests and does not expose the static-host `_headers` file.
 
 ## Required production evidence
@@ -80,10 +85,11 @@ The Windows installer defaults its initial HTTP binding to loopback, avoids gran
 5. Back up and test restoration of `tool-atlas_caddy_data` and `tool-atlas_caddy_config`; loss can force new issuance and hit ACME rate limits.
 6. Keep `.env` mode 0600, never commit it, and use a server-side secret manager if future backend credentials are introduced.
 7. For Windows, configure and externally verify an approved HTTPS binding, patch level, firewall scope, read-only application-pool ACL, service recovery, W3C logging, package checksum, and rollback before acceptance.
+8. Keep Developer Studio on loopback. If a reviewed network exception is required, terminate TLS at a trusted proxy, keep the origin private, restrict the firewall, and follow `docs/DEVELOPER_STUDIO.md`.
 
 ## Validation performed
 
-- `pnpm verify` passed: 5 test files and 19 tests, TypeScript/Vite production build, and generated-artifact checks.
+- `pnpm verify` passed: 6 test files and 39 tests, TypeScript/Vite production build, and generated-artifact checks.
 - `pnpm audit --prod` reported no known production dependency vulnerabilities on the assessment date.
 - `pnpm catalog:check` validated all content files and confirmed the generated catalog module is current; `pnpm verify` confirmed the migrated catalog still renders and tests successfully.
 - `docker compose --env-file .env.example config` rendered successfully with the required domain/contact variables and no public app port.

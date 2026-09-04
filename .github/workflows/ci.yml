@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify source and production artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.2.0
+        with:
+          node-version: 24
+          check-latest: true
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify
+        run: pnpm verify
+
+  container-smoke:
+    name: Build and smoke-test production image
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.0.1
+        with:
+          persist-credentials: false
+      - name: Build image
+        run: docker build --tag tool-atlas:ci --build-arg VERSION=ci --build-arg VCS_REF=${{ github.sha }} .
+      - name: Smoke test hardened image
+        run: |
+          set -euo pipefail
+          container_id=$(docker run --detach --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --publish 127.0.0.1:18080:8080 tool-atlas:ci)
+          trap 'docker rm --force "$container_id" >/dev/null' EXIT
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --head http://127.0.0.1:18080/; then break; fi
+            sleep 1
+          done
+          test "$(docker inspect --format '{{.Config.User}}' tool-atlas:ci)" = "nginx"
+          curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^content-security-policy:'

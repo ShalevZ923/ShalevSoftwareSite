@@ -4,5 +4,9 @@ dist/
 .playwright-cli/
 output/
 .env
+.env.*
+!.env.example
 *.log
 .DS_Store
+coverage/
+.pnpm-store/

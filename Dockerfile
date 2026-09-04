@@ -15,6 +15,14 @@ RUN pnpm build
 
 FROM nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236 AS runtime
 
+ARG VERSION=dev
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.source="https://github.com/ShalevZ923/ShalevSoftwareSite" \
+  org.opencontainers.image.title="Tool Atlas" \
+  org.opencontainers.image.description="Static Tool Atlas production site" \
+  org.opencontainers.image.version="${VERSION}" \
+  org.opencontainers.image.revision="${VCS_REF}"
+
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 RUN rm /usr/share/nginx/html/_headers
