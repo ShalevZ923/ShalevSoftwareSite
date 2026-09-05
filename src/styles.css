@@ -805,6 +805,21 @@ main {
   border-collapse: collapse;
   font-size: 12px;
 }
+.guide-resources { margin-top: 44px; padding-top: 27px; border-top: 1px solid #d7e0ec; }
+.guide-resources-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 15px; }
+.guide-resources h2 { margin: 3px 0 0; font-size: 22px; }
+.eyebrow, .guide-resource-count { color: #54708f; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.guide-resource-list { display: grid; gap: 10px; }
+.guide-resource { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 15px; border: 1px solid #d7e0ec; border-radius: 8px; background: #fbfdff; }
+.guide-resource-icon { display: grid; place-items: center; width: 38px; height: 38px; color: #1764ec; background: #eaf2ff; border-radius: 6px; }
+.guide-resource-title-row { display: flex; align-items: center; gap: 8px; }
+.guide-resource h3 { margin: 0; font-size: 15px; }
+.guide-resource p, .guide-resource small { display: block; margin: 3px 0 0; color: #54708f; font-size: 12px; }
+.guide-resource-format { padding: 3px 6px; color: #1755a3; background: #eaf2ff; border-radius: 4px; font-size: 10px; font-weight: 800; }
+.guide-resource-action { display: inline-flex; align-items: center; gap: 5px; padding: 8px 10px; color: #0b52bb; border: 1px solid #bdd1ee; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.dev-section-help { max-width: 680px; margin: 5px 0 0; color: #59708c; font-size: 13px; line-height: 1.45; }
+.dev-resource-card { margin-top: 14px; padding: 14px; border: 1px solid #d7e0ec; border-radius: 7px; background: #fbfdff; }
+.dev-resource-remove { display: flex; align-items: end; padding-bottom: 1px; }
 .markdown th,
 .markdown td {
   text-align: left;

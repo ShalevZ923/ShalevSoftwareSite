@@ -13,7 +13,7 @@ import { DocumentationPicker } from "./components/DocumentationPicker";
 import { DeveloperStudio } from "./components/DeveloperStudio";
 import { DeveloperLockGate } from "./components/DeveloperLockGate";
 import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from "./components/ui";
-import { getReleaseDownloadTarget } from "./downloads";
+import { getGuideResourceTarget, getReleaseDownloadTarget } from "./downloads";
 import { MarkdownDocument } from "./markdown";
 
 type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
@@ -829,6 +829,40 @@ function Documentation({
             </div>
           )}
           <MarkdownDocument content={docs[selected] || (tool ? docs[tool.id] : "") || ""} />
+          {tool?.resources && tool.resources.length > 0 && (
+            <section className="guide-resources" aria-labelledby="guide-resources-title">
+              <div className="guide-resources-heading">
+                <div>
+                  <span className="eyebrow">Documentation library</span>
+                  <h2 id="guide-resources-title">Guides &amp; files</h2>
+                </div>
+                <span className="guide-resource-count">{tool.resources.length} available</span>
+              </div>
+              <div className="guide-resource-list">
+                {tool.resources.map((resource) => {
+                  const target = getGuideResourceTarget(resource);
+                  return (
+                    <article key={resource.id} className="guide-resource">
+                      <div className="guide-resource-icon" aria-hidden="true"><Icon name="document" /></div>
+                      <div className="guide-resource-copy">
+                        <div className="guide-resource-title-row">
+                          <h3>{resource.title}</h3>
+                          <span className="guide-resource-format">{resource.format.toUpperCase()}</span>
+                        </div>
+                        <p>{resource.kind.replace(/-/g, " ")} · {resource.appliesTo.join(", ")} · Reviewed {resource.reviewedOn}</p>
+                        <small>Owner: {resource.owner}{resource.accessNote ? ` · ${resource.accessNote}` : ""}</small>
+                      </div>
+                      {target && (
+                        <a className="guide-resource-action" href={target.href} target={target.external ? "_blank" : undefined} rel={target.external ? "noopener noreferrer" : undefined}>
+                          {resource.format === "pptx" ? "Download" : "Open"} <Icon name={target.external ? "external" : "arrow"} size={15} />
+                        </a>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </article>
       </div>
     </section>

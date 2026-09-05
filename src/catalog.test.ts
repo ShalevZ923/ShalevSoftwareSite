@@ -27,6 +27,12 @@ describe('catalog filters', () => {
         }
       }
       expect(tool.facts?.some((fact) => /key|activation|password|token/i.test(fact.label))).not.toBe(true)
+      for (const resource of tool.resources || []) {
+        expect(resource.id).toMatch(/^[a-z0-9-]+$/)
+        expect(resource.appliesTo.length).toBeGreaterThan(0)
+        expect(resource.reviewedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+        expect((resource.url !== undefined) !== (resource.file !== undefined)).toBe(true)
+      }
     }
   })
 

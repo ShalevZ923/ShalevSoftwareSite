@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Lifecycle, Platform, Tool, ToolRelease } from "../data";
+import type { GuideResource, Lifecycle, Platform, Tool, ToolRelease } from "../data";
 import { MarkdownDocument } from "../markdown";
 import { Field, Icon } from "./ui";
 
@@ -64,6 +64,7 @@ export function DeveloperStudio({
   const [docsList, setDocsList] = useState<DocFile[]>([]);
   const [selectedDocName, setSelectedDocName] = useState<string>("");
   const [editingDocContent, setEditingDocContent] = useState<string>("");
+  const [guideLibraryFiles, setGuideLibraryFiles] = useState<string[]>([]);
 
   const [guideViewMode, setGuideViewMode] = useState<"split" | "edit" | "preview">("split");
   const [docViewMode, setDocViewMode] = useState<"split" | "edit" | "preview">("split");
@@ -141,6 +142,14 @@ export function DeveloperStudio({
     loadTools();
     loadDocs();
   }, [headers]);
+
+  useEffect(() => {
+    if (!selectedToolId) return;
+    fetch(`/api/developer/guide-library/${encodeURIComponent(selectedToolId)}`, { headers })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((files: string[]) => setGuideLibraryFiles(Array.isArray(files) ? files : []))
+      .catch(() => setGuideLibraryFiles([]));
+  }, [headers, selectedToolId]);
 
   // Select tool
   const handleSelectTool = (tool: ToolEntryPayload) => {
@@ -776,6 +785,45 @@ export function DeveloperStudio({
                         </button>
                       </div>
                     ))}
+                  </fieldset>
+
+                  <fieldset className="dev-section">
+                    <div className="dev-section-header">
+                      <div>
+                        <legend>Guides &amp; files</legend>
+                        <p className="dev-section-help">Attach an approved SharePoint/intranet link or select a PDF or PowerPoint already placed in this tool&apos;s server guide library.</p>
+                      </div>
+                      <button type="button" className="dev-small-btn" onClick={() => {
+                        const resource: GuideResource = { id: "new-guide", title: "New guide", kind: "internal-guide", format: "pdf", url: "https://", appliesTo: [editingTool.metadata.releases[0]?.version || "Current"], owner: editingTool.metadata.support.team, reviewedOn: new Date().toISOString().slice(0, 10) };
+                        setEditingTool((prev) => prev ? { ...prev, metadata: { ...prev.metadata, resources: [...(prev.metadata.resources || []), resource] } } : null);
+                      }}>+ Add guide</button>
+                    </div>
+                    {(editingTool.metadata.resources || []).map((resource, idx) => {
+                      const update = (change: Partial<GuideResource>) => setEditingTool((prev) => {
+                        if (!prev) return null;
+                        const resources = [...(prev.metadata.resources || [])];
+                        resources[idx] = { ...resources[idx], ...change };
+                        return { ...prev, metadata: { ...prev.metadata, resources } };
+                      });
+                      const isFile = resource.file !== undefined;
+                      return <div className="dev-resource-card" key={`${resource.id}-${idx}`}>
+                        <div className="dev-grid-3">
+                          <Field label="Title"><input value={resource.title} onChange={(e) => update({ title: e.target.value })} /></Field>
+                          <Field label="Type"><select value={resource.kind} onChange={(e) => update({ kind: e.target.value as GuideResource["kind"] })}><option value="official-manual">Official manual</option><option value="internal-guide">Internal guide</option><option value="training">Training</option></select></Field>
+                          <Field label="Format"><select value={resource.format} onChange={(e) => update({ format: e.target.value as GuideResource["format"] })}><option value="pdf">PDF</option><option value="pptx">PowerPoint</option><option value="web">Web page</option></select></Field>
+                        </div>
+                        <div className="dev-grid-3">
+                          <Field label="Source"><select value={isFile ? "file" : "url"} onChange={(e) => { const file = e.target.value === "file"; update(file ? { file: guideLibraryFiles[0] || `${editingTool.id}/guide.pdf`, url: undefined } : { url: "https://", file: undefined }); }}><option value="url">Approved HTTPS link</option><option value="file" disabled={resource.format === "web"}>Server guide library</option></select></Field>
+                          {isFile ? <Field label="Server file"><select value={resource.file} onChange={(e) => update({ file: e.target.value })}>{guideLibraryFiles.length ? guideLibraryFiles.map((file) => <option key={file} value={file}>{file}</option>) : <option value={resource.file}>{resource.file}</option>}</select></Field> : <Field label="SharePoint or intranet HTTPS URL"><input value={resource.url || ""} onChange={(e) => update({ url: e.target.value })} /></Field>}
+                          <Field label="Applies to versions"><input value={resource.appliesTo.join(", ")} onChange={(e) => update({ appliesTo: e.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></Field>
+                        </div>
+                        <div className="dev-grid-3">
+                          <Field label="Owner"><input value={resource.owner} onChange={(e) => update({ owner: e.target.value })} /></Field>
+                          <Field label="Reviewed on"><input type="date" value={resource.reviewedOn} onChange={(e) => update({ reviewedOn: e.target.value })} /></Field>
+                          <div className="dev-resource-remove"><button type="button" className="dev-danger-btn" onClick={() => setEditingTool((prev) => prev ? { ...prev, metadata: { ...prev.metadata, resources: (prev.metadata.resources || []).filter((_, position) => position !== idx) } } : null)}>Remove guide</button></div>
+                        </div>
+                      </div>;
+                    })}
                   </fieldset>
 
                   {/* Section: Markdown Documentation Guide */}

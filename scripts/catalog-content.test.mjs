@@ -88,6 +88,23 @@ describe("optional tool notices", () => {
       releases: [{ version: "1.0", download: "https://example.com", artifact: "test-tool/1.0/test-tool.msi" }],
     }, guide)).toThrow("exactly one download or artifact");
   });
+
+  it("accepts reviewed guide resources and rejects unsafe or ambiguous delivery targets", () => {
+    const resource = {
+      id: "setup-guide",
+      title: "Setup guide",
+      kind: "internal-guide",
+      format: "pdf",
+      url: "https://sharepoint.atlas.local/sites/devex/setup.pdf",
+      appliesTo: ["1.0"],
+      owner: "Platform Engineering",
+      reviewedOn: "2026-09-05",
+    };
+    expect(() => validateCatalogEntry("test-tool.md", { ...metadata, resources: [resource] }, guide)).not.toThrow();
+    expect(() => validateCatalogEntry("test-tool.md", { ...metadata, resources: [{ ...resource, url: "file:///server/guide.pdf" }] }, guide)).toThrow("credential-free HTTPS URL");
+    expect(() => validateCatalogEntry("test-tool.md", { ...metadata, resources: [{ ...resource, file: "test-tool/guide.pdf" }] }, guide)).toThrow("exactly one url or file");
+    expect(() => validateCatalogEntry("test-tool.md", { ...metadata, resources: [{ ...resource, url: undefined, file: "other-tool/guide.pdf" }] }, guide)).not.toThrow();
+  });
 });
 
 describe("hierarchical catalog source", () => {
