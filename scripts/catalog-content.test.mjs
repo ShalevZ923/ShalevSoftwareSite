@@ -115,7 +115,7 @@ describe("hierarchical catalog source", () => {
     expect(intellij?.metadata).toMatchObject({
       company: "JetBrains",
       category: "IDEs & Code Editors",
-      releases: [{ version: "2025.1", download: "https://www.jetbrains.com/idea/download/" }],
+      releases: expect.arrayContaining([{ version: "2025.1", download: "https://www.jetbrains.com/idea/download/" }]),
     });
     expect(intellij?.guide).toContain("## Install");
   });

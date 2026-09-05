@@ -25,6 +25,16 @@ Developer Studio is an optional local authoring interface. It runs `scripts/serv
 By default the server listens only on `127.0.0.1`. Treat anyone with the startup link or token as able to read and modify the supported catalog and documentation files.
 The terminal output is therefore secret-bearing: do not send it to centralized logs, paste it into support tickets, or include it in screenshots.
 
+## Using the redesigned workspace
+
+- Use **Software Catalog** to search and select a tool, or **Add Software** to create one. Edit **Overview**, **Releases**, **Guides**, and **Support** without losing your current draft. The Overview disclosure contains the identifier, icon initials, update label, and catalog order.
+- The first release remains the catalog's default download. Guide resources and the Markdown guide share the Guides section; use Editor, Split, or Preview on desktop, and Editor or Preview on a phone.
+- **System docs** has its own searchable list and Markdown editor. Switching between software and system docs retains both current drafts in memory.
+- **Save changes** writes the active record to the local working tree. The action stays available while scrolling; it is disabled when the active draft is unchanged or a save is running. “All changes saved” refers to that record, not the other workspace's draft, a Git commit, or publication.
+- Selecting another record or creating a tool asks before replacing an unsaved draft. Exiting or navigating to a public page asks if either workspace has unsaved changes. Browser reload/close uses the browser's built-in unsaved-work warning. Drafts are not persisted across reloads.
+- If saving fails, the error receives focus and the draft remains editable. Correct the reported issue and save again. **Reload list** retries loading the current workspace's list; it does not save a draft. For expired access, retain any needed draft text locally and restart the normal token-based access flow.
+- On phones, the record list sits above the editor. Open the main navigation using the menu button; Escape closes it. Hidden navigation is excluded from keyboard focus.
+
 ## Windows launcher
 
 Run the same loopback-only workflow from PowerShell:

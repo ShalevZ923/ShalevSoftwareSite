@@ -1,7 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "./data";
 import {
-  catalogFiltersFromSearch,
   catalogFiltersToSearch,
   defaultFilters,
   getCatalogTools,
@@ -15,8 +14,11 @@ import { DeveloperLockGate } from "./components/DeveloperLockGate";
 import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from "./components/ui";
 import { getGuideResourceTarget, getReleaseDownloadTarget } from "./downloads";
 import { MarkdownDocument } from "./markdown";
+import { catalogTargetFromSearch, resolveToolRelease, toolPageHref, type CatalogTarget } from "./toolLinks";
 
 type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
+
+const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.5.0b";
 
 const platforms: Array<"All platforms" | Platform> = [
   "All platforms",
@@ -45,14 +47,22 @@ function Sidebar({
   isOpen: boolean;
   close: () => void;
 }) {
+  const [compact, setCompact] = useState(() => window.matchMedia("(max-width: 760px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const update = () => setCompact(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const links: Array<[Page, string, IconName]> = [
     ["catalog", "Catalog", "catalog"],
     ["documentation", "Documentation", "book"],
     ["updates", "Updates", "document"],
     ["about", "About", "info"],
   ];
+  if (page === "developer") links.push(["developer", "Developer Studio", "catalog"]);
   return (
-    <aside className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
+    <aside inert={compact && !isOpen} className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
       <div className="brand">
         <Icon name="atlas" size={28} />
         <span>Tool Atlas</span>
@@ -79,14 +89,6 @@ function Sidebar({
           </button>
         ))}
       </nav>
-      <div className="sidebar-footer">
-        <span className="avatar">JD</span>
-        <div>
-          <strong>Jane Developer</strong>
-          <small>Platform Team</small>
-        </div>
-        <Icon name="chevron" size={16} />
-      </div>
     </aside>
   );
 }
@@ -94,6 +96,11 @@ function Sidebar({
 function App() {
   const [page, setPage] = useState<Page>(() => pageFromSearch(window.location.search));
   const [menuOpen, setMenuOpen] = useState(false);
+  const [routeSearch, setRouteSearch] = useState(() => window.location.search);
+  const [routeRevision, setRouteRevision] = useState(0);
+  const studioDirty = useRef(false);
+  const studioSaving = useRef(false);
+  const canLeaveStudio = () => !studioSaving.current && (!studioDirty.current || window.confirm("Discard unsaved changes?"));
   const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
   const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
   const [devToken, setDevToken] = useState<string>(() => {
@@ -179,21 +186,40 @@ function App() {
     }
   }, []);
 
-  const navigate = (nextPage: Page, nextTool = selectedDoc) => {
+  const navigate = (nextPage: Page, nextTool = selectedDoc, version?: string) => {
+    if (nextPage === "developer" && page === "developer") return;
+    if (nextPage !== "developer" && !canLeaveStudio()) return;
+    studioDirty.current = false;
     const url = new URL(window.location.href);
     if (nextPage === "catalog") url.searchParams.delete("page");
     else url.searchParams.set("page", nextPage);
 
     if (nextPage === "documentation") url.searchParams.set("tool", nextTool);
     else url.searchParams.delete("tool");
+    url.searchParams.delete("version");
+    if (nextPage === "documentation" && version) url.searchParams.set("version", version);
     url.hash = "";
 
     window.history.pushState(null, "", `${url.pathname}${url.search}`);
     setPage(nextPage);
+    setRouteSearch(url.search);
+    setRouteRevision((revision) => revision + 1);
     if (nextPage === "documentation") setSelectedDoc(nextTool);
   };
 
+  const openCatalogTool = (tool: Tool, version?: string) => {
+    if (!canLeaveStudio()) return;
+    const href = toolPageHref("catalog", tool.id, version);
+    window.history.pushState(null, "", href);
+    studioDirty.current = false;
+    setRouteSearch(href);
+    setRouteRevision((revision) => revision + 1);
+    setPage("catalog");
+  };
+
   const exitDeveloperStudio = () => {
+    if (!canLeaveStudio()) return;
+    studioDirty.current = false;
     setDevToken("");
     setIsDevAuthenticated(false);
     try {
@@ -223,6 +249,13 @@ function App() {
 
   useEffect(() => {
     const restoreRoute = () => {
+      if (!canLeaveStudio()) {
+        window.history.pushState(null, "", "?page=developer");
+        return;
+      }
+      studioDirty.current = false;
+      setRouteSearch(window.location.search);
+      setRouteRevision((revision) => revision + 1);
       setPage(pageFromSearch(window.location.search));
       const toolInSearch = new URLSearchParams(window.location.search).get("tool");
       if (toolInSearch) setSelectedDoc(toolInSearch);
@@ -230,21 +263,6 @@ function App() {
     window.addEventListener("popstate", restoreRoute);
     return () => window.removeEventListener("popstate", restoreRoute);
   }, []);
-
-  if (page === "developer") {
-    return isDevAuthenticated ? (
-      <DeveloperStudio
-        token={devToken}
-        onExit={exitDeveloperStudio}
-        onCatalogUpdated={refreshCatalog}
-      />
-    ) : (
-      <DeveloperLockGate
-        onUnlock={verifyDeveloperToken}
-        onBack={() => navigate("catalog")}
-      />
-    );
-  }
 
   return (
     <div className="app-shell">
@@ -275,11 +293,17 @@ function App() {
         >
           <Icon name="menu" />
         </button>
+        {page === "developer" && (isDevAuthenticated ? (
+          <DeveloperStudio token={devToken} onExit={exitDeveloperStudio} onCatalogUpdated={refreshCatalog}
+            onDraftStateChange={(dirty, saving) => { studioDirty.current = dirty; studioSaving.current = saving; }} />
+        ) : <DeveloperLockGate onUnlock={verifyDeveloperToken} onBack={() => navigate("catalog")} />)}
         {page === "catalog" && (
           <Catalog
+            key={`${routeRevision}:${routeSearch}`}
+            search={routeSearch}
             tools={catalogTools}
-            onDocs={(tool) => {
-              navigate("documentation", tool.id);
+            onDocs={(tool, version) => {
+              navigate("documentation", tool.id, version);
             }}
             onUpdates={() => navigate("updates")}
           />
@@ -288,6 +312,8 @@ function App() {
           <Documentation
             tools={catalogTools}
             docs={catalogDocs}
+            requestedVersion={new URLSearchParams(routeSearch).get("version") || undefined}
+            onCatalog={openCatalogTool}
             selected={selectedDoc}
             setSelected={(toolId) => navigate("documentation", toolId)}
           />
@@ -305,12 +331,14 @@ function App() {
 }
 
 function Catalog({
+  search,
   tools,
   onDocs,
   onUpdates,
 }: {
   tools: Tool[];
-  onDocs: (tool: Tool) => void;
+  search: string;
+  onDocs: (tool: Tool, version: string) => void;
   onUpdates: () => void;
 }) {
   const categories = useMemo(
@@ -318,10 +346,21 @@ function Catalog({
     [tools],
   );
   const toolIds = useMemo(() => new Set(tools.map((tool) => tool.id)), [tools]);
+  const initialLink = useMemo(() => catalogTargetFromSearch(search, tools), [search, tools]);
+  const [target, setTarget] = useState<CatalogTarget | null>(initialLink.target);
+  const [pointedTool, setPointedTool] = useState(initialLink.target?.toolId);
   const [filters, setFilters] = useState<CatalogFilters>(() =>
-    catalogFiltersFromSearch(window.location.search, categories),
+    initialLink.filters,
   );
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(initialLink.target?.toolId ?? null);
+  // A local server may supply a newly added tool/release after the static bundle loads.
+  useEffect(() => {
+    if (!initialLink.target) return;
+    setTarget(initialLink.target);
+    setExpanded(initialLink.target.toolId);
+    setPointedTool(initialLink.target.toolId);
+    setFilters(initialLink.filters);
+  }, [initialLink.target?.toolId, initialLink.target?.version]);
   const [savedToolIds, setSavedToolIds] = useState<string[]>(() => readSavedToolIds(toolIds));
   const [savedOnly, setSavedOnly] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "unavailable">(
@@ -340,8 +379,12 @@ function Catalog({
   const updateFilter = <K extends keyof CatalogFilters>(
     key: K,
     value: CatalogFilters[K],
-  ) => setFilters((current) => ({ ...current, [key]: value }));
-  const clear = () => setFilters(defaultFilters);
+  ) => {
+    setTarget(null);
+    setPointedTool(undefined);
+    setFilters((current) => ({ ...current, [key]: value }));
+  };
+  const clear = () => { setTarget(null); setPointedTool(undefined); setFilters(defaultFilters); };
   const toggleSaved = (id: string) =>
     setSavedToolIds((current) => {
       const next = new Set(current);
@@ -356,13 +399,19 @@ function Catalog({
 
   useEffect(() => {
     const current = new URL(window.location.href);
-    current.search = catalogFiltersToSearch(filters);
+    const params = new URLSearchParams(catalogFiltersToSearch(filters));
+    if (target) {
+      params.set("page", "catalog");
+      params.set("tool", target.toolId);
+      if (target.version) params.set("version", target.version);
+    }
+    current.search = params.toString();
     window.history.replaceState(
       null,
       "",
       `${current.pathname}${current.search}${current.hash}`,
     );
-  }, [filters]);
+  }, [filters, target]);
 
   useEffect(() => {
     writeSavedToolIds(savedToolIds);
@@ -396,6 +445,7 @@ function Catalog({
         title="Software catalog"
         copy="Find, compare, and support the tools your team relies on."
       />
+      {initialLink.missingTool && <p className="catalog-link-notice" role="status">The linked tool is no longer in the catalog. Browse or search for another tool below.</p>}
       <div className="catalog-layout">
         <div className="catalog-core">
           <label className="search-box">
@@ -467,7 +517,7 @@ function Catalog({
                   savedOnly ? "toolbar-button active" : "toolbar-button"
                 }
                 aria-pressed={savedOnly}
-                onClick={() => setSavedOnly((current) => !current)}
+                onClick={() => { setTarget(null); setPointedTool(undefined); setSavedOnly((current) => !current); }}
               >
                 <Icon name="bookmark" size={16} />
                 {savedOnly
@@ -517,10 +567,17 @@ function Catalog({
                 key={tool.id}
                 tool={tool}
                 expanded={expanded === tool.id}
-                toggle={() =>
-                  setExpanded(expanded === tool.id ? null : tool.id)
-                }
-                onDocs={() => onDocs(tool)}
+                initialVersion={initialLink.target?.toolId === tool.id ? initialLink.target.version : undefined}
+                pointed={pointedTool === tool.id}
+                versionUnavailable={initialLink.unavailableVersion && initialLink.target?.toolId === tool.id}
+                toggle={(version) => {
+                  const next = expanded === tool.id ? null : tool.id;
+                  setExpanded(next);
+                  setPointedTool(undefined);
+                  setTarget(next ? { toolId: next, version } : null);
+                }}
+                onVersionChange={(version) => { setPointedTool(undefined); setTarget({ toolId: tool.id, version }); }}
+                onDocs={(version) => onDocs(tool, version)}
                 saved={savedToolIdSet.has(tool.id)}
                 onToggleSaved={() => toggleSaved(tool.id)}
               />
@@ -555,6 +612,10 @@ function Catalog({
 }
 
 function ToolRow({
+  versionUnavailable,
+  initialVersion,
+  pointed,
+  onVersionChange,
   tool,
   expanded,
   toggle,
@@ -564,27 +625,41 @@ function ToolRow({
 }: {
   tool: Tool;
   expanded: boolean;
-  toggle: () => void;
-  onDocs: () => void;
+  versionUnavailable: boolean;
+  initialVersion?: string;
+  pointed: boolean;
+  onVersionChange: (version: string) => void;
+  toggle: (version: string) => void;
+  onDocs: (version: string) => void;
   saved: boolean;
   onToggleSaved: () => void;
 }) {
   const [selectedVersion, setSelectedVersion] = useState(
-    () => tool.releases[0].version,
+    () => resolveToolRelease(tool, initialVersion).version,
   );
-  const selectedRelease =
-    tool.releases.find((release) => release.version === selectedVersion) ??
-    tool.releases[0];
+  useEffect(() => { if (initialVersion) setSelectedVersion(initialVersion); }, [initialVersion]);
+  const selectedRelease = resolveToolRelease(tool, selectedVersion);
+  const rowRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!pointed || !expanded) return;
+    const frame = requestAnimationFrame(() => {
+      rowRef.current?.querySelector<HTMLButtonElement>(".tool-summary")?.focus({ preventScroll: true });
+      rowRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pointed, expanded]);
   const downloadTarget = getReleaseDownloadTarget(selectedRelease);
 
   return (
     <article
-      className={`tool-row ${expanded ? "expanded" : ""}`}
+      ref={rowRef}
+      id={`tool-${tool.id}`}
+      className={`tool-row ${expanded ? "expanded" : ""} ${pointed ? "linked-tool" : ""}`}
       role="listitem"
     >
       <button
         className="tool-summary"
-        onClick={toggle}
+        onClick={() => toggle(selectedRelease.version)}
         aria-expanded={expanded}
         aria-controls={`details-${tool.id}`}
       >
@@ -649,13 +724,14 @@ function ToolRow({
                   ))}
                 </dl>
               )}
+              {pointed && versionUnavailable && <p className="catalog-link-notice" role="status">The linked version is unavailable. Showing the default release, {selectedRelease.version}.</p>}
               <div className="detail-actions">
                 <label className="release-picker">
                   <span>Version</span>
                   <select
                     aria-label={`Download version for ${tool.name}`}
                     value={selectedRelease.version}
-                    onChange={(event) => setSelectedVersion(event.target.value)}
+                    onChange={(event) => { setSelectedVersion(event.target.value); onVersionChange(event.target.value); }}
                   >
                     {tool.releases.map((release) => (
                       <option key={release.version} value={release.version}>
@@ -677,7 +753,7 @@ function ToolRow({
                     {downloadTarget.external && <Icon name="external" size={15} />}
                   </a>
                 )}
-                <button className="secondary-button" onClick={onDocs}>
+                <button className="secondary-button" onClick={() => onDocs(selectedRelease.version)}>
                   <Icon name="book" />
                   View documentation
                 </button>
@@ -770,11 +846,15 @@ function UpdatesPage({ tools, onDocs }: { tools: Tool[]; onDocs: (tool: Tool) =>
 }
 
 function Documentation({
+  requestedVersion,
+  onCatalog,
   tools,
   docs,
   selected,
   setSelected,
 }: {
+  requestedVersion?: string;
+  onCatalog: (tool: Tool, version?: string) => void;
   tools: Tool[];
   docs: Record<string, string>;
   selected: string;
@@ -828,6 +908,14 @@ function Documentation({
               </div>
             </div>
           )}
+          {tool && <div className="doc-catalog-action">
+            <a className="secondary-button" href={toolPageHref("catalog", tool.id, requestedVersion)} onClick={(event) => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              onCatalog(tool, requestedVersion);
+            }}><Icon name="catalog" size={16} /> View in catalog <Icon name="arrow" size={16} /></a>
+            <span>{requestedVersion && resolveToolRelease(tool, requestedVersion).version !== requestedVersion ? "Requested version unavailable. Opens the default release." : requestedVersion ? `Opens version ${requestedVersion}` : "See approved downloads and available versions."}</span>
+          </div>}
           <MarkdownDocument content={docs[selected] || (tool ? docs[tool.id] : "") || ""} />
           {tool?.resources && tool.resources.length > 0 && (
             <section className="guide-resources" aria-labelledby="guide-resources-title">
@@ -942,6 +1030,7 @@ function About() {
           </article>
         </div>
       </section>
+      <p className="about-version"><small>Version {appVersion}</small></p>
     </section>
   );
 }
