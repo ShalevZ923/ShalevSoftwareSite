@@ -1,4 +1,5 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { nextGuideId, parseGuideVersions } from "./guideEditing";
 import type {
   GuideResource,
   Lifecycle,
@@ -15,6 +16,18 @@ type EditorProps = {
   setEditingTool: Dispatch<SetStateAction<ToolEntryPayload | null>>;
 };
 type ViewMode = "edit" | "split" | "preview";
+
+function GuideVersionsInput({ versions, onChange }: { versions: string[]; onChange: (versions: string[]) => void }) {
+  const [text, setText] = useState(() => versions.join(", "));
+  useEffect(() => {
+    if (JSON.stringify(parseGuideVersions(text)) !== JSON.stringify(versions))
+      setText(versions.join(", "));
+  }, [versions, text]);
+  return <input value={text} onChange={(event) => {
+    setText(event.target.value);
+    onChange(parseGuideVersions(event.target.value));
+  }} />;
+}
 
 export function OverviewEditor({
   section,
@@ -471,10 +484,14 @@ export function GuidesEditor({
   editingTool,
   setEditingTool,
   guideLibraryFiles,
+  guideLibraryStatus,
+  refreshGuideLibrary,
   guideViewMode,
   setGuideViewMode,
 }: EditorProps & {
   guideLibraryFiles: string[];
+  guideLibraryStatus: "loading" | "ready" | "error";
+  refreshGuideLibrary: () => void;
   guideViewMode: ViewMode;
   setGuideViewMode: Dispatch<SetStateAction<ViewMode>>;
 }) {
@@ -499,7 +516,7 @@ export function GuidesEditor({
             className="dev-small-btn"
             onClick={() => {
               const resource: GuideResource = {
-                id: "new-guide",
+                id: nextGuideId(editingTool.metadata.resources || []),
                 title: "New guide",
                 kind: "internal-guide",
                 format: "pdf",
@@ -529,6 +546,13 @@ export function GuidesEditor({
             + Add guide
           </button>
         </div>
+        <p role={guideLibraryStatus === "error" ? "alert" : "status"} className="dev-section-help">
+          {guideLibraryStatus === "loading" ? "Loading server guide library…"
+            : guideLibraryStatus === "error" ? "Could not load server files. Refresh to try again."
+            : guideLibraryFiles.length === 0 ? "No server files available. Ask an administrator to place a PDF or PowerPoint in this tool's guide library, then refresh. For a new tool, save it first."
+            : `${guideLibraryFiles.length} server files available.`}
+        </p>
+        <button type="button" className="dev-small-btn" disabled={guideLibraryStatus === "loading"} onClick={refreshGuideLibrary}>Refresh server files</button>
         {(editingTool.metadata.resources || []).map((resource, idx) => {
           const update = (change: Partial<GuideResource>) =>
             setEditingTool((prev) => {
@@ -584,8 +608,7 @@ export function GuidesEditor({
                         file
                           ? {
                               file:
-                                guideLibraryFiles[0] ||
-                                `${editingTool.id}/guide.pdf`,
+                                guideLibraryFiles.find((file) => file.endsWith(`.${resource.format}`)) || "",
                               url: undefined,
                             }
                           : { url: "https://", file: undefined },
@@ -593,7 +616,7 @@ export function GuidesEditor({
                     }}
                   >
                     <option value="url">Approved HTTPS link</option>
-                    <option value="file" disabled={resource.format === "web"}>
+                    <option value="file" disabled={resource.format === "web" || guideLibraryStatus !== "ready" || !guideLibraryFiles.some((file) => file.endsWith(`.${resource.format}`))}>
                       Server guide library
                     </option>
                   </select>
@@ -604,15 +627,14 @@ export function GuidesEditor({
                       value={resource.file}
                       onChange={(e) => update({ file: e.target.value })}
                     >
-                      {guideLibraryFiles.length ? (
-                        guideLibraryFiles.map((file) => (
-                          <option key={file} value={file}>
-                            {file}
-                          </option>
-                        ))
-                      ) : (
-                        <option value={resource.file}>{resource.file}</option>
+                      {!guideLibraryFiles.some((file) => file === resource.file && file.endsWith(`.${resource.format}`)) && (
+                        <option value={resource.file || ""}>
+                          {resource.file ? `${resource.file} — unavailable` : "Select a server file"}
+                        </option>
                       )}
+                      {guideLibraryFiles.filter((file) => file.endsWith(`.${resource.format}`)).map((file) => (
+                        <option key={file} value={file}>{file}</option>
+                      ))}
                     </select>
                   </Field>
                 ) : (
@@ -624,16 +646,10 @@ export function GuidesEditor({
                   </Field>
                 )}
                 <Field label="Applies to versions">
-                  <input
-                    value={resource.appliesTo.join(", ")}
-                    onChange={(e) =>
-                      update({
-                        appliesTo: e.target.value
-                          .split(",")
-                          .map((item) => item.trim())
-                          .filter(Boolean),
-                      })
-                    }
+                  <GuideVersionsInput
+                    key={`${editingTool.id}-${resource.id}`}
+                    versions={resource.appliesTo}
+                    onChange={(appliesTo) => update({ appliesTo })}
                   />
                 </Field>
               </div>

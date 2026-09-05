@@ -57,3 +57,11 @@ If network access is required, place the server behind a trusted TLS reverse pro
 - If an edit is wrong, inspect the working-tree diff and revert only the affected hunk or file through the normal Git workflow. Preserve unrelated uncommitted work.
 - A `400 Malformed request URL` response means the request path had invalid percent encoding. A `403 Forbidden` response means the resolved static path escaped `dist/`.
 - If startup refuses the bind, return to the default loopback host or finish the TLS proxy and firewall setup before using the explicit proxy assertion.
+
+### Guide editor audit fixes
+
+- New guides receive unique internal IDs automatically; administrators do not need to edit IDs.
+- Server-library loading, failure, and empty states are distinct. Use **Refresh server files** after an administrator adds a PDF/PPTX to `guide-library/<tool-id>/`. Save a new tool before attaching its server files. Only available files matching the selected format can be selected; missing existing references remain visible as unavailable.
+- **Applies to versions** accepts comma-separated versions without removing separators while typing. Saved metadata trims whitespace and removes duplicate/empty items.
+
+Validation: `pnpm verify` passed (48 tests, TypeScript, production build, artifact checks). Browser checks confirmed empty-library guidance, disabled unavailable source, and typing a comma/space followed by a second version with the value retained after Refresh. These focused checks do not replace deployment acceptance.

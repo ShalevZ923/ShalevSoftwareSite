@@ -67,6 +67,8 @@ export function DeveloperStudio({
   const [selectedDocName, setSelectedDocName] = useState<string>("");
   const [editingDocContent, setEditingDocContent] = useState<string>("");
   const [guideLibraryFiles, setGuideLibraryFiles] = useState<string[]>([]);
+  const [guideLibraryStatus, setGuideLibraryStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [guideLibraryRevision, setGuideLibraryRevision] = useState(0);
 
   const [guideViewMode, setGuideViewMode] = useState<
     "split" | "edit" | "preview"
@@ -215,22 +217,30 @@ export function DeveloperStudio({
 
   useEffect(() => {
     setGuideLibraryFiles([]);
-    if (!selectedToolId) return;
+    if (!selectedToolId) { setGuideLibraryStatus("ready"); return; }
+    setGuideLibraryStatus("loading");
     const controller = new AbortController();
     fetch(
       `/api/developer/guide-library/${encodeURIComponent(selectedToolId)}`,
       { headers, signal: controller.signal },
     )
-      .then((res) => (res.ok ? res.json() : []))
+      .then((res) => {
+        if (!res.ok) throw new Error("Unable to load guide library");
+        return res.json();
+      })
       .then((files: string[]) => {
-        if (!controller.signal.aborted)
-          setGuideLibraryFiles(Array.isArray(files) ? files : []);
+        if (!Array.isArray(files) || files.some((file) => typeof file !== "string"))
+          throw new Error("Invalid guide library response");
+        if (!controller.signal.aborted) {
+          setGuideLibraryFiles(files);
+          setGuideLibraryStatus("ready");
+        }
       })
       .catch(() => {
-        if (!controller.signal.aborted) setGuideLibraryFiles([]);
+        if (!controller.signal.aborted) setGuideLibraryStatus("error");
       });
     return () => controller.abort();
-  }, [headers, selectedToolId]);
+  }, [headers, selectedToolId, guideLibraryRevision]);
 
   // Select tool
   const handleSelectTool = (tool: ToolEntryPayload) => {
@@ -575,6 +585,8 @@ export function DeveloperStudio({
                       editingTool={editingTool}
                       setEditingTool={setEditingTool}
                       guideLibraryFiles={guideLibraryFiles}
+                      guideLibraryStatus={guideLibraryStatus}
+                      refreshGuideLibrary={() => setGuideLibraryRevision((revision) => revision + 1)}
                       guideViewMode={guideViewMode}
                       setGuideViewMode={setGuideViewMode}
                     />
