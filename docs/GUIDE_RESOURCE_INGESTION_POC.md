@@ -4,7 +4,7 @@ Developer Studio now owns the authoring experience for catalog guide resources. 
 
 ## Administrator workflow
 
-1. Start the protected local Developer Studio and select a software entry.
+1. Run `pnpm dev`, open the protected local Developer Studio link printed in the terminal, and select a software entry.
 2. In **Guides & files**, choose **Add guide**.
 3. Select either **Approved HTTPS link** for a SharePoint/intranet document or **Server guide library** for a PDF/PPTX already stored below `guide-library/<tool-id>/`.
 4. Enter the title, type, format, applicable versions, owner, and review date, then save the tool. The server validates catalog metadata, confirms every server-file selection exists below its approved tool directory, and performs a bounded `HEAD` check for each HTTPS resource.

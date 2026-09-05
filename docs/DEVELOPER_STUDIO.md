@@ -12,13 +12,13 @@ Developer Studio is an optional local authoring interface. It runs `scripts/serv
    pnpm verify
    ```
 
-3. Start the server:
+3. Start the Studio development server:
 
    ```bash
-   pnpm serve
+   pnpm dev
    ```
 
-4. Open the Developer Studio link printed by the process. It uses a URL fragment such as `?page=developer#token=...`; fragments are not sent in HTTP requests or Referer headers. The app removes the token from the address bar before verification and stores it only for the current browser session.
+4. Open the Developer Studio link printed by the process. It uses a URL fragment such as `?page=developer#token=...`; fragments are not sent in HTTP requests or Referer headers. The app removes the token from the address bar before verification and stores it only for the current browser session. `pnpm dev:client` remains available for a Vite-only public-catalog UI session; it deliberately does not expose Developer Studio or issue a token.
 5. After editing, inspect `git diff`, run `pnpm verify`, and submit the change through normal review. Do not publish directly from Developer Studio.
 6. Select **Exit Studio** when finished. This clears the browser session token. Restarting the Node.js process invalidates the old token and creates a new one.
 
