@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { loadCatalogEntries, parseReleaseList, renderCatalogFile, renderGeneratedCatalog, slugifyId } from "./catalog-content.mjs";
+import { loadCatalogEntries, loadTaxonomy, parseReleaseList, renderCatalogEntryFiles, renderGeneratedCatalog, repositoryRoot, slugifyId } from "./catalog-content.mjs";
+import { relative } from "node:path";
 import { descriptionSha256, requireApprovedDescription, trustedGitLabApiBase } from "./gitlab-catalog-security.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -44,6 +45,8 @@ function optionalFacts(value) {
   });
 }
 
+const taxonomy = await loadTaxonomy();
+
 function parseEntry(issue, order) {
   const body = issue.description;
   if (typeof body !== "string") throw new Error("Issue description is unavailable");
@@ -51,13 +54,17 @@ function parseEntry(issue, order) {
   const supportName = section(body, "Support owner");
   const id = slugifyId(name);
   if (!id) throw new Error("Software name cannot produce a valid catalog id");
+  const categoryId = section(body, "Category ID");
+  const category = taxonomy.find(({ id }) => id === categoryId);
+  if (!category) throw new Error(`Category ID is not in content/taxonomy/categories.json: ${categoryId}`);
   return {
+    categoryId,
     metadata: {
       id,
       order,
       name,
       company: section(body, "Vendor or company"),
-      category: section(body, "Category"),
+      category: category.label,
       platforms: selectedPlatforms(section(body, "Supported platforms")),
       lifecycle: section(body, "Lifecycle"),
       icon: section(body, "Catalog tile"),
@@ -77,6 +84,19 @@ function parseEntry(issue, order) {
   };
 }
 
+async function entryFiles(entry) {
+  const files = renderCatalogEntryFiles(entry.metadata, entry.guide, entry.categoryId).files;
+  const vendorFile = files[0];
+  try {
+    const currentVendor = await readFile(vendorFile.path, "utf8");
+    if (currentVendor !== vendorFile.content) throw new Error(`Vendor directory already belongs to a different company: ${vendorFile.path}`);
+    files.shift();
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  return files.map((file) => ({ ...file, path: relative(repositoryRoot, file.path) }));
+}
+
 if (process.argv.includes("--description-sha256")) {
   const issue = JSON.parse(await readStandardInput());
   process.stdout.write(`${descriptionSha256(issue.description)}\n`);
@@ -89,7 +109,7 @@ if (process.argv.includes("--dry-run")) {
   const issue = JSON.parse(await readFile(issuePath, "utf8"));
   const existingEntries = await loadCatalogEntries();
   const entry = parseEntry(issue, Math.max(...existingEntries.map(({ metadata }) => metadata.order)) + 1);
-  renderCatalogFile(entry.metadata, entry.guide);
+  await entryFiles(entry);
   renderGeneratedCatalog([...existingEntries, entry].sort((left, right) => left.metadata.order - right.metadata.order));
   process.stdout.write(`Validated catalog entry ${entry.metadata.id} from GitLab issue #${issue.iid}.\n`);
   process.exit(0);
@@ -151,7 +171,7 @@ await api("/repository/commits", {
     branch,
     commit_message: `content: add catalog entry from issue #${issue.iid}`,
     actions: [
-      { action: "create", file_path: `content/tools/${entry.metadata.id}.md`, content: renderCatalogFile(entry.metadata, entry.guide) },
+      ...(await entryFiles(entry)).map((file) => ({ action: "create", file_path: file.path, content: file.content })),
       { action: "update", file_path: "src/generated/catalog.ts", content: generated },
     ],
   }),

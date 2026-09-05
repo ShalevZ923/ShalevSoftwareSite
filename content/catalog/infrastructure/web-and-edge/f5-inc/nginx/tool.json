@@ -1,0 +1,1 @@
+{"id":"nginx","order":8,"name":"NGINX","platforms":["Linux"],"lifecycle":"Current","icon":"NX","updated":"Jul 15","description":"A high-performance web server, reverse proxy, and load balancer for internal application delivery.","support":{"name":"Avi Shaham","team":"Infrastructure","initials":"AS","email":"infra@atlas.local"},"tags":["Server","Reverse proxy","Linux"]}

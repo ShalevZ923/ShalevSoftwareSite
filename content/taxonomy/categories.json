@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "categories": [
+    { "id": "data/database-tools", "label": "Database Tools", "description": "Database clients, schema tools, and query utilities." },
+    { "id": "development/debuggers", "label": "Debuggers", "description": "Interactive debugging and diagnostic tools for development." },
+    { "id": "development/extensions-and-add-ons", "label": "Extensions & Add-ons", "description": "Approved extensions for IDEs and engineering software." },
+    { "id": "development/ides-and-editors", "label": "IDEs & Code Editors", "description": "Integrated development environments and code editors." },
+    { "id": "development/profilers", "label": "Profilers", "description": "Runtime, memory, and performance profiling tools." },
+    { "id": "infrastructure/diagnostics", "label": "Infrastructure Diagnostics", "description": "Network and host diagnosis tools." },
+    { "id": "infrastructure/web-and-edge", "label": "Web & Edge Infrastructure", "description": "Web servers, reverse proxies, and edge delivery software." },
+    { "id": "platform/containers", "label": "Containers", "description": "Container runtimes, local orchestration, and image tooling." },
+    { "id": "quality/api-design", "label": "API Design", "description": "API design, collaboration, and request-development tools." },
+    { "id": "quality/api-testing", "label": "API Testing", "description": "API clients, contract testing, and request-validation tools." },
+    { "id": "quality/performance-testing", "label": "Performance Testing", "description": "Load, stress, and performance analysis tools." },
+    { "id": "quality/test-automation", "label": "Test Automation", "description": "Functional, integration, and automated test tooling." },
+    { "id": "security/application-security", "label": "Application Security", "description": "Developer-facing application-security tools." }
+  ]
+}

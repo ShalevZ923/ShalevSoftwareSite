@@ -1,15 +1,16 @@
 import { createServer } from "node:http";
-import { readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { existsSync, createReadStream } from "node:fs";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import {
   contentDirectory,
+  catalogEntryDirectory,
   loadCatalogEntries,
+  loadTaxonomy,
   nextCatalogOrder,
-  renderCatalogFile,
-  validateCatalogEntry,
+  renderCatalogEntryFiles,
   writeGeneratedCatalog,
 } from "./catalog-content.mjs";
 
@@ -129,6 +130,29 @@ function isLoopbackHost(host) {
   return host === "127.0.0.1" || host === "localhost" || host === "::1";
 }
 
+async function categoryIdForLabel(label) {
+  const category = (await loadTaxonomy()).find((item) => item.label === label);
+  if (!category) throw new Error(`Unknown catalog category: ${label}`);
+  return category.id;
+}
+
+async function writeCatalogEntry(metadata, guide) {
+  const categoryId = await categoryIdForLabel(metadata.category);
+  const { files } = renderCatalogEntryFiles(metadata, guide, categoryId);
+  const vendorFile = files[0];
+  try {
+    const existingVendor = JSON.parse(await readFile(vendorFile.path, "utf8"));
+    if (existingVendor.name !== metadata.company) throw new Error(`Vendor directory already belongs to ${existingVendor.name}`);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  for (const file of files) {
+    await mkdir(dirname(file.path), { recursive: true });
+    await writeFile(file.path, file.content, "utf8");
+  }
+  await writeGeneratedCatalog();
+}
+
 export function assertSafeBindHost(host, behindTlsProxy = false) {
   if (!isLoopbackHost(host) && !behindTlsProxy) {
     throw new Error(
@@ -222,8 +246,9 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
             return sendJson(res, 400, { error: "metadata and guide are required" });
           }
 
-          const targetFile = join(contentDirectory, `${metadata.id}.md`);
-          if (existsSync(targetFile)) {
+          const categoryId = await categoryIdForLabel(metadata.category);
+          const targetDirectory = catalogEntryDirectory(categoryId, metadata.company, metadata.id);
+          if (existsSync(targetDirectory)) {
             return sendJson(res, 409, { error: `Tool ${metadata.id} already exists` });
           }
 
@@ -231,9 +256,7 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
             metadata.order = await nextCatalogOrder();
           }
 
-          validateCatalogEntry(targetFile, metadata, guide);
-          await writeFile(targetFile, renderCatalogFile(metadata, guide), "utf8");
-          await writeGeneratedCatalog();
+          await writeCatalogEntry(metadata, guide);
           return sendJson(res, 201, { success: true, tool: metadata });
         }
 
@@ -241,17 +264,11 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
         const toolMatch = /^\/api\/developer\/tools\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
         if (toolMatch) {
           const toolId = toolMatch[1];
-          const targetFile = join(contentDirectory, `${toolId}.md`);
-
           if (req.method === "GET") {
-            if (!existsSync(targetFile)) {
-              return sendJson(res, 404, { error: `Tool ${toolId} not found` });
-            }
-            const content = await readFile(targetFile, "utf8");
             const entries = await loadCatalogEntries(contentDirectory);
             const entry = entries.find((item) => item.metadata.id === toolId);
             if (!entry) return sendJson(res, 404, { error: `Tool ${toolId} not found` });
-            return sendJson(res, 200, { metadata: entry.metadata, guide: entry.guide, raw: content });
+            return sendJson(res, 200, { metadata: entry.metadata, guide: entry.guide });
           }
 
           if (req.method === "PUT") {
@@ -263,9 +280,13 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
               return sendJson(res, 400, { error: "metadata.id cannot be changed" });
             }
 
-            validateCatalogEntry(targetFile, metadata, guide);
-            await writeFile(targetFile, renderCatalogFile(metadata, guide), "utf8");
-            await writeGeneratedCatalog();
+            const entries = await loadCatalogEntries(contentDirectory);
+            const current = entries.find((item) => item.metadata.id === toolId);
+            if (!current) return sendJson(res, 404, { error: `Tool ${toolId} not found` });
+            if (metadata.company !== current.metadata.company || metadata.category !== current.metadata.category) {
+              return sendJson(res, 400, { error: "metadata.company and metadata.category cannot be changed through Developer Studio" });
+            }
+            await writeCatalogEntry(metadata, guide);
             return sendJson(res, 200, { success: true, tool: metadata });
           }
         }

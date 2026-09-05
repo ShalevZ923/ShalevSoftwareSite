@@ -16,8 +16,8 @@ body:
     attributes: { label: Vendor or company }
     validations: { required: true }
   - type: input
-    id: category
-    attributes: { label: Category, placeholder: IDE, Containers, Database }
+    id: category_id
+    attributes: { label: Category ID, description: Must match content/taxonomy/categories.json, placeholder: development/ides-and-editors }
     validations: { required: true }
   - type: checkboxes
     id: platforms

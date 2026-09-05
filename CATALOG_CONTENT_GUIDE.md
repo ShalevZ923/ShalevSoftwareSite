@@ -1,6 +1,6 @@
 # Maintaining the catalog
 
-Every software record is one Markdown file in [`content/tools`](./content/tools). The file begins with JSON front matter for catalog-card data and continues with the guide shown in the documentation view. The UI itself reads the generated `src/generated/catalog.ts`; do not edit that generated file directly.
+Every software record is a small source directory in [`content/catalog`](./content/catalog), organized as `<category-id>/<vendor-id>/<tool-id>`. Each tool has a `tool.json` catalog record, `guide.md` documentation, and one `releases/<version>.json` file per approved version. The category ID must come from [`content/taxonomy/categories.json`](./content/taxonomy/categories.json); the vendor directory is derived from `vendor.json.name`. The UI reads the generated `src/generated/catalog.ts`; do not edit that generated file directly.
 
 ## Local contributor path
 
@@ -16,7 +16,7 @@ The helper asks for the required visible metadata and creates one file with a sa
 pnpm verify
 ```
 
-For an existing tool, edit only its corresponding `content/tools/<id>.md` file and run:
+For an existing tool, edit its `content/catalog/<category>/<vendor>/<tool>/` directory and run:
 
 ```bash
 pnpm catalog:build
@@ -27,7 +27,9 @@ pnpm verify
 
 ## Content rules
 
-- File names and `id` values use lowercase kebab-case and must match, for example `pycharm.md` and `"id": "pycharm"`.
+- Category IDs are canonical hierarchical paths such as `development/ides-and-editors`. Add a category to the taxonomy only when it is broadly reusable; do not create one-off category names for a single product.
+- Vendor and tool directories use lowercase kebab-case. `vendor.json.name` must map to its vendor directory and `tool.json.id` must equal its tool directory, for example `development/ides-and-editors/jetbrains/intellij/tool.json`.
+- Keep product metadata in `tool.json`, support guidance in `guide.md`, and each approved release in `releases/<version>.json`. Release filenames must match their version exactly; add a new release file instead of replacing history unless a reviewed correction is needed.
 - `order` is a unique positive integer that preserves the catalog's curated “recently updated” ordering. The helper assigns the next value automatically.
 - Releases must be listed newest first. Each release has a unique version and exactly one approved target:
   - A credential-free HTTPS URL in `download` for an external vendor download.
@@ -53,7 +55,7 @@ Non-code contributors can use GitHub’s **Add software to the catalog** Issue F
 This form never changes the site on its own. A maintainer must verify the owner, release target, guide, and absence of sensitive information, then apply the `catalog-approved` label. The repository workflow then:
 
 1. Creates an isolated branch for that issue.
-2. Converts the approved form into one `content/tools/<id>.md` file.
+2. Converts the approved form into the category/vendor/tool directory and per-version release records.
 3. Regenerates the catalog, installs locked dependencies, and runs `pnpm verify`.
 4. Opens a pull request for normal review and merge.
 

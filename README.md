@@ -24,13 +24,15 @@ Open the fragment-based access link printed at startup. The token is removed fro
 
 ## Content model
 
-Each tool lives in one file under [`content/tools`](./content/tools): JSON metadata followed by its Markdown guide. Add a tool interactively with `pnpm catalog:add`, or edit one existing file and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` is checked into Git and must not be edited by hand.
+Catalog source is organized for long-term ownership: [`content/catalog/<category>/<vendor>/<tool>`](./content/catalog), with a `tool.json`, `guide.md`, and one `releases/<version>.json` record per approved version. Categories are controlled by [`content/taxonomy/categories.json`](./content/taxonomy/categories.json), so a new category is an explicit, reviewed taxonomy change—not a spelling variation. Add a tool interactively with `pnpm catalog:add`, or edit its source directory and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` is checked into Git and must not be edited by hand.
 
 Every entry has a stable ID, ownership details, platform/lifecycle metadata, one approved target per release, tags, and a guide containing `## Install` and `## Support`. A target can be a trusted HTTPS URL or a same-server artifact pointer such as `intellij/2025.1/ideaIU-2025.1.exe`. The validator rejects duplicate IDs/orders, unsafe URLs or artifact paths, remote guide images, invalid support details, and credential-like fact labels.
 
 For browser-based contribution, open the **Add software to the catalog** GitHub Issue Form. A maintainer reviews the submission and applies the `catalog-approved` label; only then does the workflow create a validated pull request for normal review and merge. GitLab projects receive the matching Issue Template and an approval-gated manual CI job that creates a merge request. See [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md) for both paths and the [GitLab catalog contribution guide](./docs/GITLAB_CATALOG_CONTRIBUTION.md) for the one-time setup and operating steps.
 
 For copy-paste examples, images, optional catalog facts such as license references, and the safety boundary for sensitive values, see [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md).
+
+The production-oriented source boundaries, catalog hierarchy, taxonomy expansion policy, and operating rules are documented in [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md).
 
 ## Release gate
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseReleaseList, validateCatalogEntry } from "./catalog-content.mjs";
+import { loadCatalogEntries, parseReleaseList, validateCatalogEntry } from "./catalog-content.mjs";
 
 describe("release list parsing", () => {
   it("keeps each approved version paired with its HTTPS download URL", () => {
@@ -87,5 +87,19 @@ describe("optional tool notices", () => {
       ...metadata,
       releases: [{ version: "1.0", download: "https://example.com", artifact: "test-tool/1.0/test-tool.msi" }],
     }, guide)).toThrow("exactly one download or artifact");
+  });
+});
+
+describe("hierarchical catalog source", () => {
+  it("assembles a tool from its category, vendor, guide, and per-version release files", async () => {
+    const entries = await loadCatalogEntries();
+    const intellij = entries.find(({ metadata }) => metadata.id === "intellij");
+
+    expect(intellij?.metadata).toMatchObject({
+      company: "JetBrains",
+      category: "IDEs & Code Editors",
+      releases: [{ version: "2025.1", download: "https://www.jetbrains.com/idea/download/" }],
+    });
+    expect(intellij?.guide).toContain("## Install");
   });
 });

@@ -1,22 +1,3 @@
----
-{
-  "id": "jq",
-  "order": 9,
-  "name": "jq",
-  "company": "jqlang",
-  "category": "Debugging",
-  "platforms": ["Windows"],
-  "lifecycle": "New",
-  "icon": "JQ",
-  "releases": [
-    { "version": "1.8.2", "artifact": "jq/1.8.2/jq-windows-amd64.exe" }
-  ],
-  "updated": "Today",
-  "description": "A lightweight command-line JSON processor, hosted here as the same-server download proof of concept.",
-  "support": {"name": "Noam Levi", "team": "Platform Engineering", "initials": "NL", "email": "platform@atlas.local"},
-  "tags": ["JSON", "CLI", "Windows", "PoC"]
-}
----
 # jq
 
 This entry proves that Tool Atlas can serve a reviewed installer directly from its own package storage instead of redirecting to a vendor URL.

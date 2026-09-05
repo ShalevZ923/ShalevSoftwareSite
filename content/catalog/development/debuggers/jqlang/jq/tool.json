@@ -1,0 +1,12 @@
+{
+  "id": "jq",
+  "order": 9,
+  "name": "jq",
+  "platforms": ["Windows"],
+  "lifecycle": "New",
+  "icon": "JQ",
+  "updated": "Today",
+  "description": "A lightweight command-line JSON processor, hosted here as the same-server download proof of concept.",
+  "support": {"name": "Noam Levi", "team": "Platform Engineering", "initials": "NL", "email": "platform@atlas.local"},
+  "tags": ["JSON", "CLI", "Windows", "PoC"]
+}

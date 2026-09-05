@@ -1,11 +1,9 @@
-// Generated from content/tools/*.md by scripts/build-catalog.mjs. Do not edit manually.
+// Generated from content/catalog/**/{tool.json,guide.md,releases/*.json} by scripts/build-catalog.mjs. Do not edit manually.
 
 export const tools = [
   {
     "id": "intellij",
     "name": "IntelliJ IDEA",
-    "company": "JetBrains",
-    "category": "IDE",
     "platforms": [
       "Windows",
       "Linux",
@@ -13,12 +11,6 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "IJ",
-    "releases": [
-      {
-        "version": "2025.1",
-        "download": "https://www.jetbrains.com/idea/download/"
-      }
-    ],
     "updated": "Today",
     "description": "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
     "support": {
@@ -46,13 +38,19 @@ export const tools = [
         "label": "Review cycle",
         "value": "Annual"
       }
+    ],
+    "company": "JetBrains",
+    "category": "IDEs & Code Editors",
+    "releases": [
+      {
+        "version": "2025.1",
+        "download": "https://www.jetbrains.com/idea/download/"
+      }
     ]
   },
   {
     "id": "vscode",
     "name": "Visual Studio Code",
-    "company": "Microsoft",
-    "category": "IDE",
     "platforms": [
       "Windows",
       "Linux",
@@ -60,12 +58,6 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "VS",
-    "releases": [
-      {
-        "version": "1.103",
-        "download": "https://code.visualstudio.com/download"
-      }
-    ],
     "updated": "Yesterday",
     "description": "A lightweight, extensible code editor for everyday development, remote workspaces, and team-standard extensions.",
     "support": {
@@ -79,13 +71,19 @@ export const tools = [
       "Editor",
       "Remote development",
       "Microsoft"
+    ],
+    "company": "Microsoft",
+    "category": "IDEs & Code Editors",
+    "releases": [
+      {
+        "version": "1.103",
+        "download": "https://code.visualstudio.com/download"
+      }
     ]
   },
   {
     "id": "docker",
     "name": "Docker Desktop",
-    "company": "Docker, Inc.",
-    "category": "Containers",
     "platforms": [
       "Windows",
       "Linux",
@@ -93,12 +91,6 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "DK",
-    "releases": [
-      {
-        "version": "4.45",
-        "download": "https://www.docker.com/products/docker-desktop/"
-      }
-    ],
     "updated": "3 days ago",
     "description": "Local container development with Docker Compose, image management, and a desktop dashboard for runtime inspection.",
     "support": {
@@ -111,13 +103,19 @@ export const tools = [
       "Containers",
       "Runtime",
       "DevOps"
+    ],
+    "company": "Docker, Inc.",
+    "category": "Containers",
+    "releases": [
+      {
+        "version": "4.45",
+        "download": "https://www.docker.com/products/docker-desktop/"
+      }
     ]
   },
   {
     "id": "postman",
     "name": "Postman",
-    "company": "Postman, Inc.",
-    "category": "API Design",
     "platforms": [
       "Windows",
       "Linux",
@@ -126,12 +124,6 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "PM",
-    "releases": [
-      {
-        "version": "11.60",
-        "download": "https://www.postman.com/downloads/"
-      }
-    ],
     "updated": "5 days ago",
     "description": "An API collaboration workspace for testing requests, sharing collections, and documenting integrations.",
     "support": {
@@ -144,13 +136,19 @@ export const tools = [
       "API",
       "Testing",
       "Collections"
+    ],
+    "company": "Postman, Inc.",
+    "category": "API Design",
+    "releases": [
+      {
+        "version": "11.60",
+        "download": "https://www.postman.com/downloads/"
+      }
     ]
   },
   {
     "id": "wireshark",
     "name": "Wireshark",
-    "company": "Wireshark Foundation",
-    "category": "Debugging",
     "platforms": [
       "Windows",
       "Linux",
@@ -158,12 +156,6 @@ export const tools = [
     ],
     "lifecycle": "Current",
     "icon": "WS",
-    "releases": [
-      {
-        "version": "4.4",
-        "download": "https://www.wireshark.org/download.html"
-      }
-    ],
     "updated": "Aug 18",
     "description": "Network protocol analyzer for capture, inspection, and troubleshooting across common protocols.",
     "support": {
@@ -176,13 +168,19 @@ export const tools = [
       "Network",
       "Debugging",
       "Security"
+    ],
+    "company": "Wireshark Foundation",
+    "category": "Infrastructure Diagnostics",
+    "releases": [
+      {
+        "version": "4.4",
+        "download": "https://www.wireshark.org/download.html"
+      }
     ]
   },
   {
     "id": "jmeter",
     "name": "Apache JMeter",
-    "company": "Apache Software Foundation",
-    "category": "Performance testing",
     "platforms": [
       "Windows",
       "Linux",
@@ -190,12 +188,6 @@ export const tools = [
     ],
     "lifecycle": "Legacy",
     "icon": "JM",
-    "releases": [
-      {
-        "version": "5.6.3",
-        "download": "https://jmeter.apache.org/download_jmeter.cgi"
-      }
-    ],
     "updated": "Aug 02",
     "description": "A mature open-source tool for load testing, functional testing, and protocol-level performance analysis.",
     "support": {
@@ -208,13 +200,19 @@ export const tools = [
       "Load testing",
       "Performance",
       "Apache"
+    ],
+    "company": "Apache Software Foundation",
+    "category": "Performance Testing",
+    "releases": [
+      {
+        "version": "5.6.3",
+        "download": "https://jmeter.apache.org/download_jmeter.cgi"
+      }
     ]
   },
   {
     "id": "dbeaver",
     "name": "DBeaver Community",
-    "company": "DBeaver Corp",
-    "category": "Database",
     "platforms": [
       "Windows",
       "Linux",
@@ -222,12 +220,6 @@ export const tools = [
     ],
     "lifecycle": "New",
     "icon": "DB",
-    "releases": [
-      {
-        "version": "25.1",
-        "download": "https://dbeaver.io/download/"
-      }
-    ],
     "updated": "Jul 29",
     "description": "Universal database management for exploring data, editing schemas, and running SQL across common engines.",
     "support": {
@@ -240,24 +232,24 @@ export const tools = [
       "Database",
       "SQL",
       "New"
+    ],
+    "company": "DBeaver Corp",
+    "category": "Database Tools",
+    "releases": [
+      {
+        "version": "25.1",
+        "download": "https://dbeaver.io/download/"
+      }
     ]
   },
   {
     "id": "nginx",
     "name": "NGINX",
-    "company": "F5, Inc.",
-    "category": "Server",
     "platforms": [
       "Linux"
     ],
     "lifecycle": "Current",
     "icon": "NX",
-    "releases": [
-      {
-        "version": "1.28",
-        "download": "https://nginx.org/en/download.html"
-      }
-    ],
     "updated": "Jul 15",
     "description": "A high-performance web server, reverse proxy, and load balancer for internal application delivery.",
     "support": {
@@ -270,24 +262,24 @@ export const tools = [
       "Server",
       "Reverse proxy",
       "Linux"
+    ],
+    "company": "F5, Inc.",
+    "category": "Web & Edge Infrastructure",
+    "releases": [
+      {
+        "version": "1.28",
+        "download": "https://nginx.org/en/download.html"
+      }
     ]
   },
   {
     "id": "jq",
     "name": "jq",
-    "company": "jqlang",
-    "category": "Debugging",
     "platforms": [
       "Windows"
     ],
     "lifecycle": "New",
     "icon": "JQ",
-    "releases": [
-      {
-        "version": "1.8.2",
-        "artifact": "jq/1.8.2/jq-windows-amd64.exe"
-      }
-    ],
     "updated": "Today",
     "description": "A lightweight command-line JSON processor, hosted here as the same-server download proof of concept.",
     "support": {
@@ -301,6 +293,14 @@ export const tools = [
       "CLI",
       "Windows",
       "PoC"
+    ],
+    "company": "jqlang",
+    "category": "Debuggers",
+    "releases": [
+      {
+        "version": "1.8.2",
+        "artifact": "jq/1.8.2/jq-windows-amd64.exe"
+      }
     ]
   }
 ];

@@ -1,28 +1,3 @@
----
-{
-  "id": "intellij",
-  "order": 1,
-  "name": "IntelliJ IDEA",
-  "company": "JetBrains",
-  "category": "IDE",
-  "platforms": ["Windows", "Linux", "macOS"],
-  "lifecycle": "Current",
-  "icon": "IJ",
-  "releases": [
-    { "version": "2025.1", "download": "https://www.jetbrains.com/idea/download/" }
-  ],
-  "updated": "Today",
-  "description": "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
-  "support": {"name": "Maya Cohen", "team": "Developer Experience", "initials": "MC", "email": "devex@atlas.local"},
-
-  "tags": ["Java", "Kotlin", "IDE", "JetBrains"],
-  "facts": [
-    {"label": "License", "value": "Named-user subscription"},
-    {"label": "Asset record", "value": "DEV-IDE-001"},
-    {"label": "Review cycle", "value": "Annual"}
-  ]
-}
----
 # IntelliJ IDEA
 
 IntelliJ IDEA is the supported default for JVM development. It is licensed through the internal developer portal.

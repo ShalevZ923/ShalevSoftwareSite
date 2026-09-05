@@ -12,9 +12,9 @@ catalog-approved label before the manual CI job can create a merge request.
 
 <!-- Required. -->
 
-### Category
+### Category ID
 
-<!-- Example: IDE, Containers, Database. Required. -->
+<!-- Required. Must exactly match content/taxonomy/categories.json, for example development/ides-and-editors. -->
 
 ### Supported platforms
 

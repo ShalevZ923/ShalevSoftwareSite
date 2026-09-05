@@ -1,0 +1,17 @@
+{
+  "id": "example-tool",
+  "order": 999,
+  "name": "Example Tool",
+  "platforms": ["Windows", "Linux", "macOS"],
+  "lifecycle": "Current",
+  "icon": "ET",
+  "updated": "2026-09-04",
+  "description": "Replace with a concise, catalog-safe description.",
+  "support": {
+    "name": "Support Owner",
+    "team": "Engineering Team",
+    "initials": "SO",
+    "email": "team@example.com"
+  },
+  "tags": ["Engineering"]
+}
