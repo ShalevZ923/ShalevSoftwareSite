@@ -55,9 +55,9 @@ function requiredArtifactPointer(value, field, source) {
   return artifact;
 }
 
-function requiredVersion(value, source) {
-  const version = requiredString(value, "releases.version", source);
-  if (!versionPattern.test(version)) fail(source, "releases.version must be filename-safe");
+function requiredVersion(value, source, field = "releases.version") {
+  const version = requiredString(value, field, source);
+  if (!versionPattern.test(version)) fail(source, `${field} must be filename-safe`);
   return version;
 }
 
@@ -145,10 +145,11 @@ export function validateCatalogEntry(source, metadata, guide) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(metadata.support.email)) fail(source, "support.email must be an email address");
   if (!Array.isArray(metadata.releases)) fail(source, "releases must be a list");
   const releaseVersions = new Set();
-  for (const release of metadata.releases) {
+  for (const [releaseIndex, release] of metadata.releases.entries()) {
+    const releaseField = `releases[${releaseIndex}]`;
     if (!release || typeof release !== "object" || Array.isArray(release)) fail(source, "each release must be an object");
-    const version = requiredVersion(release.version, source);
-    if (releaseVersions.has(version)) fail(source, "releases must not repeat a version");
+    const version = requiredVersion(release.version, source, `${releaseField}.version`);
+    if (releaseVersions.has(version)) fail(source, `${releaseField}.version must not repeat a version`);
     releaseVersions.add(version);
     const hasDownload = release.download !== undefined;
     const hasArtifact = release.artifact !== undefined;
@@ -156,12 +157,12 @@ export function validateCatalogEntry(source, metadata, guide) {
       fail(source, "each release must define exactly one download or artifact target");
     }
     if (hasDownload) {
-      requiredHttpsUrl(release.download, "releases.download", source);
+      requiredHttpsUrl(release.download, `${releaseField}.download`, source);
     } else {
-      const artifact = requiredArtifactPointer(release.artifact, "releases.artifact", source);
+      const artifact = requiredArtifactPointer(release.artifact, `${releaseField}.artifact`, source);
       const [artifactToolId, artifactVersion] = artifact.split("/");
-      if (artifactToolId !== id) fail(source, "releases.artifact tool-id must match the catalog id");
-      if (artifactVersion !== version) fail(source, "releases.artifact version must match the release version");
+      if (artifactToolId !== id) fail(source, `${releaseField}.artifact tool-id must match the catalog id`);
+      if (artifactVersion !== version) fail(source, `${releaseField}.artifact version must match the release version`);
     }
   }
   if (releaseVersions.size === 0) fail(source, "releases must contain at least one approved release");

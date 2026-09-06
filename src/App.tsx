@@ -874,6 +874,12 @@ function Documentation({
     [tools, deferredQuery],
   );
   const tool = tools.find((t) => t.id === selected) ?? tools[0];
+  const guideResources = tool?.resources
+    ? [...tool.resources].sort((left, right) => {
+        if (!requestedVersion) return 0;
+        return Number(right.appliesTo.includes(requestedVersion)) - Number(left.appliesTo.includes(requestedVersion));
+      })
+    : [];
   return (
     <section className="page documentation-page">
       <PageHeader
@@ -912,6 +918,7 @@ function Documentation({
                 <span>In this guide</span>
                 <a href="#install">Install</a>
                 <a href="#support">Support</a>
+                {guideResources.length > 0 && <a href="#guide-resources-title">Guides &amp; files</a>}
               </div>
             </div>
           )}
@@ -924,18 +931,20 @@ function Documentation({
             <span>{requestedVersion && resolveToolRelease(tool, requestedVersion).version !== requestedVersion ? "Requested version unavailable. Opens the default release." : requestedVersion ? `Opens version ${requestedVersion}` : "See approved downloads and available versions."}</span>
           </div>}
           <MarkdownDocument content={docs[selected] || (tool ? docs[tool.id] : "") || ""} />
-          {tool?.resources && tool.resources.length > 0 && (
+          {guideResources.length > 0 && (
             <section className="guide-resources" aria-labelledby="guide-resources-title">
               <div className="guide-resources-heading">
                 <div>
                   <span className="eyebrow">Documentation library</span>
                   <h2 id="guide-resources-title">Guides &amp; files</h2>
                 </div>
-                <span className="guide-resource-count">{tool.resources.length} available</span>
+                <span className="guide-resource-count">{guideResources.length} available</span>
               </div>
               <div className="guide-resource-list">
-                {tool.resources.map((resource) => {
+                {guideResources.map((resource) => {
                   const target = getGuideResourceTarget(resource);
+                  const action = resource.format === "pptx" ? "Download" : "Open";
+                  const matchesRequestedVersion = requestedVersion && resource.appliesTo.includes(requestedVersion);
                   return (
                     <article key={resource.id} className="guide-resource">
                       <div className="guide-resource-icon" aria-hidden="true"><Icon name="document" /></div>
@@ -944,12 +953,12 @@ function Documentation({
                           <h3>{resource.title}</h3>
                           <span className="guide-resource-format">{resource.format.toUpperCase()}</span>
                         </div>
-                        <p>{resource.kind.replace(/-/g, " ")} · {resource.appliesTo.join(", ")} · Reviewed {resource.reviewedOn}</p>
+                        <p>{matchesRequestedVersion ? `Matches ${requestedVersion} · ` : ""}{resource.kind.replace(/-/g, " ")} · {resource.appliesTo.join(", ")} · Reviewed {resource.reviewedOn}</p>
                         <small>Owner: {resource.owner}{resource.accessNote ? ` · ${resource.accessNote}` : ""}</small>
                       </div>
                       {target && (
-                        <a className="guide-resource-action" href={target.href} target={target.external ? "_blank" : undefined} rel={target.external ? "noopener noreferrer" : undefined}>
-                          {resource.format === "pptx" ? "Download" : "Open"} <Icon name={target.external ? "external" : "arrow"} size={15} />
+                        <a className="guide-resource-action" href={target.href} target={target.external ? "_blank" : undefined} rel={target.external ? "noopener noreferrer" : undefined} aria-label={`${action} ${resource.title} — ${resource.format.toUpperCase()}`}>
+                          {action} {resource.title} — {resource.format.toUpperCase()} <Icon name={target.external ? "external" : "arrow"} size={15} />
                         </a>
                       )}
                     </article>

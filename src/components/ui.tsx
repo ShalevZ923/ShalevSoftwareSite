@@ -67,6 +67,14 @@ export function PageHeader({ title, copy }: { title: string; copy: string }) {
   return <header className="page-header"><div><h1 id="page-title" tabIndex={-1}>{title}</h1><p>{copy}</p></div><div className="topo-lines" aria-hidden="true" /></header>;
 }
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <label className="field"><span>{label}</span>{children}</label>;
+export function Field({
+  label,
+  children,
+  invalid = false,
+}: {
+  label: string;
+  children: ReactNode;
+  invalid?: boolean;
+}) {
+  return <label className={invalid ? "field field-invalid" : "field"}><span>{label}</span>{children}</label>;
 }
