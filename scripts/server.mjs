@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { existsSync, createReadStream } from "node:fs";
-import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import {
@@ -205,7 +205,10 @@ export function assertSafeBindHost(host, behindTlsProxy = false) {
   }
 }
 
-export function createToolAtlasServer({ distDirectory = distDir } = {}) {
+export function createToolAtlasServer({
+  distDirectory = distDir,
+  packagesDirectory = packagesDir,
+} = {}) {
   return createServer(async (req, res) => {
     let pathname;
     try {
@@ -397,19 +400,30 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
           return sendText(res, 405, "Method Not Allowed");
         }
         const [_, toolId, version, filename] = downloadMatch;
-        const filePath = join(packagesDir, toolId, version, filename);
+        const filePath = join(packagesDirectory, toolId, version, filename);
 
         if (!existsSync(filePath)) {
           return sendText(res, 404, "Download not found");
         }
 
-        const fileStats = await stat(filePath);
+        // Package directories can be host-mounted. Resolve both ends before
+        // streaming so an accidental or malicious symlink cannot escape the
+        // approved package root.
+        const [realPackagesDirectory, realFilePath] = await Promise.all([
+          realpath(packagesDirectory),
+          realpath(filePath),
+        ]);
+        if (!isPathInside(realPackagesDirectory, realFilePath)) {
+          return sendText(res, 403, "Forbidden");
+        }
+
+        const fileStats = await stat(realFilePath);
         if (!fileStats.isFile()) {
           return sendText(res, 404, "Download not found");
         }
 
         applySecurityHeaders(res, false);
-        res.setHeader("Content-Disposition", `attachment; filename="${basename(filePath)}"`);
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
         res.setHeader("Content-Type", "application/octet-stream");
         res.setHeader("Content-Length", fileStats.size);
         res.setHeader("Cache-Control", "private, no-store");
@@ -420,7 +434,7 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
         }
 
         res.writeHead(200);
-        return createReadStream(filePath).pipe(res);
+        return createReadStream(realFilePath).pipe(res);
       }
 
       const guideMatch = safeGuideRegex.exec(pathname);
