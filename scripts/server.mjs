@@ -302,9 +302,15 @@ export function createToolAtlasServer({
             metadata.order = await nextCatalogOrder();
           }
 
-          await verifyGuideLibraryResources(metadata.id, metadata.resources);
-          await verifyGuideLinks(metadata.resources);
-          await writeCatalogEntry(metadata, guide);
+          try {
+            await verifyGuideLibraryResources(metadata.id, metadata.resources);
+            await verifyGuideLinks(metadata.resources);
+            await writeCatalogEntry(metadata, guide);
+          } catch (error) {
+            return sendJson(res, 400, {
+              error: error instanceof Error ? error.message : "Catalog validation failed",
+            });
+          }
           return sendJson(res, 201, { success: true, tool: metadata });
         }
 
@@ -334,9 +340,15 @@ export function createToolAtlasServer({
             if (metadata.company !== current.metadata.company || metadata.category !== current.metadata.category) {
               return sendJson(res, 400, { error: "metadata.company and metadata.category cannot be changed through Developer Studio" });
             }
-            await verifyGuideLibraryResources(toolId, metadata.resources);
-            await verifyGuideLinks(metadata.resources);
-            await writeCatalogEntry(metadata, guide);
+            try {
+              await verifyGuideLibraryResources(toolId, metadata.resources);
+              await verifyGuideLinks(metadata.resources);
+              await writeCatalogEntry(metadata, guide);
+            } catch (error) {
+              return sendJson(res, 400, {
+                error: error instanceof Error ? error.message : "Catalog validation failed",
+              });
+            }
             return sendJson(res, 200, { success: true, tool: metadata });
           }
         }

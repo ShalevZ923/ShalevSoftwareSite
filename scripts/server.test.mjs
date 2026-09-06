@@ -120,6 +120,26 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(data.guide).toContain("## Support");
   });
 
+  it("returns a validation error instead of a server failure for an invalid tool update", async () => {
+    const existing = await fetch(`${baseUrl}/api/developer/tools/intellij`, {
+      headers: { Authorization: `Bearer ${developerToken}` },
+    });
+    const entry = await existing.json();
+    entry.metadata.releases[0].version = "";
+
+    const res = await fetch(`${baseUrl}/api/developer/tools/intellij`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${developerToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(entry),
+    });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("releases[0].version");
+  });
+
   it("lists and reads documentation files", async () => {
     const listRes = await fetch(`${baseUrl}/api/developer/docs`, {
       headers: {
