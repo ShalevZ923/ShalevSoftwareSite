@@ -22,6 +22,25 @@ pnpm serve
 
 Open the fragment-based access link printed at startup. The token is removed from the address bar before verification and is never accepted from a query string. Exiting the studio clears it from browser session storage.
 
+## Sharing a tool and returning from documentation
+
+Each tool guide has a **View in catalog** link. It opens that tool's catalog entry, expands its details, scrolls it into view, focuses its heading button, and highlights the row.
+
+- Share JMeter's guide: `?page=documentation&tool=jmeter`
+- Open JMeter directly in the catalog: `?page=catalog&tool=jmeter`
+- Request a release: `?page=catalog&tool=jmeter&version=5.6.3`
+- Carry a release through a guide: `?page=documentation&tool=intellij&version=2026.01-Mac`
+
+Append these query strings to the site's normal URL. Tool IDs and version strings must match catalog metadata exactly. Without a version, the first approved release is selected. If a version is unavailable, the tool still opens with its default release and a short explanation. A removed tool shows a notice instead of expanding an unrelated entry.
+
+Conflicting filters are cleared so a linked tool is visible; compatible filters remain. Changing a release updates the URL and actual download target. **View documentation** retains the selected release, and **Copy view link** includes the expanded tool/version. Reload and browser Back/Forward restore these links. The documentation content itself remains the tool's shared guide; a version in its URL selects a catalog release, not a historical guide revision.
+
+## Website version
+
+Set `VITE_APP_VERSION=1.5.0b` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.5.0b`.
+
+After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
+
 ## Content model
 
 Catalog source is organized for long-term ownership: [`content/catalog/<category>/<vendor>/<tool>`](./content/catalog), with a `tool.json`, `guide.md`, and one `releases/<version>.json` record per approved version. Categories are controlled by [`content/taxonomy/categories.json`](./content/taxonomy/categories.json), so a new category is an explicit, reviewed taxonomy change—not a spelling variation. Add a tool interactively with `pnpm catalog:add`, or edit its source directory and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` is checked into Git and must not be edited by hand.

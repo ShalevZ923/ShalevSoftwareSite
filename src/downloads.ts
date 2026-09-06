@@ -1,6 +1,7 @@
-import type { ToolRelease } from "./data";
+import type { GuideResource, ToolRelease } from "./data";
 
 const artifactPointerPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const guideFilePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx)$/;
 
 export function getTrustedHttpsUrl(href?: string) {
   if (!href) return undefined;
@@ -19,6 +20,15 @@ export type ReleaseDownloadTarget = {
   external: boolean;
   filename?: string;
 };
+
+export function getGuideResourceTarget(resource: GuideResource): ReleaseDownloadTarget | undefined {
+  if (resource.file !== undefined) {
+    if (!guideFilePattern.test(resource.file)) return undefined;
+    return { href: `/guides/${resource.file}`, external: false, filename: resource.file.split("/").at(-1) };
+  }
+  const href = getTrustedHttpsUrl(resource.url);
+  return href ? { href, external: true } : undefined;
+}
 
 /** Resolves validated release metadata without accepting arbitrary local paths. */
 export function getReleaseDownloadTarget(

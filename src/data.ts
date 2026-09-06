@@ -39,6 +39,23 @@ export type ToolImage = {
   alt: string;
 };
 
+/** A reviewed, internal documentation resource. Content is stored separately
+ * from the catalog; this record only contains safe display and delivery data. */
+export type GuideResource = {
+  id: string;
+  title: string;
+  kind: "official-manual" | "internal-guide" | "training";
+  format: "pdf" | "pptx" | "web";
+  /** A credential-free approved HTTPS link, typically a SharePoint item. */
+  url?: string;
+  /** A file below the server-owned guide library: tool-id/filename. */
+  file?: string;
+  appliesTo: string[];
+  owner: string;
+  reviewedOn: string;
+  accessNote?: string;
+};
+
 export type Tool = {
   id: string;
   name: string;
@@ -55,6 +72,7 @@ export type Tool = {
   image?: ToolImage;
   facts?: CatalogFact[];
   notice?: ToolNotice;
+  resources?: GuideResource[];
 };
 
 // The generator validates every field before emitting this JSON-shaped module.

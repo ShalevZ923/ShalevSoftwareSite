@@ -45,6 +45,10 @@ export const tools = [
       {
         "version": "2025.1",
         "download": "https://www.jetbrains.com/idea/download/"
+      },
+      {
+        "version": "2026.01-Mac",
+        "download": "https://www.jetbrains.com/idea/download/?section=mac"
       }
     ]
   },

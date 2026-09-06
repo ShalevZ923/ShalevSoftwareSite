@@ -18,9 +18,11 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const distDir = join(rootDir, "dist");
 const docsDir = join(rootDir, "docs");
 const packagesDir = join(rootDir, "packages");
+const guideLibraryDir = join(rootDir, "guide-library");
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const HOST = process.env.HOST || "127.0.0.1";
+const guideLinkHosts = new Set((process.env.TOOL_ATLAS_GUIDE_HOSTS || "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean));
 
 // Ephemeral single-session developer token generated on process startup
 export const developerToken = randomBytes(32).toString("hex");
@@ -39,10 +41,51 @@ const mimeTypes = {
   ".ico": "image/x-icon",
   ".woff": "font/woff",
   ".woff2": "font/woff2",
+  ".pdf": "application/pdf",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 };
 
 const safeDownloadRegex =
   /^\/downloads\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:exe|msi|msix|zip|dmg|pkg|deb|rpm))$/;
+const safeGuideRegex = /^\/guides\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx))$/;
+
+async function verifyGuideLibraryResources(toolId, resources = []) {
+  for (const resource of resources) {
+    if (!resource.file) continue;
+    const [resourceToolId, filename] = resource.file.split("/");
+    if (resourceToolId !== toolId || !filename) throw new Error("guide resource file must belong to its tool");
+    const expected = join(guideLibraryDir, resourceToolId, filename);
+    if (!existsSync(expected) || !(await stat(expected)).isFile()) {
+      throw new Error(`guide resource file is not present in the approved library: ${resource.file}`);
+    }
+    const [realRoot, realFile] = await Promise.all([realpath(guideLibraryDir), realpath(expected)]);
+    if (!isPathInside(realRoot, realFile)) throw new Error("guide resource file escapes the approved library");
+  }
+}
+
+async function verifyGuideLinks(resources = []) {
+  for (const resource of resources) {
+    if (!resource.url) continue;
+    const target = new URL(resource.url);
+    if (!guideLinkHosts.has(target.hostname.toLowerCase())) {
+      throw new Error(`guide link host is not allowlisted: ${target.hostname}. Configure TOOL_ATLAS_GUIDE_HOSTS`);
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const response = await fetch(target, { method: "HEAD", redirect: "manual", signal: controller.signal });
+      // 401/403 commonly means the endpoint is reachable but relies on the
+      // reader's own SharePoint or intranet SSO session.
+      if (response.status >= 400 && response.status !== 401 && response.status !== 403) {
+        throw new Error(`guide link check returned HTTP ${response.status}`);
+      }
+    } catch (error) {
+      throw new Error(`guide link check failed for ${target.hostname}: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+}
 
 function verifyToken(req) {
   let candidate = "";
@@ -256,6 +299,8 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
             metadata.order = await nextCatalogOrder();
           }
 
+          await verifyGuideLibraryResources(metadata.id, metadata.resources);
+          await verifyGuideLinks(metadata.resources);
           await writeCatalogEntry(metadata, guide);
           return sendJson(res, 201, { success: true, tool: metadata });
         }
@@ -286,9 +331,24 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
             if (metadata.company !== current.metadata.company || metadata.category !== current.metadata.category) {
               return sendJson(res, 400, { error: "metadata.company and metadata.category cannot be changed through Developer Studio" });
             }
+            await verifyGuideLibraryResources(toolId, metadata.resources);
+            await verifyGuideLinks(metadata.resources);
             await writeCatalogEntry(metadata, guide);
             return sendJson(res, 200, { success: true, tool: metadata });
           }
+        }
+
+        // List documentation files: /api/developer/docs
+        const guideLibraryMatch = /^\/api\/developer\/guide-library\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
+        if (guideLibraryMatch && req.method === "GET") {
+          const toolId = guideLibraryMatch[1];
+          const directory = join(guideLibraryDir, toolId);
+          if (!existsSync(directory)) return sendJson(res, 200, []);
+          const files = (await readdir(directory, { withFileTypes: true }))
+            .filter((entry) => entry.isFile() && /\.(?:pdf|pptx)$/iu.test(entry.name))
+            .map((entry) => `${toolId}/${entry.name}`)
+            .sort();
+          return sendJson(res, 200, files);
         }
 
         // List documentation files: /api/developer/docs
@@ -361,6 +421,23 @@ export function createToolAtlasServer({ distDirectory = distDir } = {}) {
 
         res.writeHead(200);
         return createReadStream(filePath).pipe(res);
+      }
+
+      const guideMatch = safeGuideRegex.exec(pathname);
+      if (guideMatch) {
+        if (req.method !== "GET" && req.method !== "HEAD") return sendText(res, 405, "Method Not Allowed");
+        const [, toolId, filename] = guideMatch;
+        const filePath = join(guideLibraryDir, toolId, filename);
+        if (!existsSync(filePath) || !(await stat(filePath)).isFile()) return sendText(res, 404, "Guide not found");
+        const [realRoot, realFile] = await Promise.all([realpath(guideLibraryDir), realpath(filePath)]);
+        if (!isPathInside(realRoot, realFile)) return sendText(res, 403, "Forbidden");
+        applySecurityHeaders(res, false);
+        res.setHeader("Content-Type", mimeTypes[extname(realFile).toLowerCase()] || "application/octet-stream");
+        res.setHeader("Content-Disposition", `inline; filename="${basename(realFile)}"`);
+        res.setHeader("Cache-Control", "private, no-store");
+        if (req.method === "HEAD") { res.writeHead(200); return res.end(); }
+        res.writeHead(200);
+        return createReadStream(realFile).pipe(res);
       }
 
       // 6. Static File Serving from dist/

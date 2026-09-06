@@ -15,6 +15,9 @@ const localImagePattern = /^\/tool-images\/[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 const artifactPointerPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const sensitiveFactPattern = /key|activation|password|token/i;
 const noticeTones = new Set(["info", "warning"]);
+const guideKinds = new Set(["official-manual", "internal-guide", "training"]);
+const guideFormats = new Set(["pdf", "pptx", "web"]);
+const guideFilePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx)$/;
 
 function fail(source, message) {
   throw new Error(`${source}: ${message}`);
@@ -184,6 +187,33 @@ export function validateCatalogEntry(source, metadata, guide) {
     requiredString(metadata.image.alt, "image.alt", source);
     if (!localImagePattern.test(imagePath) || imagePath.includes("..")) fail(source, "image.src must be a local /tool-images/ path");
   }
+  if (metadata.resources !== undefined) {
+    if (!Array.isArray(metadata.resources)) fail(source, "resources must be a list when supplied");
+    const resourceIds = new Set();
+    for (const resource of metadata.resources) {
+      if (!resource || typeof resource !== "object" || Array.isArray(resource)) fail(source, "each resource must be an object");
+      const resourceId = requiredString(resource.id, "resources.id", source);
+      if (!idPattern.test(resourceId) || resourceIds.has(resourceId)) fail(source, "resources.id must be unique lowercase kebab-case");
+      resourceIds.add(resourceId);
+      requiredString(resource.title, "resources.title", source);
+      if (!guideKinds.has(resource.kind)) fail(source, "resources.kind must be official-manual, internal-guide, or training");
+      if (!guideFormats.has(resource.format)) fail(source, "resources.format must be pdf, pptx, or web");
+      const hasUrl = resource.url !== undefined;
+      const hasFile = resource.file !== undefined;
+      if (hasUrl === hasFile) fail(source, "each resource must define exactly one url or file");
+      if (hasUrl) requiredHttpsUrl(resource.url, "resources.url", source);
+      if (hasFile && (!guideFilePattern.test(requiredString(resource.file, "resources.file", source)) || resource.file.includes(".."))) fail(source, "resources.file must use tool-id/filename.pdf or .pptx");
+      const versions = requireStringList(resource.appliesTo, "resources.appliesTo", source);
+      if (versions.some((version) => /[\r\n]/u.test(version))) fail(source, "resources.appliesTo contains an invalid version");
+      requiredString(resource.owner, "resources.owner", source);
+      const reviewedOn = requiredString(resource.reviewedOn, "resources.reviewedOn", source);
+      if (!/^\d{4}-\d{2}-\d{2}$/u.test(reviewedOn)) fail(source, "resources.reviewedOn must use YYYY-MM-DD");
+      if (resource.accessNote !== undefined) requiredString(resource.accessNote, "resources.accessNote", source);
+      if (resource.format === "web" && hasFile) fail(source, "web resources must use an HTTPS url");
+      if (resource.format !== "web" && hasFile && !resource.file.endsWith(`.${resource.format}`)) fail(source, "resources.file extension must match resources.format");
+    }
+  }
+
   if (!/^## Install\b/mu.test(guide) || !/^## Support\b/mu.test(guide)) fail(source, "guide must include ## Install and ## Support sections");
   return { metadata, guide };
 }
