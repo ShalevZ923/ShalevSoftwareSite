@@ -7,7 +7,7 @@ import {
   getDocumentationTools,
   type CatalogFilters,
 } from "./catalog";
-import { readSavedToolIds, writeSavedToolIds } from "./catalogStorage";
+import { filterSavedToolIds, readSavedToolIds, writeSavedToolIds } from "./catalogStorage";
 import { DocumentationPicker } from "./components/DocumentationPicker";
 import { DeveloperStudio } from "./components/DeveloperStudio";
 import { DeveloperLockGate } from "./components/DeveloperLockGate";
@@ -416,6 +416,13 @@ function Catalog({
   useEffect(() => {
     writeSavedToolIds(savedToolIds);
   }, [savedToolIds]);
+
+  useEffect(() => {
+    setSavedToolIds((current) => {
+      const valid = filterSavedToolIds(current, toolIds);
+      return valid.length === current.length ? current : valid;
+    });
+  }, [toolIds]);
 
   const copyViewLink = async () => {
     try {
