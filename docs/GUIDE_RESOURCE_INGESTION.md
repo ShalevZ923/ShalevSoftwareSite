@@ -1,4 +1,4 @@
-# Guide resource ingestion proof of concept
+# Guide resource ingestion
 
 Developer Studio now owns the authoring experience for catalog guide resources. Administrators do not edit catalog front matter directly.
 
@@ -16,6 +16,6 @@ Tool Atlas renders a compact **Guides & files** panel on the user-facing documen
 
 ## Boundaries and next step
 
-This POC intentionally does not upload files or crawl arbitrary network locations. The Studio can only list PDF/PPTX files in the selected tool's approved guide-library directory. HTTPS checks are restricted to the exact hosts in `TOOL_ATLAS_GUIDE_HOSTS`; set that server-side configuration before attaching SharePoint or intranet links. A `401` or `403` result is accepted as reachable because those services commonly require the reader's own SSO session. This avoids exposing server folders through the browser or turning the link checker into a general network client.
+The implementation intentionally does not upload files or crawl arbitrary network locations. The Studio can only list PDF/PPTX files in the selected tool's approved guide-library directory. HTTPS checks are restricted to the exact hosts in `TOOL_ATLAS_GUIDE_HOSTS`; set that server-side configuration before attaching SharePoint or intranet links. A `401` or `403` result is accepted as reachable because those services commonly require the reader's own SSO session. This avoids exposing server folders through the browser or turning the link checker into a general network client.
 
 The next production integration is a SharePoint adapter that uses a narrowly scoped service identity to browse approved document libraries, preserve the selected item ID, and record validation/audit status. User access remains governed by the user's SharePoint SSO; a service-side link check alone is not proof that every user can open a protected document.

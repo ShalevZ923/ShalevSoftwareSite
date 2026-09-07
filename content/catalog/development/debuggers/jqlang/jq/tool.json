@@ -6,7 +6,7 @@
   "lifecycle": "New",
   "icon": "JQ",
   "updated": "Today",
-  "description": "A lightweight command-line JSON processor, hosted here as the same-server download proof of concept.",
+  "description": "A lightweight command-line JSON processor with an approved same-server download.",
   "support": {"name": "Noam Levi", "team": "Platform Engineering", "initials": "NL", "email": "platform@atlas.local"},
-  "tags": ["JSON", "CLI", "Windows", "PoC"]
+  "tags": ["JSON", "CLI", "Windows", "Hosted download"]
 }

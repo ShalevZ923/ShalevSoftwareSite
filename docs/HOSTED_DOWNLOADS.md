@@ -1,6 +1,6 @@
-# Hosted-download proof of concept
+# Hosted downloads
 
-This local proof uses two containers:
+This local validation setup uses two containers:
 
 1. A pinned Microsoft PowerShell container downloads the official jq 1.8.2 Windows executable and publishes it only after matching the release SHA-256 digest.
 2. The production Tool Atlas NGINX image serves the application and the resulting local package file on `127.0.0.1:8080`.
@@ -12,10 +12,10 @@ The browser download target is `/downloads/jq/1.8.2/jq-windows-amd64.exe`. It is
 From the repository root:
 
 ```bash
-docker compose -f compose.poc.yaml up --build
+docker compose -f compose.hosted-downloads.yaml up --build
 ```
 
-The publisher defaults to host UID/GID `1000:1000`. If your checkout belongs to another account, set `POC_UID` and `POC_GID` to that account's numeric IDs before starting Compose. The publisher remains unprivileged, has no Linux capabilities, and can write only the mounted package directory.
+The publisher defaults to host UID/GID `1000:1000`. If your checkout belongs to another account, set `HOSTED_DOWNLOAD_UID` and `HOSTED_DOWNLOAD_GID` to that account's numeric IDs before starting Compose. The publisher remains unprivileged, has no Linux capabilities, and can write only the mounted package directory.
 
 Open <http://127.0.0.1:8080>, select **jq**, and choose **Download 1.8.2**. The browser should download `jq-windows-amd64.exe` from the local Tool Atlas origin.
 
@@ -39,9 +39,9 @@ The jq release page and GitHub release API publish that digest for the 1,035,264
 ## Inspect and stop it
 
 ```bash
-docker compose -f compose.poc.yaml ps
-docker compose -f compose.poc.yaml logs publisher app
-docker compose -f compose.poc.yaml down
+docker compose -f compose.hosted-downloads.yaml ps
+docker compose -f compose.hosted-downloads.yaml logs publisher app
+docker compose -f compose.hosted-downloads.yaml down
 ```
 
-The downloaded package is deliberately retained in `packages/jq/1.8.2/` after the containers stop so it can be inspected and reused. Remove it through the normal approved package-retirement process when the proof is no longer needed.
+The downloaded package is deliberately retained in `packages/jq/1.8.2/` after the containers stop so it can be inspected and reused. Remove it through the normal approved package-retirement process when it is no longer needed.

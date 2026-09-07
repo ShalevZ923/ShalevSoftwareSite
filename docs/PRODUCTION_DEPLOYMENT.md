@@ -1,11 +1,11 @@
-# Production deployment and `v1.4.0-beta.1`
+# Production deployment and `v1.6.0-beta.1`
 
 ## Release artifacts
 
-`v1.4.0-beta.1` publishes a Linux/amd64 static-site image to GitHub Container Registry:
+`v1.6.0-beta.1` publishes a Linux/amd64 static-site image to GitHub Container Registry:
 
 ```text
-ghcr.io/shalevz923/shalevsoftwaresite:1.4.0-beta.1
+ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.1
 ```
 
 The tag is a beta convenience tag, not an immutable deployment identity. After the release workflow succeeds, record its published digest and deploy `ghcr.io/shalevz923/shalevsoftwaresite@sha256:...` instead. The image contains only the built static site and NGINX; it does not include the Node.js Developer Studio server or its write APIs.
@@ -14,12 +14,11 @@ The tag workflow verifies that the Git tag and `package.json` version match, run
 
 ## Test the image
 
-For a private GitHub Container Registry package, authenticate with a token that has only `read:packages` before pulling:
+The public GitHub Container Registry package can be pulled without authentication:
 
 ```bash
-docker login ghcr.io
-docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.4.0-beta.1
-docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:8080:8080 ghcr.io/shalevz923/shalevsoftwaresite:1.4.0-beta.1
+docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.1
+docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:8080:8080 ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.1
 curl --fail --head http://127.0.0.1:8080/
 ```
 
@@ -31,7 +30,7 @@ docker compose --env-file .env up --no-build --detach
 docker compose --env-file .env ps
 ```
 
-Keep the image origin private behind Caddy, publish only 80/443, retain the certificate volumes, and verify HTTPS and security headers from a separate network. Roll back by changing `TOOL_ATLAS_IMAGE` to the previously recorded digest and repeating the final two Compose commands.
+Keep the deployed application behind Caddy, publish only 80/443, retain the certificate volumes, and verify HTTPS and security headers from a separate network. Roll back by changing `TOOL_ATLAS_IMAGE` to the previously recorded digest and repeating the final two Compose commands.
 
 ## Windows Server decision
 
