@@ -1,11 +1,19 @@
+import { createElement } from "react";
 import { describe, expect, it } from "vitest";
 import {
   getTrustedHttpsUrl,
+  getHeadingText,
   getTrustedImageSource,
   getTrustedLinkTarget,
 } from "./markdown";
 
 describe("Markdown safety boundaries", () => {
+  it("keeps heading anchors stable when guides use inline Markdown formatting", () => {
+    expect(getHeadingText(["Install ", createElement("strong", null, "now")])).toBe(
+      "Install now",
+    );
+  });
+
   it("allows only local catalog images", () => {
     expect(getTrustedImageSource("/tool-images/pycharm.svg")).toBe(
       "/tool-images/pycharm.svg",

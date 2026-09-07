@@ -7,6 +7,10 @@ import {
   ReleasesEditor,
   GuidesEditor,
 } from "./studio/ToolSections";
+import {
+  getToolValidationRecovery,
+  type ValidationRecovery,
+} from "./studio/saveValidation";
 import { Icon, ToolGlyph } from "./ui";
 
 type DocFile = {
@@ -62,6 +66,7 @@ export function DeveloperStudio({
   const [editingTool, setEditingTool] = useState<ToolEntryPayload | null>(null);
   const [toolSearch, setToolSearch] = useState("");
   const [isCreatingNewTool, setIsCreatingNewTool] = useState(false);
+  const [toolPickerOpen, setToolPickerOpen] = useState(false);
 
   const [docsList, setDocsList] = useState<DocFile[]>([]);
   const [selectedDocName, setSelectedDocName] = useState<string>("");
@@ -83,6 +88,7 @@ export function DeveloperStudio({
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [section, setSection] = useState("Overview");
+  const [validationRecovery, setValidationRecovery] = useState<ValidationRecovery | null>(null);
   const [docSearch, setDocSearch] = useState("");
   const [savedTool, setSavedTool] = useState("");
   const [savedDoc, setSavedDoc] = useState("");
@@ -92,8 +98,13 @@ export function DeveloperStudio({
   const [loadingDoc, setLoadingDoc] = useState(false);
   const docRequest = useRef(0);
   useEffect(() => {
-    if (statusMessage?.tone === "error") statusRef.current?.focus();
-  }, [statusMessage]);
+    if (statusMessage?.tone !== "error") return;
+    const target = validationRecovery
+      ? document.querySelector<HTMLElement>(`[data-validation-field="${validationRecovery.field}"]`) ||
+        document.querySelector<HTMLElement>(`[data-validation-section="${validationRecovery.section}"]`)
+      : statusRef.current;
+    requestAnimationFrame(() => target?.focus());
+  }, [statusMessage, validationRecovery]);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
     const update = () => {
@@ -129,6 +140,7 @@ export function DeveloperStudio({
     if (isSaving) return;
     setActiveTab(tab);
     setStatusMessage(null);
+    setValidationRecovery(null);
   };
 
   const headers = useMemo(() => {
@@ -251,6 +263,8 @@ export function DeveloperStudio({
     setSavedTool(JSON.stringify(tool));
     setSection("Overview");
     setStatusMessage(null);
+    setValidationRecovery(null);
+    setToolPickerOpen(false);
   };
 
   // Select doc
@@ -277,6 +291,8 @@ export function DeveloperStudio({
     setSelectedToolId("");
     setEditingTool(freshTool);
     setStatusMessage(null);
+    setValidationRecovery(null);
+    setToolPickerOpen(false);
   };
 
   // Save Tool Changes
@@ -309,15 +325,20 @@ export function DeveloperStudio({
         tone: "success",
         text: `Successfully saved ${editingTool.metadata.name}! Catalog regenerated.`,
       });
+      setValidationRecovery(null);
       setSavedTool(JSON.stringify(editingTool));
       setIsCreatingNewTool(false);
       setSelectedToolId(editingTool.id);
       await loadTools(false);
       onCatalogUpdated();
     } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Save failed";
+      const recovery = getToolValidationRecovery(message);
+      setSection(recovery.section);
+      setValidationRecovery(recovery);
       setStatusMessage({
         tone: "error",
-        text: err instanceof Error ? err.message : "Save failed",
+        text: `${message}. ${recovery.guidance}`,
       });
     } finally {
       setIsSaving(false);
@@ -424,7 +445,7 @@ export function DeveloperStudio({
           className={`dev-status-banner tone-${statusMessage.tone}`}
         >
           <span>{statusMessage.text}</span>
-          {statusMessage.tone === "error" && (
+          {statusMessage.tone === "error" && !validationRecovery && (
             <button
               className="dev-small-btn"
               onClick={() => {
@@ -436,7 +457,10 @@ export function DeveloperStudio({
             </button>
           )}
           <button
-            onClick={() => setStatusMessage(null)}
+            onClick={() => {
+              setStatusMessage(null);
+              setValidationRecovery(null);
+            }}
             aria-label="Dismiss message"
             className="dev-dismiss-btn"
           >
@@ -468,9 +492,22 @@ export function DeveloperStudio({
               >
                 + Add Software
               </button>
+              <button
+                type="button"
+                className="dev-picker-toggle"
+                aria-expanded={toolPickerOpen}
+                aria-controls="studio-tool-picker"
+                onClick={() => setToolPickerOpen((open) => !open)}
+              >
+                {toolPickerOpen ? "Hide software" : `Choose software (${toolsList.length})`}
+              </button>
             </div>
 
-            <div className="dev-item-list">
+            <div
+              id="studio-tool-picker"
+              className="dev-item-list dev-tool-picker-list"
+              data-open={toolPickerOpen}
+            >
               {loadingTools && (
                 <p className="dev-list-message" role="status">
                   Loading software…
@@ -564,6 +601,7 @@ export function DeveloperStudio({
                       editingTool={editingTool}
                       setEditingTool={setEditingTool}
                       isCreatingNewTool={isCreatingNewTool}
+                      validation={validationRecovery}
                     />
 
                     {/* Section: Support Owner */}
@@ -571,6 +609,7 @@ export function DeveloperStudio({
                       section={section}
                       editingTool={editingTool}
                       setEditingTool={setEditingTool}
+                      validation={validationRecovery}
                     />
 
                     {/* Section: Releases */}
@@ -578,6 +617,7 @@ export function DeveloperStudio({
                       section={section}
                       editingTool={editingTool}
                       setEditingTool={setEditingTool}
+                      validation={validationRecovery}
                     />
 
                     <GuidesEditor
@@ -589,6 +629,7 @@ export function DeveloperStudio({
                       refreshGuideLibrary={() => setGuideLibraryRevision((revision) => revision + 1)}
                       guideViewMode={guideViewMode}
                       setGuideViewMode={setGuideViewMode}
+                      validation={validationRecovery}
                     />
                   </div>
                 </fieldset>

@@ -9,15 +9,21 @@ describe("Tool Atlas Self-Contained Server", () => {
   let server;
   let baseUrl;
   let fixtureRoot;
+  let fixturePackages;
 
   beforeAll(async () => {
     fixtureRoot = await mkdtemp(join(tmpdir(), "tool-atlas-server-test-"));
     const fixtureDist = join(fixtureRoot, "dist");
+    fixturePackages = join(fixtureRoot, "packages");
     await mkdir(fixtureDist);
+    await mkdir(fixturePackages);
     await writeFile(join(fixtureDist, "index.html"), '<div id="root"></div>', "utf8");
     await writeFile(join(fixtureRoot, "dist-secret.txt"), "must not be served", "utf8");
 
-    server = createToolAtlasServer({ distDirectory: fixtureDist });
+    server = createToolAtlasServer({
+      distDirectory: fixtureDist,
+      packagesDirectory: fixturePackages,
+    });
     await new Promise((resolve) => {
       server.listen(0, "127.0.0.1", () => {
         const address = server.address();
@@ -114,6 +120,26 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(data.guide).toContain("## Support");
   });
 
+  it("returns a validation error instead of a server failure for an invalid tool update", async () => {
+    const existing = await fetch(`${baseUrl}/api/developer/tools/intellij`, {
+      headers: { Authorization: `Bearer ${developerToken}` },
+    });
+    const entry = await existing.json();
+    entry.metadata.releases[0].version = "";
+
+    const res = await fetch(`${baseUrl}/api/developer/tools/intellij`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${developerToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(entry),
+    });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("releases[0].version");
+  });
+
   it("lists and reads documentation files", async () => {
     const listRes = await fetch(`${baseUrl}/api/developer/docs`, {
       headers: {
@@ -187,6 +213,21 @@ describe("Tool Atlas Self-Contained Server", () => {
       const res = await fetch(`${baseUrl}/linked-secret.txt`);
       expect(res.status).toBe(403);
       expect(await res.text()).not.toContain("must not cross the static root");
+    },
+  );
+
+  it.runIf(process.platform !== "win32")(
+    "does not follow download symlinks outside the package root",
+    async () => {
+      const outsideFile = join(fixtureRoot, "outside-installer.msi");
+      const packageVersion = join(fixturePackages, "test-tool", "1.0");
+      await writeFile(outsideFile, "must not cross the package root", "utf8");
+      await mkdir(packageVersion, { recursive: true });
+      await symlink(outsideFile, join(packageVersion, "linked.msi"));
+
+      const res = await fetch(`${baseUrl}/downloads/test-tool/1.0/linked.msi`);
+      expect(res.status).toBe(403);
+      expect(await res.text()).not.toContain("must not cross the package root");
     },
   );
 

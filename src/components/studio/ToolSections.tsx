@@ -1,5 +1,14 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { nextGuideId, parseGuideVersions } from "./guideEditing";
+import {
+  getReleaseSource,
+  getServerFilename,
+  makeDefaultRelease,
+  withReleaseSource,
+  withReleaseVersion,
+  withServerFilename,
+} from "./releaseEditing";
+import type { ValidationRecovery } from "./saveValidation";
 import type {
   GuideResource,
   Lifecycle,
@@ -14,6 +23,7 @@ type EditorProps = {
   section: string;
   editingTool: ToolEntryPayload;
   setEditingTool: Dispatch<SetStateAction<ToolEntryPayload | null>>;
+  validation?: ValidationRecovery | null;
 };
 type ViewMode = "edit" | "split" | "preview";
 
@@ -34,17 +44,23 @@ export function OverviewEditor({
   editingTool,
   setEditingTool,
   isCreatingNewTool,
+  validation,
 }: EditorProps & { isCreatingNewTool: boolean }) {
+  const hasValidationError = validation?.section === "Overview";
   return (
     <fieldset
-      className="dev-section dev-overview"
+      className={`dev-section dev-overview${hasValidationError ? " dev-section-invalid" : ""}`}
       hidden={section !== "Overview"}
+      tabIndex={hasValidationError ? -1 : undefined}
+      data-validation-section="Overview"
     >
       <legend className="sr-only">Overview</legend>
       <div className="dev-grid-2">
-        <Field label="Tool name">
+        <Field label="Tool name" invalid={validation?.field === "tool-name"}>
           <input
             type="text"
+            data-validation-field="tool-name"
+            aria-invalid={validation?.field === "tool-name" || undefined}
             value={editingTool.metadata.name}
             onChange={(e) => {
               const name = e.target.value;
@@ -79,9 +95,11 @@ export function OverviewEditor({
             }}
           />
         </Field>
-        <Field label="Category">
+        <Field label="Category" invalid={validation?.field === "category"}>
           <input
             type="text"
+            data-validation-field="category"
+            aria-invalid={validation?.field === "category" || undefined}
             value={editingTool.metadata.category}
             onChange={(e) => {
               const category = e.target.value;
@@ -121,9 +139,11 @@ export function OverviewEditor({
         </Field>
       </div>
 
-      <Field label="Short description">
+      <Field label="Short description" invalid={validation?.field === "description"}>
         <textarea
           rows={3}
+          data-validation-field="description"
+          aria-invalid={validation?.field === "description" || undefined}
           value={editingTool.metadata.description}
           onChange={(e) => {
             const description = e.target.value;
@@ -139,10 +159,12 @@ export function OverviewEditor({
         />
       </Field>
 
-      <div className="field">
+      <div className={validation?.field === "platforms" ? "field field-invalid" : "field"}>
         <span id="studio-platforms-label">Platforms</span>
         <div
           className="dev-checkbox-row"
+          data-validation-field="platforms"
+          tabIndex={validation?.field === "platforms" ? -1 : undefined}
           role="group"
           aria-labelledby="studio-platforms-label"
         >
@@ -178,9 +200,11 @@ export function OverviewEditor({
         </div>
       </div>
 
-      <Field label="Tags (comma-separated)">
+      <Field label="Tags (comma-separated)" invalid={validation?.field === "tags"}>
         <input
           type="text"
+          data-validation-field="tags"
+          aria-invalid={validation?.field === "tags" || undefined}
           value={editingTool.metadata.tags.join(", ")}
           onChange={(e) => {
             const tags = e.target.value
@@ -284,14 +308,23 @@ export function SupportEditor({
   section,
   editingTool,
   setEditingTool,
+  validation,
 }: EditorProps) {
+  const hasValidationError = validation?.section === "Support";
   return (
-    <fieldset className="dev-section" hidden={section !== "Support"}>
+    <fieldset
+      className={`dev-section${hasValidationError ? " dev-section-invalid" : ""}`}
+      hidden={section !== "Support"}
+      tabIndex={hasValidationError ? -1 : undefined}
+      data-validation-section="Support"
+    >
       <legend>Support owner</legend>
       <div className="dev-grid-3">
-        <Field label="Owner Name">
+        <Field label="Owner Name" invalid={validation?.field === "support-owner"}>
           <input
             type="text"
+            data-validation-field="support-owner"
+            aria-invalid={validation?.field === "support-owner" || undefined}
             value={editingTool.metadata.support.name}
             onChange={(e) => {
               const name = e.target.value;
@@ -329,9 +362,11 @@ export function SupportEditor({
             }}
           />
         </Field>
-        <Field label="Support Email">
+        <Field label="Support Email" invalid={validation?.field === "support-email"}>
           <input
             type="email"
+            data-validation-field="support-email"
+            aria-invalid={validation?.field === "support-email" || undefined}
             value={editingTool.metadata.support.email}
             onChange={(e) => {
               const email = e.target.value;
@@ -358,12 +393,16 @@ export function ReleasesEditor({
   section,
   editingTool,
   setEditingTool,
+  validation,
 }: EditorProps) {
+  const hasValidationError = validation?.section === "Releases";
   return (
     <fieldset
-      className="dev-section"
+      className={`dev-section${hasValidationError ? " dev-section-invalid" : ""}`}
       hidden={section !== "Releases"}
       aria-labelledby="studio-releases-title"
+      tabIndex={hasValidationError ? -1 : undefined}
+      data-validation-section="Releases"
     >
       <div className="dev-section-header">
         <h3 id="studio-releases-title">Approved releases</h3>
@@ -392,19 +431,22 @@ export function ReleasesEditor({
         </button>
       </div>
 
-      <p className="dev-section-help">
-        The first release is the default download shown in the catalog.
-      </p>
-      {editingTool.metadata.releases.map((rel, idx) => (
+      <p className="dev-section-help">The first release is the default download shown in the catalog.</p>
+      {editingTool.metadata.releases.map((rel, idx) => {
+        const versionField = `release-version-${idx}`;
+        const targetField = `release-target-${idx}`;
+        return (
         <div key={idx} className="dev-release-row">
           <div style={{ width: "120px" }}>
-            <Field label="Version">
+            <Field label="Version" invalid={validation?.field === versionField}>
               <input
                 type="text"
+                data-validation-field={versionField}
+                aria-invalid={validation?.field === versionField || undefined}
                 value={rel.version}
                 onChange={(e) => {
                   const releases = [...editingTool.metadata.releases];
-                  releases[idx] = { ...releases[idx], version: e.target.value };
+                  releases[idx] = withReleaseVersion(rel, e.target.value, editingTool.id);
                   setEditingTool((prev) =>
                     prev
                       ? {
@@ -418,39 +460,66 @@ export function ReleasesEditor({
             </Field>
           </div>
           <div style={{ flex: 1 }}>
-            <Field label="Download URL or artifact:tool-id/version/filename">
-              <input
-                type="text"
-                value={
-                  rel.download ||
-                  (rel.artifact ? `artifact:${rel.artifact}` : "")
-                }
+            <Field label="Source">
+              <select
+                value={getReleaseSource(rel)}
                 onChange={(e) => {
-                  const val = e.target.value.trim();
                   const releases = [...editingTool.metadata.releases];
-                  if (val.startsWith("artifact:")) {
-                    releases[idx] = {
-                      version: rel.version,
-                      artifact: val.slice("artifact:".length),
-                    };
-                  } else {
-                    releases[idx] = {
-                      version: rel.version,
-                      download: val,
-                    };
-                  }
-                  setEditingTool((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          metadata: { ...prev.metadata, releases },
-                        }
-                      : null,
-                  );
+                  releases[idx] = withReleaseSource(rel, e.target.value as "url" | "server-file", editingTool.id);
+                  setEditingTool((prev) => prev ? { ...prev, metadata: { ...prev.metadata, releases } } : null);
                 }}
-              />
+              >
+                <option value="url">Approved HTTPS URL</option>
+                <option value="server-file">Server file</option>
+              </select>
             </Field>
           </div>
+          <div style={{ flex: 2 }}>
+            {getReleaseSource(rel) === "url" ? (
+              <Field label="Approved HTTPS download URL" invalid={validation?.field === targetField}>
+                <input
+                  type="url"
+                  data-validation-field={targetField}
+                  aria-invalid={validation?.field === targetField || undefined}
+                  value={"download" in rel ? rel.download : ""}
+                  onChange={(e) => {
+                    const releases = [...editingTool.metadata.releases];
+                    releases[idx] = { version: rel.version, download: e.target.value.trim() };
+                    setEditingTool((prev) => prev ? { ...prev, metadata: { ...prev.metadata, releases } } : null);
+                  }}
+                />
+              </Field>
+            ) : (
+              <Field label="Server file name" invalid={validation?.field === targetField}>
+                <input
+                  type="text"
+                  data-validation-field={targetField}
+                  aria-invalid={validation?.field === targetField || undefined}
+                  value={getServerFilename(rel)}
+                  placeholder="tool-installer.msi"
+                  onChange={(e) => {
+                    const releases = [...editingTool.metadata.releases];
+                    releases[idx] = withServerFilename(rel, e.target.value, editingTool.id);
+                    setEditingTool((prev) => prev ? { ...prev, metadata: { ...prev.metadata, releases } } : null);
+                  }}
+                />
+              </Field>
+            )}
+          </div>
+          {idx === 0 ? (
+            <span className="dev-release-default" aria-label="Default download">Default download</span>
+          ) : (
+            <button
+              type="button"
+              className="dev-small-btn"
+              onClick={() => setEditingTool((prev) => prev ? {
+                ...prev,
+                metadata: { ...prev.metadata, releases: makeDefaultRelease(prev.metadata.releases, idx) },
+              } : null)}
+            >
+              Make default
+            </button>
+          )}
           <button
             type="button"
             className="dev-danger-btn"
@@ -474,7 +543,8 @@ export function ReleasesEditor({
             Remove
           </button>
         </div>
-      ))}
+        );
+      })}
     </fieldset>
   );
 }
@@ -488,6 +558,7 @@ export function GuidesEditor({
   refreshGuideLibrary,
   guideViewMode,
   setGuideViewMode,
+  validation,
 }: EditorProps & {
   guideLibraryFiles: string[];
   guideLibraryStatus: "loading" | "ready" | "error";
@@ -495,12 +566,17 @@ export function GuidesEditor({
   guideViewMode: ViewMode;
   setGuideViewMode: Dispatch<SetStateAction<ViewMode>>;
 }) {
+  const hasValidationError = validation?.section === "Guides";
+  const [expandedGuideId, setExpandedGuideId] = useState<string | null>(null);
+  useEffect(() => setExpandedGuideId(null), [editingTool.id]);
   return (
     <>
       <fieldset
-        className="dev-section"
+        className={`dev-section${hasValidationError ? " dev-section-invalid" : ""}`}
         hidden={section !== "Guides"}
         aria-labelledby="studio-resources-title"
+        tabIndex={hasValidationError ? -1 : undefined}
+        data-validation-section="Guides"
       >
         <div className="dev-section-header">
           <div>
@@ -527,6 +603,7 @@ export function GuidesEditor({
                 owner: editingTool.metadata.support.team,
                 reviewedOn: new Date().toISOString().slice(0, 10),
               };
+              setExpandedGuideId(resource.id);
               setEditingTool((prev) =>
                 prev
                   ? {
@@ -563,7 +640,21 @@ export function GuidesEditor({
             });
           const isFile = resource.file !== undefined;
           return (
-            <div className="dev-resource-card" key={`${resource.id}-${idx}`}>
+            <details
+              className={validation?.field === "guide-resource" ? "dev-resource-card dev-field-invalid" : "dev-resource-card"}
+              key={`${resource.id}-${idx}`}
+              data-validation-field="guide-resource"
+              open={expandedGuideId === resource.id}
+              onToggle={(event) => setExpandedGuideId(event.currentTarget.open ? resource.id : null)}
+            >
+              <summary>
+                <span>
+                  <strong>{resource.title || "Untitled guide"}</strong>
+                  <small>{resource.format.toUpperCase()} · {resource.appliesTo.join(", ") || "No versions selected"}</small>
+                </span>
+                <span>Edit</span>
+              </summary>
+              <div className="dev-resource-form">
               <div className="dev-grid-3">
                 <Field label="Title">
                   <input
@@ -691,16 +782,18 @@ export function GuidesEditor({
                   </button>
                 </div>
               </div>
-            </div>
+              </div>
+            </details>
           );
         })}
       </fieldset>
 
       {/* Section: Markdown Documentation Guide */}
       <fieldset
-        className="dev-section"
+        className={`dev-section${hasValidationError ? " dev-section-invalid" : ""}`}
         hidden={section !== "Guides"}
         aria-labelledby="studio-guide-title"
+        tabIndex={hasValidationError ? -1 : undefined}
       >
         <div className="dev-section-header">
           <h3 id="studio-guide-title">Markdown guide</h3>
@@ -740,6 +833,8 @@ export function GuidesEditor({
             <textarea
               className="dev-textarea"
               aria-label="Guide Markdown"
+              data-validation-field="guide-markdown"
+              aria-invalid={validation?.field === "guide-markdown" || undefined}
               value={editingTool.guide}
               onChange={(e) => {
                 const guide = e.target.value;
