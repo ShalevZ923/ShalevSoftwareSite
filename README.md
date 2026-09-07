@@ -2,7 +2,7 @@
 
 Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. The production Docker and IIS deployments remain backend-free and contain no application secrets.
 
-An optional local Node.js server provides the Developer Studio proof of concept. That mode has authenticated filesystem-write APIs and an ephemeral startup token, so it is not part of the public static deployment. See [the Developer Studio guide](./docs/DEVELOPER_STUDIO.md) before using it.
+An optional local Node.js server provides Developer Studio, an authenticated local authoring interface. It has filesystem-write APIs and an ephemeral startup token, so it is not part of the public static deployment. See [the Developer Studio guide](./docs/DEVELOPER_STUDIO.md) before using it.
 
 The catalog supports shareable filter URLs and a saved-tools list. Saved tools are stored only in the visitor's browser; they are never sent to a server or included in shared links.
 
@@ -162,7 +162,7 @@ See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, ver
 
 For the `v1.6.0-beta.1` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
 
-To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download proof of concept](docs/HOSTED_DOWNLOAD_POC.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
+To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download guide](docs/HOSTED_DOWNLOADS.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
 
 ## Windows Server or workstation deployment
 

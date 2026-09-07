@@ -1,4 +1,4 @@
-# Developer Studio proof of concept
+# Developer Studio
 
 Developer Studio is an optional local authoring interface. It runs `scripts/server.mjs`, reads catalog and documentation files, and can write reviewed changes into the working tree. It does not replace the approval-gated pull-request and merge-request contribution workflows.
 

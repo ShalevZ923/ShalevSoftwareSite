@@ -1,6 +1,6 @@
 # Developer Studio redesign proposal
 
-Status: implemented locally on `codex/guide-resource-ingestion-poc`; verification evidence is recorded below.
+Status: implemented and merged; verification evidence is recorded below.
 
 Primary-screen visual proposal: [Developer Studio concept](./design/developer-studio-concept.png), generated with the built-in Image Gen tool. Brief: match Tool Atlas's navy navigation, white surface, Newsreader heading and Inter controls; show a searchable software list, Overview / Releases / Guides / Support sections, and a persistent save action. This is the approved primary-screen direction reference. Generated logos, tag chips, and the disclosure's invented “color, sort name, and weight” text are illustrative; retain actual repository controls and supported fields. The gate, guide editor, and mobile layouts extend the same typography, colors, and controls.
 
@@ -71,7 +71,7 @@ System docs use the same record-list and action-bar pattern, with document searc
 
 ## Boundaries
 
-This is a UI and editing-experience redesign within the existing local Studio proof of concept. It does not turn Studio into a hosted or multi-user administration system. Saving, authentication, catalog validation, and publication boundaries retain the existing local-only behavior.
+This is a UI and editing-experience redesign within the existing local Studio. It does not turn Studio into a hosted or multi-user administration system. Saving, authentication, catalog validation, and publication boundaries retain the existing local-only behavior.
 
 
 ## Implementation and verification — 2026-09-05

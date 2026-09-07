@@ -1,15 +1,15 @@
-name: tool-atlas-poc
+name: tool-atlas-hosted-downloads
 
 services:
   publisher:
     image: mcr.microsoft.com/powershell:lts-alpine-3.20@sha256:6827da316115b10df9ce9435b89abbf1f062909db0e1a8a24472b05dee704fd6
-    user: "${POC_UID:-1000}:${POC_GID:-1000}"
+    user: "${HOSTED_DOWNLOAD_UID:-1000}:${HOSTED_DOWNLOAD_GID:-1000}"
     working_dir: /workspace
     environment:
       XDG_CACHE_HOME: /tmp/.cache
       XDG_CONFIG_HOME: /tmp/.config
       XDG_DATA_HOME: /tmp/.local/share
-    command: ["pwsh", "-NoLogo", "-NoProfile", "-File", "/workspace/poc/Publish-Jq.ps1"]
+    command: ["pwsh", "-NoLogo", "-NoProfile", "-File", "/workspace/scripts/Publish-Jq.ps1"]
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=8m
@@ -24,7 +24,7 @@ services:
   app:
     build:
       context: .
-    image: tool-atlas:poc
+    image: tool-atlas:hosted-downloads
     depends_on:
       publisher:
         condition: service_completed_successfully
