@@ -1,6 +1,6 @@
 # jq
 
-This entry proves that Tool Atlas can serve a reviewed installer directly from its own package storage instead of redirecting to a vendor URL.
+Tool Atlas serves this reviewed installer directly from its package storage instead of redirecting to a vendor URL.
 
 ## Install
 
