@@ -10,7 +10,7 @@ ghcr.io/shalevz923/shalevsoftwaresite:1.6.0
 
 The version tag is a convenience tag, not an immutable deployment identity. After the release workflow succeeds, record its published digest and deploy `ghcr.io/shalevz923/shalevsoftwaresite@sha256:...` instead. The image contains only the built static site and NGINX; it does not include the Node.js Developer Studio server or its write APIs.
 
-The tag workflow verifies that the Git tag and `package.json` version match, runs `pnpm verify`, pushes the image only after that succeeds, and creates an OCI provenance attestation. CI runs the same source verification and a read-only NGINX container smoke test on pull requests and `main`.
+The tag workflow verifies that the Git tag and `package.json` version match, runs `pnpm verify`, and pushes the image only after that succeeds. On a public repository it also creates an OCI provenance attestation; GitHub does not persist attestations for user-owned private repositories.
 
 ## Test the image
 
