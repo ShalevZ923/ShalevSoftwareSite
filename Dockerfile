@@ -1,7 +1,8 @@
-FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS build
+FROM node:26-alpine@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868 AS build
 
 WORKDIR /app
-RUN corepack enable
+# Node 26 no longer ships Corepack; install it so packageManager (pnpm) still works.
+RUN npm install -g corepack && corepack enable
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -14,7 +15,7 @@ COPY src ./src
 ARG VITE_APP_VERSION=1.6.0-beta.2
 RUN pnpm build
 
-FROM nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236 AS runtime
+FROM nginx:1.31-alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3 AS runtime
 
 ARG VERSION=dev
 ARG VCS_REF=unknown
