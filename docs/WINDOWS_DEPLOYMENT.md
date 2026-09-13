@@ -85,7 +85,10 @@ The command prints the exact catalog line:
 2025.1 | artifact:intellij/2025.1/ideaIU-2025.1.exe
 ```
 
-Put that release in `content/tools/intellij.md`, regenerate, review, and deploy the updated application:
+Put that release in the canonical entry under
+`content/catalog/<category>/<vendor>/<tool>/releases/<version>.json`, then
+regenerate, review, and deploy the updated application. Do not edit
+`src/generated/catalog.ts` directly:
 
 ```powershell
 pnpm catalog:build

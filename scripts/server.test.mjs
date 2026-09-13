@@ -68,6 +68,15 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(data.valid).toBe(false);
   });
 
+  it("rejects oversized unauthenticated JSON without retaining it", async () => {
+    const res = await fetch(`${baseUrl}/api/developer/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "x".repeat(2 * 1024 * 1024 + 1),
+    });
+    expect(res.status).toBe(413);
+  });
+
   it("verifies valid ephemeral developer token on POST /api/developer/verify", async () => {
     const res = await fetch(`${baseUrl}/api/developer/verify`, {
       method: "POST",
@@ -93,6 +102,12 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(() => assertSafeBindHost("127.0.0.1")).not.toThrow();
     expect(() => assertSafeBindHost("0.0.0.0")).toThrow(/Refusing a non-loopback bind/);
     expect(() => assertSafeBindHost("0.0.0.0", true)).not.toThrow();
+  });
+
+  it("uses short request timeouts for the optional authoring server", () => {
+    expect(server.headersTimeout).toBe(10_000);
+    expect(server.requestTimeout).toBe(15_000);
+    expect(server.keepAliveTimeout).toBe(5_000);
   });
 
   it("allows access to developer tools with Bearer token", async () => {

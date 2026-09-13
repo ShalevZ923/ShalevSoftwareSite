@@ -1,0 +1,11 @@
+# Enforce this file through a GitHub ruleset before making the repository public.
+* @ShalevZ923
+
+# Security-sensitive implementation and publication paths.
+/.github/ @ShalevZ923
+/scripts/ @ShalevZ923
+/Dockerfile @ShalevZ923
+/compose.yaml @ShalevZ923
+/Caddyfile @ShalevZ923
+/nginx.conf @ShalevZ923
+/windows/ @ShalevZ923

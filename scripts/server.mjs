@@ -127,17 +127,32 @@ function applySecurityHeaders(res, isAsset = false) {
   }
 }
 
+const maxJsonBodyBytes = 2 * 1024 * 1024;
+
+function payloadTooLargeError() {
+  const error = new Error("Payload too large");
+  error.statusCode = 413;
+  return error;
+}
+
 async function readJsonBody(req) {
   return new Promise((resolveBody, rejectBody) => {
     let body = "";
+    let settled = false;
     req.on("data", (chunk) => {
+      if (settled) return;
       body += chunk;
-      if (body.length > 2 * 1024 * 1024) {
-        // 2MB payload cap
-        rejectBody(new Error("Payload too large"));
+      if (Buffer.byteLength(body, "utf8") > maxJsonBodyBytes) {
+        // Stop retaining data immediately. Resume drains the socket so the
+        // process can return 413 without accumulating an unbounded body.
+        settled = true;
+        req.resume();
+        rejectBody(payloadTooLargeError());
       }
     });
     req.on("end", () => {
+      if (settled) return;
+      settled = true;
       if (!body.trim()) return resolveBody({});
       try {
         resolveBody(JSON.parse(body));
@@ -145,7 +160,12 @@ async function readJsonBody(req) {
         rejectBody(new Error(`Invalid JSON: ${err.message}`));
       }
     });
-    req.on("error", rejectBody);
+    req.on("error", (error) => {
+      if (!settled) {
+        settled = true;
+        rejectBody(error);
+      }
+    });
   });
 }
 
@@ -209,7 +229,7 @@ export function createToolAtlasServer({
   distDirectory = distDir,
   packagesDirectory = packagesDir,
 } = {}) {
-  return createServer(async (req, res) => {
+  const server = createServer(async (req, res) => {
     let pathname;
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
@@ -243,8 +263,12 @@ export function createToolAtlasServer({
         let body = {};
         try {
           body = await readJsonBody(req);
-        } catch {
-          // ignore
+        } catch (error) {
+          if (error.statusCode === 413) {
+            return sendJson(res, 413, { valid: false, error: error.message });
+          }
+          // Invalid JSON is equivalent to an invalid credential here and does
+          // not reveal parsing details.
         }
         let token = body.token || "";
         if (!token) {
@@ -540,9 +564,16 @@ export function createToolAtlasServer({
       createReadStream(candidatePath).pipe(res);
     } catch (error) {
       process.stderr.write(`Server error: ${error.message}\n`);
-      sendJson(res, 500, { error: error.message });
+      sendJson(res, error.statusCode || 500, { error: error.message });
     }
   });
+  // Developer Studio is an optional authoring server. Bound request and header
+  // durations limit slow clients when an operator deliberately puts it behind
+  // a trusted TLS proxy; production static deployments do not run this server.
+  server.headersTimeout = 10_000;
+  server.requestTimeout = 15_000;
+  server.keepAliveTimeout = 5_000;
+  return server;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -1,5 +1,11 @@
 # Tool Atlas
 
+Tool Atlas is licensed under the [Apache License 2.0](./LICENSE). The license
+applies to this repository's first-party software and documentation only; it
+does not grant rights to third-party vendor names, logos, installers, or other
+catalog material. See the [open-source readiness checklist](./docs/OPEN_SOURCE_READINESS.md)
+before changing repository visibility.
+
 Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. The production Docker and IIS deployments remain backend-free and contain no application secrets.
 
 An optional local Node.js server provides Developer Studio, an authenticated local authoring interface. It has filesystem-write APIs and an ephemeral startup token, so it is not part of the public static deployment. See [the Developer Studio guide](./docs/DEVELOPER_STUDIO.md) before using it.

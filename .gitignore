@@ -10,3 +10,4 @@ output/
 .DS_Store
 coverage/
 .pnpm-store/
+.codex*
