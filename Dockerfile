@@ -12,7 +12,7 @@ COPY public ./public
 COPY content ./content
 COPY scripts ./scripts
 COPY src ./src
-ARG VITE_APP_VERSION=1.6.0-beta.2
+ARG VITE_APP_VERSION=1.6.0
 RUN pnpm build
 
 FROM nginx:1.31-alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3 AS runtime

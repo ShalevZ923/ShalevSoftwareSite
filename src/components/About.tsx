@@ -1,6 +1,6 @@
 import { Icon } from "./ui";
 
-const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.6.0-beta.2";
+const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.6.0";
 
 export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
   return (

@@ -18,16 +18,16 @@ The catalog supports shareable filter URLs and a saved-tools list. Saved tools a
 
 The ready-made release image contains only the static catalog served by unprivileged NGINX; it does not include the local Developer Studio server or its write APIs.
 
-Pull the current beta release:
+Pull the current release:
 
 ```bash
-docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
+docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0
 docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   -p 127.0.0.1:8080:8080 \
-  ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
+  ghcr.io/shalevz923/shalevsoftwaresite:1.6.0
 ```
 
-Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing; `:beta` follows the latest beta image. For a production deployment, pin the reviewed image digest and use the [production deployment guide](./docs/PRODUCTION_DEPLOYMENT.md).
+Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing. For a production deployment, pin the reviewed image digest and use the [production deployment guide](./docs/PRODUCTION_DEPLOYMENT.md).
 
 ## Local development
 
@@ -60,7 +60,7 @@ Conflicting filters are cleared so a linked tool is visible; compatible filters 
 
 ## Website version
 
-Set `VITE_APP_VERSION=1.6.0-beta.2` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.6.0-beta.2`.
+Set `VITE_APP_VERSION=1.6.0` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.6.0`.
 
 After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
 
@@ -168,7 +168,7 @@ The app container runs as the unprivileged `nginx` user with a read-only filesys
 
 See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
 
-For the `v1.6.0-beta.2` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
+For the `v1.6.0` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
 
 To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download guide](docs/HOSTED_DOWNLOADS.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
 

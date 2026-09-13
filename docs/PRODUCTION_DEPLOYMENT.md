@@ -1,14 +1,14 @@
-# Production deployment and `v1.6.0-beta.2`
+# Production deployment and `v1.6.0`
 
 ## Release artifacts
 
-`v1.6.0-beta.2` publishes a Linux/amd64 static-site image to GitHub Container Registry:
+`v1.6.0` publishes a Linux/amd64 static-site image to GitHub Container Registry:
 
 ```text
-ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
+ghcr.io/shalevz923/shalevsoftwaresite:1.6.0
 ```
 
-The tag is a beta convenience tag, not an immutable deployment identity. After the release workflow succeeds, record its published digest and deploy `ghcr.io/shalevz923/shalevsoftwaresite@sha256:...` instead. The image contains only the built static site and NGINX; it does not include the Node.js Developer Studio server or its write APIs.
+The version tag is a convenience tag, not an immutable deployment identity. After the release workflow succeeds, record its published digest and deploy `ghcr.io/shalevz923/shalevsoftwaresite@sha256:...` instead. The image contains only the built static site and NGINX; it does not include the Node.js Developer Studio server or its write APIs.
 
 The tag workflow verifies that the Git tag and `package.json` version match, runs `pnpm verify`, pushes the image only after that succeeds, and creates an OCI provenance attestation. CI runs the same source verification and a read-only NGINX container smoke test on pull requests and `main`.
 
@@ -17,8 +17,8 @@ The tag workflow verifies that the Git tag and `package.json` version match, run
 The public GitHub Container Registry package can be pulled without authentication:
 
 ```bash
-docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
-docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:8080:8080 ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
+docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0
+docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:8080:8080 ghcr.io/shalevz923/shalevsoftwaresite:1.6.0
 curl --fail --head http://127.0.0.1:8080/
 ```
 
@@ -40,7 +40,7 @@ Microsoft documents that Linux containers require virtualization on Windows, and
 
 ## Release gate
 
-Before promoting beta to a stable release, require all of the following:
+Before promoting a build to production, require all of the following:
 
 1. Green CI and image-publication workflow for the exact tag.
 2. Recorded image digest and verified provenance attestation.
