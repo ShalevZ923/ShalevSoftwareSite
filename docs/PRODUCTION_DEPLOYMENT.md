@@ -1,11 +1,11 @@
-# Production deployment and `v1.6.0-beta.1`
+# Production deployment and `v1.6.0-beta.2`
 
 ## Release artifacts
 
-`v1.6.0-beta.1` publishes a Linux/amd64 static-site image to GitHub Container Registry:
+`v1.6.0-beta.2` publishes a Linux/amd64 static-site image to GitHub Container Registry:
 
 ```text
-ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.1
+ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
 ```
 
 The tag is a beta convenience tag, not an immutable deployment identity. After the release workflow succeeds, record its published digest and deploy `ghcr.io/shalevz923/shalevsoftwaresite@sha256:...` instead. The image contains only the built static site and NGINX; it does not include the Node.js Developer Studio server or its write APIs.
@@ -17,8 +17,8 @@ The tag workflow verifies that the Git tag and `package.json` version match, run
 The public GitHub Container Registry package can be pulled without authentication:
 
 ```bash
-docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.1
-docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:8080:8080 ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.1
+docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
+docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:8080:8080 ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
 curl --fail --head http://127.0.0.1:8080/
 ```
 
@@ -46,4 +46,6 @@ Before promoting beta to a stable release, require all of the following:
 2. Recorded image digest and verified provenance attestation.
 3. Fresh dependency and image-vulnerability review.
 4. External HTTPS, firewall, package-download, rollback, and Windows/IIS acceptance evidence.
-5. A decision on whether Developer Studio remains local-only or is replaced by the approval-gated catalog pull-request workflow for multi-user changes.
+5. Developer Studio remains **local-only**. Multi-user catalog changes use the approval-gated GitHub/GitLab issue and pull-request workflow, not a networked Studio.
+
+Item 5 is the product decision for this line: do not ship Studio write APIs in the public image.

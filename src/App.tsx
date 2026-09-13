@@ -18,7 +18,7 @@ import { catalogTargetFromSearch, resolveToolRelease, toolPageHref, type Catalog
 
 type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
 
-const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.6.0-beta.1";
+const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.6.0-beta.2";
 
 const platforms: Array<"All platforms" | Platform> = [
   "All platforms",

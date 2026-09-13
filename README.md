@@ -3,7 +3,9 @@
 Tool Atlas is licensed under the [Apache License 2.0](./LICENSE). The license
 applies to this repository's first-party software and documentation only; it
 does not grant rights to third-party vendor names, logos, installers, or other
-catalog material. See the [open-source readiness checklist](./docs/OPEN_SOURCE_READINESS.md)
+catalog material. See [CONTRIBUTING.md](./CONTRIBUTING.md),
+[SECURITY.md](./SECURITY.md), and the
+[open-source readiness checklist](./docs/OPEN_SOURCE_READINESS.md)
 before changing repository visibility.
 
 Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. The production Docker and IIS deployments remain backend-free and contain no application secrets.
@@ -19,10 +21,10 @@ The ready-made release image contains only the static catalog served by unprivil
 Pull the current beta release:
 
 ```bash
-docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.1
+docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
 docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   -p 127.0.0.1:8080:8080 \
-  ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.1
+  ghcr.io/shalevz923/shalevsoftwaresite:1.6.0-beta.2
 ```
 
 Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing; `:beta` follows the latest beta image. For a production deployment, pin the reviewed image digest and use the [production deployment guide](./docs/PRODUCTION_DEPLOYMENT.md).
@@ -58,7 +60,7 @@ Conflicting filters are cleared so a linked tool is visible; compatible filters 
 
 ## Website version
 
-Set `VITE_APP_VERSION=1.6.0-beta.1` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.6.0-beta.1`.
+Set `VITE_APP_VERSION=1.6.0-beta.2` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.6.0-beta.2`.
 
 After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
 
@@ -166,7 +168,7 @@ The app container runs as the unprivileged `nginx` user with a read-only filesys
 
 See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
 
-For the `v1.6.0-beta.1` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
+For the `v1.6.0-beta.2` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
 
 To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download guide](docs/HOSTED_DOWNLOADS.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
 

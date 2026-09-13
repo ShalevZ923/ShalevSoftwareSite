@@ -11,3 +11,4 @@ output/
 coverage/
 .pnpm-store/
 .codex*
+deliverables/

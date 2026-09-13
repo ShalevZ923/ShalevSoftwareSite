@@ -19,6 +19,18 @@ first-party content files under a clearly labelled **CC-BY-4.0** content
 license. Keep logos and trademarks excluded unless written permission says
 otherwise.
 
+Internal meeting notes and slide decks stay in `deliverables/`, which is
+gitignored and is not part of the published source tree.
+
+## Repository files
+
+- [x] `LICENSE` (Apache-2.0) and `NOTICE` for first-party software and docs
+- [x] `SECURITY.md` private-advisory reporting
+- [x] `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`
+- [x] `.github/CODEOWNERS` for workflow, scripts, and deployment paths
+- [x] `.github/dependabot.yml` for npm, Actions, and Docker updates
+- [x] `deliverables/` gitignored; `.env` / `.env.*` already gitignored
+
 ## Before changing visibility
 
 - [ ] Confirm who owns every file and whether customer, employee, licence,
@@ -26,16 +38,15 @@ otherwise.
   or untracked directories.
 - [ ] Keep `content/catalog/` public-only. Never add licence keys, activation
   codes, private contacts, contract terms, personal data, or installer files.
-- [ ] Inspect the final staged tree with a secret scanner and a manual review;
-  `.env`, `.env.*`, package binaries, logs, output, and `deliverables/` must
-  remain intentionally excluded or reviewed before staging.
+- [ ] Inspect the final staged tree with a secret scanner and a manual review.
 - [ ] Rotate any credential that was ever placed in the repository, a commit,
   an issue, an Actions log, or an artifact. Removing a current file does not
   remove a copied or historical secret.
-- [ ] Add `LICENSE`, `NOTICE` if required, `SECURITY.md`, a contribution guide,
-  and a code of conduct after the licensing and ownership decisions are made.
 
 ## GitHub configuration
+
+These settings are not stored as ordinary source files. Complete them in the
+GitHub UI (or with `gh`) **before** switching the repository public.
 
 - [ ] Make `main` a ruleset-protected branch: pull requests only, at least one
   independent approval, stale-approval dismissal, required CI, no force pushes,
@@ -54,6 +65,10 @@ otherwise.
   third-party actions to full commit SHAs, and review pin updates.
 - [ ] Keep package visibility deliberate. Publish immutable image digests and
   verify the provenance attestation before deployment.
+
+CI workflows already pin third-party Actions to commit SHAs and set
+`permissions: contents: read` on the verify workflow. Catalog-issue and image
+publish workflows keep the extra write scopes they need.
 
 ## Environment variables and secrets
 

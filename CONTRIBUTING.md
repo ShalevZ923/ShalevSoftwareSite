@@ -1,5 +1,9 @@
 # Contributing to Tool Atlas
 
+Participation is covered by the [code of conduct](./CODE_OF_CONDUCT.md).
+Security reports must follow [SECURITY.md](./SECURITY.md) instead of a public
+issue.
+
 ## Before opening a pull request
 
 - Use a branch and keep changes focused.
