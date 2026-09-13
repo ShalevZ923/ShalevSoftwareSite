@@ -7,11 +7,26 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  issues: read
+  issues: write
 
 jobs:
+  reject-unauthorized-approval:
+    if: github.event.label.name == 'catalog-approved' && github.actor != github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove catalog-approved applied by a non-owner
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label catalog-approved
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
+            "@${ACTOR} only the repository owner can apply \`catalog-approved\`. The label was removed. Ask a maintainer to review the submission."
+
   create-catalog-pr:
-    if: github.event.label.name == 'catalog-approved' && github.event.issue.state == 'open'
+    if: github.event.label.name == 'catalog-approved' && github.event.issue.state == 'open' && github.actor == github.repository_owner
     runs-on: ubuntu-latest
     concurrency:
       group: catalog-issue-${{ github.event.issue.number }}

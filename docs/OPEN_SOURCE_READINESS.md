@@ -48,12 +48,16 @@ gitignored and is not part of the published source tree.
 These settings are not stored as ordinary source files. Complete them in the
 GitHub UI (or with `gh`) **before** switching the repository public.
 
-- [ ] Make `main` a ruleset-protected branch: pull requests only, at least one
-  independent approval, stale-approval dismissal, required CI, no force pushes,
-  no branch deletion, and restrict direct pushes and tag creation to release
-  maintainers.
-- [ ] Restrict who can apply `catalog-approved`. That label starts a workflow
-  holding branch/PR write permission; it must be limited to trusted maintainers.
+- [ ] Make `main` a ruleset-protected branch: pull requests only, required CI
+  (`Verify source and production artifact` and `Build and smoke-test production image`),
+  no force pushes, and no branch deletion. Add a second required approving
+  review and Code Owner review only after there is an independent reviewer;
+  a solo owner cannot approve their own pull request. Restrict tag creation
+  (`v*`) to the release maintainer.
+- [ ] Restrict who can apply `catalog-approved`. GitHub has no per-label ACL;
+  the catalog workflow already ignores and strips that label unless the actor
+  is the repository owner. Do not grant Triage or Write to people who should
+  not approve catalog submissions.
 - [ ] Require review of workflow, Docker, deployment, and catalog-validator
   changes by designated owners. A `CODEOWNERS` file only becomes enforcement
   when the ruleset requires code-owner review.
