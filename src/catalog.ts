@@ -118,6 +118,52 @@ export function getCatalogTools(catalog: Tool[], filters: CatalogFilters) {
     });
 }
 
+const monthIndex: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+/** Smaller ranks are more recent. Relative labels outrank month-day stamps. */
+export function recencyRank(updated: string): number {
+  const value = updated.trim().toLocaleLowerCase();
+  if (value === "today") return 0;
+  if (value === "yesterday") return 1;
+  const days = /^(\d+)\s+days?\s+ago$/u.exec(value);
+  if (days) return Number(days[1]);
+  const dated = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})$/u.exec(value);
+  if (dated) {
+    const month = monthIndex[dated[1]];
+    const day = Number(dated[2]);
+    return 200 + (11 - month) * 32 + (31 - day);
+  }
+  return 900;
+}
+
+export type CatalogUpdateKind = "notice" | "new" | "release" | "update";
+
+export function catalogUpdateKind(tool: Tool): CatalogUpdateKind {
+  if (tool.notice) return "notice";
+  if (tool.lifecycle === "New") return "new";
+  if (tool.releases.length > 1) return "release";
+  return "update";
+}
+
+export const catalogUpdateKindLabel: Record<CatalogUpdateKind, string> = {
+  notice: "Notice",
+  new: "New in catalog",
+  release: "Release",
+  update: "Catalog change",
+};
+
+/** Newest catalog changes first, then name. */
+export function getRecentUpdates(catalog: Tool[]): Tool[] {
+  return [...catalog].sort((a, b) => {
+    const byTime = recencyRank(a.updated) - recencyRank(b.updated);
+    if (byTime !== 0) return byTime;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 /** Returns a predictable, searchable list for the documentation library. */
 export function getDocumentationTools(catalog: Tool[], query: string) {
   const normalizedQuery = query.trim().toLocaleLowerCase();

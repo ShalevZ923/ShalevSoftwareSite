@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { catalogFiltersFromSearch, catalogFiltersToSearch, defaultFilters, getCatalogTools, getDocumentationTools, slugifyHeading } from './catalog'
+import { catalogFiltersFromSearch, catalogFiltersToSearch, defaultFilters, getCatalogTools, getDocumentationTools, getRecentUpdates, recencyRank, slugifyHeading } from './catalog'
 import { docs, tools } from './data'
 
 describe('catalog filters', () => {
@@ -47,6 +47,14 @@ describe('catalog filters', () => {
     expect(search).toBe('query=docker&category=Container&platform=Linux&sort=updated')
     expect(catalogFiltersFromSearch(`?${search}`, ['All categories', 'Container', 'IDE'])).toEqual({ ...defaultFilters, query: 'docker', category: 'Container', platform: 'Linux', sort: 'updated' })
     expect(catalogFiltersFromSearch('?category=Unknown&platform=Solaris&lifecycle=Future&sort=random', ['All categories', 'IDE'])).toEqual(defaultFilters)
+  })
+
+  it('ranks recent updates newest first', () => {
+    expect(recencyRank('Today')).toBeLessThan(recencyRank('Yesterday'))
+    expect(recencyRank('Yesterday')).toBeLessThan(recencyRank('3 days ago'))
+    expect(recencyRank('Aug 18')).toBeLessThan(recencyRank('Aug 02'))
+    expect(recencyRank('Aug 02')).toBeLessThan(recencyRank('Jul 29'))
+    expect(getRecentUpdates(tools).map((tool) => tool.id).slice(0, 4)).toEqual(['intellij', 'jq', 'vscode', 'docker'])
   })
 
   it('searches the documentation library by tool metadata and sorts it by name', () => {

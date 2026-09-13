@@ -6,6 +6,20 @@
     <meta name="description" content="A practical catalog for supported developer software." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Tool Atlas — Software catalog</title>
+    <script>
+      (function () {
+        var key = "tool-atlas-theme";
+        var theme = null;
+        try {
+          theme = localStorage.getItem(key);
+        } catch (e) {}
+        if (theme !== "light" && theme !== "dark") {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

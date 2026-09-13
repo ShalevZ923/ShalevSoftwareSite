@@ -5,20 +5,22 @@ import {
   defaultFilters,
   getCatalogTools,
   getDocumentationTools,
+  getRecentUpdates,
   type CatalogFilters,
 } from "./catalog";
 import { filterSavedToolIds, readSavedToolIds, writeSavedToolIds } from "./catalogStorage";
 import { DocumentationPicker } from "./components/DocumentationPicker";
 import { DeveloperStudio } from "./components/DeveloperStudio";
 import { DeveloperLockGate } from "./components/DeveloperLockGate";
+import { About } from "./components/About";
+import { UpdatesPage } from "./components/UpdatesPage";
 import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from "./components/ui";
 import { getGuideResourceTarget, getReleaseDownloadTarget } from "./downloads";
 import { MarkdownDocument } from "./markdown";
+import { applyTheme, readStoredTheme, resolveTheme, systemTheme, writeTheme, type Theme } from "./theme";
 import { catalogTargetFromSearch, resolveToolRelease, toolPageHref, type CatalogTarget } from "./toolLinks";
 
 type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
-
-const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.6.0-beta.2";
 
 const platforms: Array<"All platforms" | Platform> = [
   "All platforms",
@@ -41,11 +43,19 @@ function Sidebar({
   navigate,
   isOpen,
   close,
+  collapsed,
+  onToggleCollapsed,
+  theme,
+  onToggleTheme,
 }: {
   page: Page;
   navigate: (page: Page) => void;
   isOpen: boolean;
   close: () => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+  theme: Theme;
+  onToggleTheme: () => void;
 }) {
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width: 760px)").matches);
   useEffect(() => {
@@ -57,16 +67,27 @@ function Sidebar({
   const links: Array<[Page, string, IconName]> = [
     ["catalog", "Catalog", "catalog"],
     ["documentation", "Documentation", "book"],
-    ["updates", "Updates", "document"],
+    ["updates", "Updates", "updates"],
     ["about", "About", "info"],
   ];
   if (page === "developer") links.push(["developer", "Developer Studio", "catalog"]);
   return (
-    <aside inert={compact && !isOpen} className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
-      <div className="brand">
-        <Icon name="atlas" size={28} />
+    <aside
+      inert={compact && !isOpen}
+      className={`sidebar${isOpen ? " sidebar-open" : ""}${collapsed ? " sidebar-collapsed" : ""}`}
+    >
+      <button
+        type="button"
+        className="brand"
+        aria-label="Tool Atlas home"
+        onClick={() => {
+          navigate("catalog");
+          close();
+        }}
+      >
+        <img src="/logo.svg" width={32} height={32} alt="" />
         <span>Tool Atlas</span>
-      </div>
+      </button>
       <button
         className="mobile-close"
         onClick={close}
@@ -79,6 +100,8 @@ function Sidebar({
           <button
             key={id}
             className={page === id ? "nav-link active" : "nav-link"}
+            aria-label={label}
+            title={collapsed ? label : undefined}
             onClick={() => {
               navigate(id);
               close();
@@ -89,6 +112,30 @@ function Sidebar({
           </button>
         ))}
       </nav>
+      <div className="sidebar-foot">
+        <button
+          type="button"
+          className="theme-toggle"
+          aria-pressed={theme === "dark"}
+          aria-label={theme === "dark" ? "Dark mode" : "Light mode"}
+          title={collapsed ? (theme === "dark" ? "Switch to light mode" : "Switch to dark mode") : undefined}
+          onClick={onToggleTheme}
+        >
+          <Icon name={theme === "dark" ? "moon" : "sun"} />
+          <span>{theme === "dark" ? "Dark" : "Light"}</span>
+        </button>
+        <button
+          type="button"
+          className="sidebar-toggle"
+          aria-pressed={collapsed}
+          aria-controls="main-navigation"
+          title={collapsed ? "Expand navigation" : "Collapse navigation"}
+          onClick={onToggleCollapsed}
+        >
+          <Icon name="chevron" />
+          <span>{collapsed ? "Expand" : "Collapse"}</span>
+        </button>
+      </div>
     </aside>
   );
 }
@@ -96,6 +143,44 @@ function Sidebar({
 function App() {
   const [page, setPage] = useState<Page>(() => pageFromSearch(window.location.search));
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem("tool-atlas-nav-collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleNavCollapsed = () => {
+    setNavCollapsed((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem("tool-atlas-nav-collapsed", next ? "1" : "0");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+  const [theme, setTheme] = useState<Theme>(() => resolveTheme(readStoredTheme(), systemTheme()));
+  const [themeFollowsSystem, setThemeFollowsSystem] = useState(() => readStoredTheme() === null);
+  const toggleTheme = () => {
+    setTheme((current) => {
+      const next = current === "dark" ? "light" : "dark";
+      writeTheme(next);
+      return next;
+    });
+    setThemeFollowsSystem(false);
+  };
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+  useEffect(() => {
+    if (!themeFollowsSystem) return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setTheme(media.matches ? "dark" : "light");
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [themeFollowsSystem]);
   const [routeSearch, setRouteSearch] = useState(() => window.location.search);
   const [routeRevision, setRouteRevision] = useState(0);
   const studioDirty = useRef(false);
@@ -265,7 +350,7 @@ function App() {
   }, []);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${navCollapsed ? " app-shell-nav-collapsed" : ""}`} data-page={page}>
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
@@ -274,6 +359,10 @@ function App() {
         navigate={navigate}
         isOpen={menuOpen}
         close={() => setMenuOpen(false)}
+        collapsed={navCollapsed}
+        onToggleCollapsed={toggleNavCollapsed}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       {menuOpen && (
         <button
@@ -321,10 +410,11 @@ function App() {
         {page === "updates" && (
           <UpdatesPage
             tools={catalogTools}
+            onCatalog={openCatalogTool}
             onDocs={(tool) => navigate("documentation", tool.id)}
           />
         )}
-        {page === "about" && <About />}
+        {page === "about" && <About onOpenCatalog={() => navigate("catalog")} />}
       </main>
     </div>
   );
@@ -801,7 +891,7 @@ function Updates({ tools, onViewAll }: { tools: Tool[]; onViewAll: () => void })
   return (
     <aside className="updates">
       <h2>Recent updates</h2>
-      {tools.slice(0, 5).map((tool) => (
+      {getRecentUpdates(tools).slice(0, 5).map((tool) => (
         <div key={tool.id} className="update">
           <span />
           <div>
@@ -816,39 +906,6 @@ function Updates({ tools, onViewAll }: { tools: Tool[]; onViewAll: () => void })
         View all updates <Icon name="arrow" size={17} />
       </button>
     </aside>
-  );
-}
-
-function UpdatesPage({ tools, onDocs }: { tools: Tool[]; onDocs: (tool: Tool) => void }) {
-  return (
-    <section className="page updates-page">
-      <PageHeader
-        title="Recent updates"
-        copy="The latest approved software releases and catalog changes."
-      />
-      <div className="updates-list" aria-label="Recent catalog updates">
-        {tools.map((tool) => (
-          <article className="update-card" key={tool.id}>
-            <ToolGlyph tool={tool} />
-            <div>
-              <span className="update-kind">CATALOG UPDATE</span>
-              <h2>{tool.name} {tool.releases[0].version}</h2>
-              <p>
-                The approved release and catalog entry were updated {tool.updated.toLocaleLowerCase()}.
-              </p>
-              {tool.notice && (
-                <p className={`update-notice ${tool.notice.tone}`}>
-                  <strong>{tool.notice.title}.</strong> {tool.notice.message}
-                </p>
-              )}
-              <button className="text-action" onClick={() => onDocs(tool)}>
-                View documentation <Icon name="arrow" size={15} />
-              </button>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -969,84 +1026,6 @@ function Documentation({
           )}
         </article>
       </div>
-    </section>
-  );
-}
-
-function About() {
-  return (
-    <section className="page about-page">
-      <PageHeader
-        title="A shared map for your software"
-        copy="Tool Atlas helps developers find the right software, get a trusted download path, and know who can help."
-      />
-      <div className="about-grid">
-        <article className="about-lead">
-          <h2>Less hunting. More building.</h2>
-          <p>
-            Our Developer Enablement division keeps the software landscape
-            understandable: which tools are approved, where they fit, and how to
-            get unstuck.
-          </p>
-          <p>
-            This catalog is the front door. It connects practical documentation,
-            standard configurations, and real people who support the tools your
-            teams use.
-          </p>
-          <a href="mailto:devex@atlas.local" className="primary-button">
-            Talk to Developer Enablement <Icon name="arrow" />
-          </a>
-        </article>
-        <div className="about-points">
-          <article>
-            <span className="point-number">01</span>
-            <h3>Find the right tool</h3>
-            <p>
-              Compare categories, platforms, lifecycle status, and ownership
-              before you install.
-            </p>
-          </article>
-          <article>
-            <span className="point-number">02</span>
-            <h3>Start with confidence</h3>
-            <p>Use trusted download paths and short, maintained setup notes.</p>
-          </article>
-          <article>
-            <span className="point-number">03</span>
-            <h3>Get the right help</h3>
-            <p>
-              Every catalog entry makes its support boundary and owner visible.
-            </p>
-          </article>
-        </div>
-      </div>
-      <section className="principles">
-        <h2>How we maintain the catalog</h2>
-        <div>
-          <article>
-            <h3>Useful over exhaustive</h3>
-            <p>
-              We lead with supported software, then make lifecycle status clear
-              when a legacy tool remains necessary.
-            </p>
-          </article>
-          <article>
-            <h3>Ownership is explicit</h3>
-            <p>
-              A product listing includes the team responsible for the
-              platform—not an anonymous help desk.
-            </p>
-          </article>
-          <article>
-            <h3>Documentation is practical</h3>
-            <p>
-              Guides answer the immediate question: install, configure, use
-              safely, and request help.
-            </p>
-          </article>
-        </div>
-      </section>
-      <p className="about-version"><small>Version {appVersion}</small></p>
     </section>
   );
 }
