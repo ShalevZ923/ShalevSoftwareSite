@@ -14,7 +14,7 @@ COPY src ./src
 ARG VITE_APP_VERSION=1.6.0-beta.2
 RUN pnpm build
 
-FROM nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236 AS runtime
+FROM nginx:1.31-alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3 AS runtime
 
 ARG VERSION=dev
 ARG VCS_REF=unknown
