@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "./data";
 import {
   catalogFiltersToSearch,
@@ -8,17 +8,43 @@ import {
   getRecentUpdates,
   type CatalogFilters,
 } from "./catalog";
+import { COPY_FEEDBACK_MS, copyLinkAnnouncement, copyLinkLabel, searchShortcutHint } from "./catalogChrome";
 import { filterSavedToolIds, readSavedToolIds, writeSavedToolIds } from "./catalogStorage";
 import { DocumentationPicker } from "./components/DocumentationPicker";
-import { DeveloperStudio } from "./components/DeveloperStudio";
-import { DeveloperLockGate } from "./components/DeveloperLockGate";
-import { About } from "./components/About";
-import { UpdatesPage } from "./components/UpdatesPage";
 import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from "./components/ui";
 import { getGuideResourceTarget, getReleaseDownloadTarget } from "./downloads";
-import { MarkdownDocument } from "./markdown";
+import { focusableElements, wrapTabTarget } from "./focusTrap";
 import { applyTheme, readStoredTheme, resolveTheme, systemTheme, writeTheme, type Theme } from "./theme";
 import { catalogTargetFromSearch, resolveToolRelease, toolPageHref, type CatalogTarget } from "./toolLinks";
+
+const About = lazy(async () => {
+  const module = await import("./components/About");
+  return { default: module.About };
+});
+const UpdatesPage = lazy(async () => {
+  const module = await import("./components/UpdatesPage");
+  return { default: module.UpdatesPage };
+});
+const DeveloperStudio = lazy(async () => {
+  const module = await import("./components/DeveloperStudio");
+  return { default: module.DeveloperStudio };
+});
+const DeveloperLockGate = lazy(async () => {
+  const module = await import("./components/DeveloperLockGate");
+  return { default: module.DeveloperLockGate };
+});
+const MarkdownDocument = lazy(async () => {
+  const module = await import("./markdown");
+  return { default: module.MarkdownDocument };
+});
+
+function PageFallback() {
+  return (
+    <p className="page-loading" role="status">
+      Loading page…
+    </p>
+  );
+}
 
 type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
 
@@ -47,6 +73,8 @@ function Sidebar({
   onToggleCollapsed,
   theme,
   onToggleTheme,
+  sidebarRef,
+  compact,
 }: {
   page: Page;
   navigate: (page: Page) => void;
@@ -56,14 +84,9 @@ function Sidebar({
   onToggleCollapsed: () => void;
   theme: Theme;
   onToggleTheme: () => void;
+  sidebarRef: RefObject<HTMLElement | null>;
+  compact: boolean;
 }) {
-  const [compact, setCompact] = useState(() => window.matchMedia("(max-width: 760px)").matches);
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 760px)");
-    const update = () => setCompact(media.matches);
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
   const links: Array<[Page, string, IconName]> = [
     ["catalog", "Catalog", "catalog"],
     ["documentation", "Documentation", "book"],
@@ -71,9 +94,14 @@ function Sidebar({
     ["about", "About", "info"],
   ];
   if (page === "developer") links.push(["developer", "Developer Studio", "catalog"]);
+  const drawerOpen = compact && isOpen;
   return (
     <aside
+      ref={sidebarRef}
       inert={compact && !isOpen}
+      role={drawerOpen ? "dialog" : undefined}
+      aria-modal={drawerOpen ? true : undefined}
+      aria-label={drawerOpen ? "Main navigation" : undefined}
       className={`sidebar${isOpen ? " sidebar-open" : ""}${collapsed ? " sidebar-collapsed" : ""}`}
     >
       <button
@@ -89,6 +117,7 @@ function Sidebar({
         <span>Tool Atlas</span>
       </button>
       <button
+        type="button"
         className="mobile-close"
         onClick={close}
         aria-label="Close navigation"
@@ -99,8 +128,10 @@ function Sidebar({
         {links.map(([id, label, icon]) => (
           <button
             key={id}
+            type="button"
             className={page === id ? "nav-link active" : "nav-link"}
             aria-label={label}
+            aria-current={page === id ? "page" : undefined}
             title={collapsed ? label : undefined}
             onClick={() => {
               navigate(id);
@@ -143,6 +174,10 @@ function Sidebar({
 function App() {
   const [page, setPage] = useState<Page>(() => pageFromSearch(window.location.search));
   const [menuOpen, setMenuOpen] = useState(false);
+  const [compactNav, setCompactNav] = useState(() => window.matchMedia("(max-width: 760px)").matches);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const drawerOpen = compactNav && menuOpen;
   const [navCollapsed, setNavCollapsed] = useState(() => {
     try {
       return window.localStorage.getItem("tool-atlas-nav-collapsed") === "1";
@@ -316,21 +351,70 @@ function App() {
   };
 
   useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const update = () => {
+      setCompactNav(media.matches);
+      if (!media.matches) setMenuOpen(false);
+    };
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
     if (initialPageRender.current) {
       initialPageRender.current = false;
       return;
     }
-    document.getElementById("page-title")?.focus();
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    let focused = false;
+    const focusTitle = () => {
+      if (focused) return;
+      const title = main.querySelector<HTMLElement>("#page-title");
+      if (!title) return;
+      title.focus();
+      focused = true;
+    };
+    focusTitle();
+    if (focused) return;
+    const observer = new MutationObserver(() => {
+      focusTitle();
+      if (focused) observer.disconnect();
+    });
+    observer.observe(main, { childList: true, subtree: true });
+    const timeout = window.setTimeout(() => observer.disconnect(), 4000);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timeout);
+    };
   }, [page]);
 
   useEffect(() => {
-    if (!menuOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
+    if (!drawerOpen) return;
+    const sidebar = sidebarRef.current;
+    const previouslyFocused = document.activeElement;
+    const closeButton = sidebar?.querySelector<HTMLElement>(".mobile-close");
+    const focusable = sidebar ? focusableElements(sidebar) : [];
+    (closeButton ?? focusable[0])?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        return;
+      }
+      if (!sidebar) return;
+      const wrapTo = wrapTabTarget(event.key, event.shiftKey, document.activeElement, focusableElements(sidebar));
+      if (wrapTo instanceof HTMLElement) {
+        event.preventDefault();
+        wrapTo.focus();
+      }
     };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [menuOpen]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+      else menuButtonRef.current?.focus();
+    };
+  }, [drawerOpen]);
 
   useEffect(() => {
     const restoreRoute = () => {
@@ -351,7 +435,7 @@ function App() {
 
   return (
     <div className={`app-shell${navCollapsed ? " app-shell-nav-collapsed" : ""}`} data-page={page}>
-      <a className="skip-link" href="#main-content">
+      <a className="skip-link" href="#main-content" inert={drawerOpen}>
         Skip to main content
       </a>
       <Sidebar
@@ -363,6 +447,8 @@ function App() {
         onToggleCollapsed={toggleNavCollapsed}
         theme={theme}
         onToggleTheme={toggleTheme}
+        sidebarRef={sidebarRef}
+        compact={compactNav}
       />
       {menuOpen && (
         <button
@@ -372,8 +458,10 @@ function App() {
           onClick={() => setMenuOpen(false)}
         />
       )}
-      <main id="main-content">
+      <main id="main-content" inert={drawerOpen}>
         <button
+          ref={menuButtonRef}
+          type="button"
           className="mobile-menu"
           onClick={() => setMenuOpen(true)}
           aria-label="Open navigation"
@@ -382,10 +470,14 @@ function App() {
         >
           <Icon name="menu" />
         </button>
-        {page === "developer" && (isDevAuthenticated ? (
-          <DeveloperStudio token={devToken} onExit={exitDeveloperStudio} onCatalogUpdated={refreshCatalog}
-            onDraftStateChange={(dirty, saving) => { studioDirty.current = dirty; studioSaving.current = saving; }} />
-        ) : <DeveloperLockGate onUnlock={verifyDeveloperToken} onBack={() => navigate("catalog")} />)}
+        {page === "developer" && (
+          <Suspense fallback={<PageFallback />}>
+            {isDevAuthenticated ? (
+              <DeveloperStudio token={devToken} onExit={exitDeveloperStudio} onCatalogUpdated={refreshCatalog}
+                onDraftStateChange={(dirty, saving) => { studioDirty.current = dirty; studioSaving.current = saving; }} />
+            ) : <DeveloperLockGate onUnlock={verifyDeveloperToken} onBack={() => navigate("catalog")} />}
+          </Suspense>
+        )}
         {page === "catalog" && (
           <Catalog
             key={`${routeRevision}:${routeSearch}`}
@@ -395,6 +487,7 @@ function App() {
               navigate("documentation", tool.id, version);
             }}
             onUpdates={() => navigate("updates")}
+            hotkeysEnabled={!drawerOpen}
           />
         )}
         {page === "documentation" && (
@@ -408,13 +501,19 @@ function App() {
           />
         )}
         {page === "updates" && (
-          <UpdatesPage
-            tools={catalogTools}
-            onCatalog={openCatalogTool}
-            onDocs={(tool) => navigate("documentation", tool.id)}
-          />
+          <Suspense fallback={<PageFallback />}>
+            <UpdatesPage
+              tools={catalogTools}
+              onCatalog={openCatalogTool}
+              onDocs={(tool) => navigate("documentation", tool.id)}
+            />
+          </Suspense>
         )}
-        {page === "about" && <About onOpenCatalog={() => navigate("catalog")} />}
+        {page === "about" && (
+          <Suspense fallback={<PageFallback />}>
+            <About onOpenCatalog={() => navigate("catalog")} />
+          </Suspense>
+        )}
       </main>
     </div>
   );
@@ -425,11 +524,13 @@ function Catalog({
   tools,
   onDocs,
   onUpdates,
+  hotkeysEnabled = true,
 }: {
   tools: Tool[];
   search: string;
   onDocs: (tool: Tool, version: string) => void;
   onUpdates: () => void;
+  hotkeysEnabled?: boolean;
 }) {
   const categories = useMemo(
     () => ["All categories", ...Array.from(new Set(tools.map((tool) => tool.category))).sort()],
@@ -524,6 +625,13 @@ function Catalog({
   };
 
   useEffect(() => {
+    if (copyState === "idle") return;
+    const timer = window.setTimeout(() => setCopyState("idle"), COPY_FEEDBACK_MS);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
+
+  useEffect(() => {
+    if (!hotkeysEnabled) return;
     const focusSearch = (event: KeyboardEvent) => {
       if (
         (event.metaKey || event.ctrlKey) &&
@@ -535,7 +643,7 @@ function Catalog({
     };
     window.addEventListener("keydown", focusSearch);
     return () => window.removeEventListener("keydown", focusSearch);
-  }, []);
+  }, [hotkeysEnabled]);
   return (
     <section className="page catalog-page">
       <PageHeader
@@ -554,7 +662,9 @@ function Catalog({
               onChange={(event) => updateFilter("query", event.target.value)}
               placeholder="Search tools, vendors, or tags…"
             />
-            <kbd>⌘K</kbd>
+            <kbd aria-label={`Search shortcut ${searchShortcutHint(navigator.userAgent, navigator.platform)}`}>
+              {searchShortcutHint(navigator.userAgent, navigator.platform)}
+            </kbd>
           </label>
           <div className="filters" aria-label="Catalog filters">
             <Field label="Category">
@@ -621,17 +731,15 @@ function Catalog({
                   ? "All tools"
                   : `Saved tools (${savedToolIds.length})`}
               </button>
-              <button className="toolbar-button" onClick={copyViewLink}>
+              <button type="button" className="toolbar-button" onClick={copyViewLink}>
                 <Icon
                   name={copyState === "copied" ? "check" : "link"}
                   size={16}
                 />
-                {copyState === "copied" ? "Link copied" : "Copy view link"}
+                {copyLinkLabel(copyState)}
               </button>
               <span className="sr-only" role="status" aria-live="polite">
-                {copyState === "unavailable"
-                  ? "Could not copy the link. Copy the address from your browser instead."
-                  : ""}
+                {copyLinkAnnouncement(copyState)}
               </span>
               <label className="sort-select">
                 Sort by{" "}
@@ -987,7 +1095,9 @@ function Documentation({
             }}><Icon name="catalog" size={16} /> View in catalog <Icon name="arrow" size={16} /></a>
             <span>{requestedVersion && resolveToolRelease(tool, requestedVersion).version !== requestedVersion ? "Requested version unavailable. Opens the default release." : requestedVersion ? `Opens version ${requestedVersion}` : "See approved downloads and available versions."}</span>
           </div>}
-          <MarkdownDocument content={docs[selected] || (tool ? docs[tool.id] : "") || ""} />
+          <Suspense fallback={<p className="page-loading" role="status">Loading guide…</p>}>
+            <MarkdownDocument content={docs[selected] || (tool ? docs[tool.id] : "") || ""} />
+          </Suspense>
           {guideResources.length > 0 && (
             <section className="guide-resources" aria-labelledby="guide-resources-title">
               <div className="guide-resources-heading">

@@ -2,17 +2,10 @@ import { isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { slugifyHeading } from "./catalog";
-import { getTrustedHttpsUrl } from "./downloads";
+import { getTrustedImageSource } from "./trustedMedia";
 
 export { getTrustedHttpsUrl } from "./downloads";
-
-const localImagePath = /^\/tool-images\/[A-Za-z0-9][A-Za-z0-9._/-]*$/;
-
-export function getTrustedImageSource(source?: string) {
-  return source && localImagePath.test(source) && !source.includes("..")
-    ? source
-    : undefined;
-}
+export { getTrustedImageSource } from "./trustedMedia";
 
 export function getTrustedLinkTarget(href?: string) {
   if (!href) return undefined;

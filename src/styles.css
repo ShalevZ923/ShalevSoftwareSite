@@ -1090,6 +1090,7 @@ main {
 .about-mission,
 .about-howto,
 .about-team,
+.about-ide,
 .principles {
   padding: 28px 0;
   border-top: 1px solid var(--border);
@@ -1194,6 +1195,28 @@ main {
 .about-version {
   margin: 8px 0 0;
   color: var(--text-muted);
+}
+.about-ide-snippet {
+  margin: 0;
+  padding: 16px 18px;
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-heading);
+  font: 13px/1.6 "DM Mono", monospace;
+}
+.about-ide-note {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 680px;
+}
+.page-loading {
+  margin: 24px 0;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 .about-version small {
   font-size: 12px;
@@ -1563,6 +1586,9 @@ main {
     width: 100%;
     flex-wrap: wrap;
     justify-content: flex-start;
+  }
+  .toolbar-button {
+    white-space: normal;
   }
 }
 

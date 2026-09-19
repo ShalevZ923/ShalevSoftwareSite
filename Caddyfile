@@ -9,6 +9,11 @@
 {$SITE_DOMAIN} {
 	encode zstd gzip
 
+	log {
+		output stdout
+		format json
+	}
+
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		-Server

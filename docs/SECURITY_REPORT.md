@@ -1,6 +1,6 @@
 # Security report
 
-**Assessment date:** 2026-09-04
+**Assessment date:** 2026-09-19
 **Scope:** the current React application, the optional local Developer Studio Node.js server, hosted-release metadata, its NGINX container, the Docker Compose/Caddy deployment, the Windows IIS deployment, and documented operating procedures.
 **Method:** source-backed static review and local configuration validation. No public hostname, DNS record, live certificate, running production container, or external vulnerability feed was tested.
 
@@ -20,12 +20,14 @@ The previous direct-container pattern published plaintext HTTP on port 8080. It 
 | Public host to application | Only `proxy` publishes 80/443; `app` is attached only to the Docker-internal `app_network`. | `compose.yaml` |
 | Proxy to static origin | Caddy reverse-proxies to `app:8080` on the internal network. | `Caddyfile` |
 | Origin process | NGINX runs as `nginx`, has a read-only root filesystem in Compose, a small `/tmp` tmpfs, no capabilities, and no host port. | `Dockerfile`, `compose.yaml` |
-| Browser rendering | CSP, no-sniff, anti-framing, restrictive permissions/referrer policies, COOP/CORP, safe Markdown links, and local-only guide images. | `nginx.conf`, `src/markdown.tsx` |
+| Browser rendering | CSP, no-sniff, anti-framing, restrictive permissions/referrer policies, COOP/CORP, safe Markdown links, and local-only guide images. | `nginx.conf`, `src/markdown.tsx`, `src/trustedMedia.ts` |
 | Hosted installers | Catalog pointers are restricted to `tool-id/version/filename`; IIS/NGINX map those public identifiers to a separate read-only package directory, disable listing, allow reviewed extensions, and force attachment responses. | `scripts/catalog-content.mjs`, `src/downloads.ts`, `windows/downloads.web.config`, `nginx.conf` |
 | Windows lifecycle and logs | IIS uses an isolated application-pool identity, W3SVC automatic startup/recovery, W3C file logs, and Windows Event Log diagnostics without a remote logging API. | `windows/Install-ToolAtlas.ps1`, `windows/Get-ToolAtlasLogs.ps1` |
 | Catalog contribution | Local content is schema-validated before generation; public Issue Form data can create a PR only after a trusted maintainer applies `catalog-approved`. | `scripts/catalog-content.mjs`, `.github/workflows/catalog-issue-to-pr.yml` |
 | GitLab catalog contribution | A GitLab template is untrusted input; a manually triggered default-branch job rechecks `catalog-approved` before a protected project token can create a branch and merge request. | `.gitlab/issue_templates/Add catalog software.md`, `.gitlab-ci.yml` |
 | Local Developer Studio | Loopback is the default; non-loopback startup requires an explicit TLS-proxy assertion; bootstrap credentials use a URL fragment and protected APIs accept headers rather than query tokens. | `scripts/server.mjs`, `src/App.tsx`, `windows/Start-ToolAtlas.ps1` |
+| Edge logs | Caddy JSON access logs are the visitor-IP record at the public edge. NGINX JSON access/error to stdout/stderr includes `/downloads/…`; `remote` is the visitor after `X-Forwarded-For` from Caddy, the only peer that can reach the origin. | `Caddyfile`, `nginx.conf` |
+| Companion MCP | Separate image. It reads `/catalog/v1` and never runs inside the catalog NGINX container. | `docs/CATALOG_MACHINE_FEED.md` |
 
 ## Findings
 
@@ -41,7 +43,7 @@ The original Docker build used mutable Node and NGINX tags. The deployment now p
 
 ### Resolved: cache locations dropped NGINX security headers — Low (CWE-693)
 
-NGINX does not inherit server-level `add_header` directives into a location that defines another `add_header`. The previous HTML and asset locations set only `Cache-Control`, so real responses omitted CSP, anti-framing, no-sniff, and the other server-level protections. Cache selection now uses one server-level mapped value, keeping every security header on HTML and assets while preserving `no-store` for application routes and immutable caching for fingerprinted assets.
+NGINX does not inherit server-level `add_header` directives into a location that defines another `add_header`. The previous HTML and asset locations set only `Cache-Control`, so real responses omitted CSP, anti-framing, no-sniff, and the other server-level protections. Cache selection now uses one server-level mapped value, keeping every security header on HTML and assets while preserving `no-store` for application routes, a short public cache for `/catalog/v1/*.json`, and immutable caching for fingerprinted assets.
 
 ### Resolved: Developer Studio token and path handling — Medium/Low
 
@@ -71,7 +73,7 @@ The Windows installer defaults its initial HTTP binding to loopback, avoids gran
 
 - Query-string filters are allowlisted and rendered as React text, not HTML (`src/catalog.ts`).
 - Browser-local saved tools are parsed defensively and restricted to known static IDs (`src/catalogStorage.ts`).
-- Markdown does not enable raw HTML; links are limited to HTTPS, `mailto:`, and local fragments, while images are limited to local `/tool-images/` paths (`src/markdown.tsx`).
+- Markdown does not enable raw HTML; links are limited to HTTPS, `mailto:`, and local fragments, while images are limited to local `/tool-images/` paths (`src/trustedMedia.ts`, `src/markdown.tsx`).
 - The static production deployments have no server-side authentication or filesystem-write path. The optional Developer Studio does, and remains limited to trusted local authoring rather than production publication.
 - Hosted files are published only by an administrator-run PowerShell command; the public static site has no upload or filesystem-write path.
 - The static origin returns a CSP, nosniff, anti-framing, referrer, permissions, COOP, and CORP headers (`nginx.conf`). It accepts only GET and HEAD requests and does not expose the static-host `_headers` file.
@@ -89,7 +91,7 @@ The Windows installer defaults its initial HTTP binding to loopback, avoids gran
 
 ## Validation performed
 
-- `pnpm verify` passed: 6 test files and 39 tests, TypeScript/Vite production build, and generated-artifact checks.
+- `pnpm verify` passed: 14 test files and 78 tests, TypeScript/Vite production build, and generated-artifact checks.
 - `pnpm audit --prod` reported no known production dependency vulnerabilities on the assessment date.
 - `pnpm catalog:check` validated all content files and confirmed the generated catalog module is current; `pnpm verify` confirmed the migrated catalog still renders and tests successfully.
 - `docker compose --env-file .env.example config` rendered successfully with the required domain/contact variables and no public app port.

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Platform, Tool } from "../data";
-import { getTrustedImageSource } from "../markdown";
+import { getTrustedImageSource } from "../trustedMedia";
 
 export type IconName =
   | "arrow"

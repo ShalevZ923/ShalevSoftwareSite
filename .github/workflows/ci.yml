@@ -53,3 +53,5 @@ jobs:
           done
           test "$(docker inspect --format '{{.Config.User}}' tool-atlas:ci)" = "nginx"
           curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^content-security-policy:'
+          curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^cache-control: no-store'
+          curl --fail --silent --show-error --head http://127.0.0.1:18080/catalog/v1/index.json | grep --ignore-case '^cache-control: public, max-age=60'

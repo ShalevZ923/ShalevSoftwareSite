@@ -128,7 +128,7 @@ Follow the active W3C log:
 .\windows\Get-ToolAtlasLogs.ps1 -Tail 20 -Follow
 ```
 
-IIS uses W3C access logs by default and writes process/service failures to Windows Event Log. No log leaves the workstation or server. If central log collection is added later, treat it as a separate security and privacy project with authenticated transport, retention limits, redaction, and operator approval. See Microsoft's [IIS site logging reference](https://learn.microsoft.com/en-us/iis/configuration/system.applicationhost/sites/site/logfile/).
+IIS uses W3C access logs by default and writes process/service failures to Windows Event Log. `/downloads/…` requests in those logs are the installer audit trail. `/catalog/v1/*.json` is cached for one minute at IIS. No log leaves the workstation or server. The companion MCP server, if used, is a separate Linux image with its own logs; IIS never runs that process. If central log collection is added later, treat it as a separate security and privacy project with authenticated transport, retention limits, redaction, and operator approval. See Microsoft's [IIS site logging reference](https://learn.microsoft.com/en-us/iis/configuration/system.applicationhost/sites/site/logfile/).
 
 ## 5. Verify downloads
 

@@ -1,6 +1,6 @@
 import { Icon } from "./ui";
 
-const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.6.0";
+const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.7.0";
 
 export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
   return (
@@ -150,6 +150,38 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
             </p>
           </article>
         </div>
+      </section>
+
+      <section className="about-ide" aria-labelledby="about-ide-title">
+        <div className="about-section-heading">
+          <p className="about-kicker">Connect an IDE</p>
+          <h2 id="about-ide-title">Search the catalog from Cursor or VS Code.</h2>
+          <p>
+            Administrators run a second Docker image, Tool Atlas MCP, beside this
+            static site. It is not inside the catalog NGINX container. After it
+            is deployed, paste only the HTTPS URL into <code>mcp.json</code>.
+            The MCP server never sees the chat; it logs catalog search and
+            lookup tool calls.
+          </p>
+        </div>
+        <pre
+          className="about-ide-snippet"
+          tabIndex={0}
+          aria-label="Example Cursor mcp.json"
+        >
+          <code>{`{
+  "mcpServers": {
+    "tool-atlas": {
+      "url": "https://mcp.atlas.example.com/mcp"
+    }
+  }
+}`}</code>
+        </pre>
+        <p className="about-ide-note">
+          Replace the hostname with the address your administrator publishes.
+          VS Code uses the same URL under <code>servers</code> with{" "}
+          <code>"type": "http"</code>.
+        </p>
       </section>
 
       <p className="about-version">

@@ -10,3 +10,6 @@
 /downloads/*
   Content-Disposition: attachment
   Cache-Control: private, no-store
+
+/catalog/v1/*
+  Cache-Control: public, max-age=60

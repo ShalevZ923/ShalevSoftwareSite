@@ -21,10 +21,10 @@ The ready-made release image contains only the static catalog served by unprivil
 Pull the current release:
 
 ```bash
-docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.6.0
+docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.7.0
 docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   -p 127.0.0.1:8080:8080 \
-  ghcr.io/shalevz923/shalevsoftwaresite:1.6.0
+  ghcr.io/shalevz923/shalevsoftwaresite:1.7.0
 ```
 
 Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing. For a production deployment, pin the reviewed image digest and use the [production deployment guide](./docs/PRODUCTION_DEPLOYMENT.md).
@@ -60,7 +60,7 @@ Conflicting filters are cleared so a linked tool is visible; compatible filters 
 
 ## Website version
 
-Set `VITE_APP_VERSION=1.6.0` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.6.0`.
+Set `VITE_APP_VERSION=1.7.0` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.7.0`.
 
 After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
 
@@ -162,13 +162,15 @@ The HTTP check should redirect to HTTPS. The HTTPS response should include `Stri
 - Certificates renew automatically; retain and back up the Docker volumes `tool-atlas_caddy_data` and `tool-atlas_caddy_config`. Losing them can trigger new certificate issuance and ACME rate limits.
 - For an app update, run `pnpm verify`, build a reviewed image, and then run `docker compose --env-file .env up --build --detach`. The tracked base and proxy images are pinned to immutable digests; update those pins only through a reviewed vulnerability/provenance check.
 - For a hostname change, update `SITE_DOMAIN`, verify the new DNS record, then run the same `up` command. Caddy will obtain a certificate for the new hostname.
-- Inspect the live state with `docker compose --env-file .env ps` and `docker compose --env-file .env logs proxy app`. Do not copy `.env` into an image or commit it.
+- Inspect the live state with `docker compose --env-file .env ps` and `docker compose --env-file .env logs proxy app`. Caddy writes JSON access logs (including `/downloads/…`) to stdout. NGINX writes JSON access and error logs to the app container stdout/stderr. Do not copy `.env` into an image or commit it.
 
 The app container runs as the unprivileged `nginx` user with a read-only filesystem, a small writable temporary filesystem, no Linux capabilities, and no host port. The proxy is the only public container; it has only the capability needed to bind HTTP(S) ports and persists certificate state in named volumes.
 
 See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
 
-For the `v1.6.0` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
+For the `v1.7.0` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
+
+The catalog website remains backend-free. A separate Tool Atlas MCP image can search `/catalog/v1` for IDEs. It is not packed into the NGINX image. See [the machine catalog contract](docs/CATALOG_MACHINE_FEED.md).
 
 To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download guide](docs/HOSTED_DOWNLOADS.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
 

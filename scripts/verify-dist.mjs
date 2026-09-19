@@ -53,6 +53,9 @@ async function main() {
   if (catalogIndex.tools.some((tool) => !tool.id || !tool.defaultVersion || !tool.summary)) {
     throw new Error('Production catalog index is missing required tool fields.')
   }
+  if (!headers.includes('/catalog/v1/') || !headers.includes('Cache-Control: public, max-age=60')) {
+    throw new Error('Production headers are missing a short public cache for the catalog machine feed.')
+  }
   if (!Array.isArray(catalogTools.tools) || catalogTools.tools.length !== catalogIndex.tools.length) {
     throw new Error('Production catalog tools feed does not match the index.')
   }
