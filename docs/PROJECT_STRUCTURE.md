@@ -16,6 +16,7 @@ Tool Atlas remains a static, backend-free public catalog. Its source tree separa
 │   └── generated/catalog.ts           # Generated only; checked for staleness in CI
 ├── scripts/                           # Content validation, generation, and contribution adapters
 ├── public/                            # Static assets and host response-header configuration
+│   └── catalog/v1/{index,tools}.json  # Generated machine feed; no backend, no guides
 ├── docs/                              # Operating, security, and deployment documentation
 ├── .github/ and .gitlab/              # Approval-gated contribution automation
 └── Dockerfile, compose.yaml, Caddyfile, nginx.conf
@@ -31,7 +32,7 @@ The directory hierarchy is the catalog’s routing and ownership key:
 3. **Tool** is the stable lowercase identifier used by the application and shareable URLs.
 4. **Release** is a separate immutable-in-intent record containing one version and its approved HTTPS download URL.
 
-The build validates every part: category membership, normalized vendor and product paths, required guide sections, unique tool/order/version values, credential-free HTTPS download URLs, and static-safe content. It then emits the only data the frontend reads. This means filesystem organization improves review without adding backend exposure or public operational data.
+The build validates every part: category membership, normalized vendor and product paths, required guide sections, unique tool/order/version values, credential-free HTTPS download URLs, and static-safe content. It then emits the data the frontend reads plus a compact machine feed at `/catalog/v1/`. This means filesystem organization improves review without adding backend exposure or public operational data.
 
 ## Taxonomy growth
 

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-19T08:41:23.984Z",
+  "tools": [
+    {
+      "id": "intellij",
+      "name": "IntelliJ IDEA",
+      "company": "JetBrains",
+      "category": "IDEs & Code Editors",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "Java",
+        "Kotlin",
+        "IDE",
+        "JetBrains"
+      ],
+      "summary": "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
+      "defaultVersion": "2025.1"
+    },
+    {
+      "id": "vscode",
+      "name": "Visual Studio Code",
+      "company": "Microsoft",
+      "category": "IDEs & Code Editors",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "IDE",
+        "Editor",
+        "Remote development",
+        "Microsoft"
+      ],
+      "summary": "A lightweight, extensible code editor for everyday development, remote workspaces, and team-standard extensions.",
+      "defaultVersion": "1.103"
+    },
+    {
+      "id": "docker",
+      "name": "Docker Desktop",
+      "company": "Docker, Inc.",
+      "category": "Containers",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "Containers",
+        "Runtime",
+        "DevOps"
+      ],
+      "summary": "Local container development with Docker Compose, image management, and a desktop dashboard for runtime inspection.",
+      "defaultVersion": "4.45"
+    },
+    {
+      "id": "postman",
+      "name": "Postman",
+      "company": "Postman, Inc.",
+      "category": "API Design",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS",
+        "Web"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "API",
+        "Testing",
+        "Collections"
+      ],
+      "summary": "An API collaboration workspace for testing requests, sharing collections, and documenting integrations.",
+      "defaultVersion": "11.60"
+    },
+    {
+      "id": "wireshark",
+      "name": "Wireshark",
+      "company": "Wireshark Foundation",
+      "category": "Infrastructure Diagnostics",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "Network",
+        "Debugging",
+        "Security"
+      ],
+      "summary": "Network protocol analyzer for capture, inspection, and troubleshooting across common protocols.",
+      "defaultVersion": "4.4"
+    },
+    {
+      "id": "jmeter",
+      "name": "Apache JMeter",
+      "company": "Apache Software Foundation",
+      "category": "Performance Testing",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Legacy",
+      "tags": [
+        "Load testing",
+        "Performance",
+        "Apache"
+      ],
+      "summary": "A mature open-source tool for load testing, functional testing, and protocol-level performance analysis.",
+      "defaultVersion": "5.6.3"
+    },
+    {
+      "id": "dbeaver",
+      "name": "DBeaver Community",
+      "company": "DBeaver Corp",
+      "category": "Database Tools",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "New",
+      "tags": [
+        "Database",
+        "SQL",
+        "New"
+      ],
+      "summary": "Universal database management for exploring data, editing schemas, and running SQL across common engines.",
+      "defaultVersion": "25.1"
+    },
+    {
+      "id": "nginx",
+      "name": "NGINX",
+      "company": "F5, Inc.",
+      "category": "Web & Edge Infrastructure",
+      "platforms": [
+        "Linux"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "Server",
+        "Reverse proxy",
+        "Linux"
+      ],
+      "summary": "A high-performance web server, reverse proxy, and load balancer for internal application delivery.",
+      "defaultVersion": "1.28"
+    },
+    {
+      "id": "jq",
+      "name": "jq",
+      "company": "jqlang",
+      "category": "Debuggers",
+      "platforms": [
+        "Windows"
+      ],
+      "lifecycle": "New",
+      "tags": [
+        "JSON",
+        "CLI",
+        "Windows",
+        "Hosted download"
+      ],
+      "summary": "A lightweight command-line JSON processor with an approved same-server download.",
+      "defaultVersion": "1.8.2"
+    }
+  ]
+}

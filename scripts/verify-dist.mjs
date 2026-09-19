@@ -39,6 +39,27 @@ async function main() {
   if (assetPaths.length < 2) throw new Error('Production index does not reference both CSS and JavaScript assets.')
   await Promise.all(assetPaths.map((asset) => requireFile(resolve(dist, `.${asset}`))))
 
+  const catalogIndexPath = resolve(dist, 'catalog/v1/index.json')
+  const catalogToolsPath = resolve(dist, 'catalog/v1/tools.json')
+  await Promise.all([requireFile(catalogIndexPath), requireFile(catalogToolsPath)])
+  const catalogIndex = JSON.parse(await readFile(catalogIndexPath, 'utf8'))
+  const catalogTools = JSON.parse(await readFile(catalogToolsPath, 'utf8'))
+  if (catalogIndex.schemaVersion !== 1 || catalogTools.schemaVersion !== 1) {
+    throw new Error('Production catalog feed is missing schemaVersion 1.')
+  }
+  if (!Array.isArray(catalogIndex.tools) || catalogIndex.tools.length === 0) {
+    throw new Error('Production catalog index does not contain tools.')
+  }
+  if (catalogIndex.tools.some((tool) => !tool.id || !tool.defaultVersion || !tool.summary)) {
+    throw new Error('Production catalog index is missing required tool fields.')
+  }
+  if (!Array.isArray(catalogTools.tools) || catalogTools.tools.length !== catalogIndex.tools.length) {
+    throw new Error('Production catalog tools feed does not match the index.')
+  }
+  if (JSON.stringify(catalogIndex).includes('@atlas.local') || JSON.stringify(catalogTools).includes('## Install')) {
+    throw new Error('Production catalog feed unexpectedly includes guides or support contacts.')
+  }
+
   process.stdout.write(`Production artifact verified: ${assetPaths.length} local assets and required static-host headers are present.\n`)
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadCatalogEntries, parseReleaseList, validateCatalogEntry } from "./catalog-content.mjs";
+import { loadCatalogEntries, machineCatalogIsCurrent, parseReleaseList, renderMachineCatalog, validateCatalogEntry } from "./catalog-content.mjs";
 
 describe("release list parsing", () => {
   it("keeps each approved version paired with its HTTPS download URL", () => {
@@ -118,5 +118,56 @@ describe("hierarchical catalog source", () => {
       releases: expect.arrayContaining([{ version: "2025.1", download: "https://www.jetbrains.com/idea/download/" }]),
     });
     expect(intellij?.guide).toContain("## Install");
+  });
+});
+
+describe("machine catalog feed", () => {
+  it("renders a compact index and a tools feed without guides or support contacts", async () => {
+    const entries = await loadCatalogEntries();
+    const feed = renderMachineCatalog(entries, "2026-09-19T08:00:00.000Z");
+    const index = JSON.parse(feed.index);
+    const tools = JSON.parse(feed.tools);
+    const intellijIndex = index.tools.find((tool) => tool.id === "intellij");
+    const intellij = tools.tools.find((tool) => tool.id === "intellij");
+    const jq = tools.tools.find((tool) => tool.id === "jq");
+
+    expect(index).toMatchObject({
+      schemaVersion: 1,
+      generatedAt: "2026-09-19T08:00:00.000Z",
+    });
+    expect(tools.schemaVersion).toBe(1);
+    expect(index.tools.map((tool) => tool.id)).toEqual(entries.map(({ metadata }) => metadata.id));
+    expect(intellijIndex).toEqual({
+      id: "intellij",
+      name: "IntelliJ IDEA",
+      company: "JetBrains",
+      category: "IDEs & Code Editors",
+      platforms: ["Windows", "Linux", "macOS"],
+      lifecycle: "Current",
+      tags: ["Java", "Kotlin", "IDE", "JetBrains"],
+      summary: "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
+      defaultVersion: "2025.1",
+    });
+    expect(intellij).toMatchObject({
+      id: "intellij",
+      name: "IntelliJ IDEA",
+      description: intellijIndex.summary,
+      releases: expect.arrayContaining([{ version: "2025.1", download: "https://www.jetbrains.com/idea/download/" }]),
+    });
+    expect(jq.releases).toEqual([{ version: "1.8.2", artifact: "jq/1.8.2/jq-windows-amd64.exe" }]);
+    expect(JSON.stringify(index)).not.toMatch(/@atlas\.local|## Install|devex@/);
+    expect(JSON.stringify(tools)).not.toMatch(/@atlas\.local|## Install|Asset record/);
+    expect(intellij).not.toHaveProperty("support");
+    expect(intellij).not.toHaveProperty("facts");
+    expect(intellij).not.toHaveProperty("guide");
+  });
+
+  it("treats matching feed files as current even when generatedAt differs", async () => {
+    const entries = await loadCatalogEntries();
+    const feed = renderMachineCatalog(entries, "2026-09-19T08:00:00.000Z");
+    const later = renderMachineCatalog(entries, "2026-09-20T00:00:00.000Z");
+
+    expect(machineCatalogIsCurrent(later.index, later.tools, entries)).toBe(true);
+    expect(machineCatalogIsCurrent(feed.index, '{"schemaVersion":1}', entries)).toBe(false);
   });
 });

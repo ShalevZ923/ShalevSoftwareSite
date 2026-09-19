@@ -23,7 +23,7 @@ pnpm catalog:build
 pnpm verify
 ```
 
-`pnpm catalog:build` validates all entries and regenerates `src/generated/catalog.ts`. `pnpm catalog:check`, which runs before unit tests, fails if generated output is stale.
+`pnpm catalog:build` validates all entries and regenerates `src/generated/catalog.ts` plus the public machine feed at `public/catalog/v1/`. `pnpm catalog:check`, which runs before unit tests, fails if generated output is stale. The feed is documented in [the machine catalog contract](./docs/CATALOG_MACHINE_FEED.md).
 
 ## Content rules
 

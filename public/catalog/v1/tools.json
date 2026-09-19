@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-19T08:41:23.984Z",
+  "tools": [
+    {
+      "id": "intellij",
+      "name": "IntelliJ IDEA",
+      "company": "JetBrains",
+      "category": "IDEs & Code Editors",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "Java",
+        "Kotlin",
+        "IDE",
+        "JetBrains"
+      ],
+      "description": "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
+      "releases": [
+        {
+          "version": "2025.1",
+          "download": "https://www.jetbrains.com/idea/download/"
+        },
+        {
+          "version": "2026.01-Mac",
+          "download": "https://www.jetbrains.com/idea/download/?section=mac"
+        }
+      ]
+    },
+    {
+      "id": "vscode",
+      "name": "Visual Studio Code",
+      "company": "Microsoft",
+      "category": "IDEs & Code Editors",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "IDE",
+        "Editor",
+        "Remote development",
+        "Microsoft"
+      ],
+      "description": "A lightweight, extensible code editor for everyday development, remote workspaces, and team-standard extensions.",
+      "releases": [
+        {
+          "version": "1.103",
+          "download": "https://code.visualstudio.com/download"
+        }
+      ]
+    },
+    {
+      "id": "docker",
+      "name": "Docker Desktop",
+      "company": "Docker, Inc.",
+      "category": "Containers",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "Containers",
+        "Runtime",
+        "DevOps"
+      ],
+      "description": "Local container development with Docker Compose, image management, and a desktop dashboard for runtime inspection.",
+      "releases": [
+        {
+          "version": "4.45",
+          "download": "https://www.docker.com/products/docker-desktop/"
+        }
+      ]
+    },
+    {
+      "id": "postman",
+      "name": "Postman",
+      "company": "Postman, Inc.",
+      "category": "API Design",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS",
+        "Web"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "API",
+        "Testing",
+        "Collections"
+      ],
+      "description": "An API collaboration workspace for testing requests, sharing collections, and documenting integrations.",
+      "releases": [
+        {
+          "version": "11.60",
+          "download": "https://www.postman.com/downloads/"
+        }
+      ]
+    },
+    {
+      "id": "wireshark",
+      "name": "Wireshark",
+      "company": "Wireshark Foundation",
+      "category": "Infrastructure Diagnostics",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "Network",
+        "Debugging",
+        "Security"
+      ],
+      "description": "Network protocol analyzer for capture, inspection, and troubleshooting across common protocols.",
+      "releases": [
+        {
+          "version": "4.4",
+          "download": "https://www.wireshark.org/download.html"
+        }
+      ]
+    },
+    {
+      "id": "jmeter",
+      "name": "Apache JMeter",
+      "company": "Apache Software Foundation",
+      "category": "Performance Testing",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "Legacy",
+      "tags": [
+        "Load testing",
+        "Performance",
+        "Apache"
+      ],
+      "description": "A mature open-source tool for load testing, functional testing, and protocol-level performance analysis.",
+      "releases": [
+        {
+          "version": "5.6.3",
+          "download": "https://jmeter.apache.org/download_jmeter.cgi"
+        }
+      ]
+    },
+    {
+      "id": "dbeaver",
+      "name": "DBeaver Community",
+      "company": "DBeaver Corp",
+      "category": "Database Tools",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS"
+      ],
+      "lifecycle": "New",
+      "tags": [
+        "Database",
+        "SQL",
+        "New"
+      ],
+      "description": "Universal database management for exploring data, editing schemas, and running SQL across common engines.",
+      "releases": [
+        {
+          "version": "25.1",
+          "download": "https://dbeaver.io/download/"
+        }
+      ]
+    },
+    {
+      "id": "nginx",
+      "name": "NGINX",
+      "company": "F5, Inc.",
+      "category": "Web & Edge Infrastructure",
+      "platforms": [
+        "Linux"
+      ],
+      "lifecycle": "Current",
+      "tags": [
+        "Server",
+        "Reverse proxy",
+        "Linux"
+      ],
+      "description": "A high-performance web server, reverse proxy, and load balancer for internal application delivery.",
+      "releases": [
+        {
+          "version": "1.28",
+          "download": "https://nginx.org/en/download.html"
+        }
+      ]
+    },
+    {
+      "id": "jq",
+      "name": "jq",
+      "company": "jqlang",
+      "category": "Debuggers",
+      "platforms": [
+        "Windows"
+      ],
+      "lifecycle": "New",
+      "tags": [
+        "JSON",
+        "CLI",
+        "Windows",
+        "Hosted download"
+      ],
+      "description": "A lightweight command-line JSON processor with an approved same-server download.",
+      "releases": [
+        {
+          "version": "1.8.2",
+          "artifact": "jq/1.8.2/jq-windows-amd64.exe"
+        }
+      ]
+    }
+  ]
+}

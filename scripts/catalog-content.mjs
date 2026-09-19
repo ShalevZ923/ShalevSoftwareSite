@@ -6,6 +6,10 @@ export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "
 export const contentDirectory = join(repositoryRoot, "content", "catalog");
 export const taxonomyPath = join(repositoryRoot, "content", "taxonomy", "categories.json");
 export const generatedCatalogPath = join(repositoryRoot, "src", "generated", "catalog.ts");
+export const machineCatalogSchemaVersion = 1;
+export const machineCatalogDirectory = join(repositoryRoot, "public", "catalog", "v1");
+export const machineCatalogIndexPath = join(machineCatalogDirectory, "index.json");
+export const machineCatalogToolsPath = join(machineCatalogDirectory, "tools.json");
 
 const platforms = new Set(["Windows", "Linux", "macOS", "Web"]);
 const lifecycles = new Set(["Current", "New", "Legacy"]);
@@ -295,10 +299,79 @@ export function renderGeneratedCatalog(entries) {
   return `// Generated from content/catalog/**/{tool.json,guide.md,releases/*.json} by scripts/build-catalog.mjs. Do not edit manually.\n\nexport const tools = ${JSON.stringify(tools, null, 2)};\n\nexport const docs = ${JSON.stringify(docs, null, 2)};\n`;
 }
 
+function publicCatalogFields(metadata) {
+  return {
+    id: metadata.id,
+    name: metadata.name,
+    company: metadata.company,
+    category: metadata.category,
+    platforms: [...metadata.platforms],
+    lifecycle: metadata.lifecycle,
+    tags: [...metadata.tags],
+  };
+}
+
+function publicRelease(release) {
+  return release.download !== undefined
+    ? { version: release.version, download: release.download }
+    : { version: release.version, artifact: release.artifact };
+}
+
+/** Compact, credential-free JSON for MCP and other machine clients. Guides and support contacts stay out. */
+export function renderMachineCatalog(entries, generatedAt = new Date().toISOString()) {
+  const index = {
+    schemaVersion: machineCatalogSchemaVersion,
+    generatedAt,
+    tools: entries.map(({ metadata }) => ({
+      ...publicCatalogFields(metadata),
+      summary: metadata.description,
+      defaultVersion: metadata.releases[0].version,
+    })),
+  };
+  const tools = {
+    schemaVersion: machineCatalogSchemaVersion,
+    generatedAt,
+    tools: entries.map(({ metadata }) => ({
+      ...publicCatalogFields(metadata),
+      description: metadata.description,
+      releases: metadata.releases.map(publicRelease),
+    })),
+  };
+  return {
+    index: `${JSON.stringify(index, null, 2)}\n`,
+    tools: `${JSON.stringify(tools, null, 2)}\n`,
+  };
+}
+
+export function machineCatalogWithoutTimestamp(text) {
+  const parsed = JSON.parse(text);
+  delete parsed.generatedAt;
+  return parsed;
+}
+
+export function machineCatalogIsCurrent(currentIndex, currentTools, entries) {
+  const expected = renderMachineCatalog(entries, "2000-01-01T00:00:00.000Z");
+  try {
+    return (
+      JSON.stringify(machineCatalogWithoutTimestamp(currentIndex)) ===
+        JSON.stringify(machineCatalogWithoutTimestamp(expected.index)) &&
+      JSON.stringify(machineCatalogWithoutTimestamp(currentTools)) ===
+        JSON.stringify(machineCatalogWithoutTimestamp(expected.tools))
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function writeGeneratedCatalog() {
-  const contents = renderGeneratedCatalog(await loadCatalogEntries());
+  const entries = await loadCatalogEntries();
+  const contents = renderGeneratedCatalog(entries);
   await mkdir(dirname(generatedCatalogPath), { recursive: true });
   await writeFile(generatedCatalogPath, contents, "utf8");
+  const feed = renderMachineCatalog(entries);
+  await mkdir(machineCatalogDirectory, { recursive: true });
+  await writeFile(machineCatalogIndexPath, feed.index, "utf8");
+  await writeFile(machineCatalogToolsPath, feed.tools, "utf8");
   return contents;
 }
 

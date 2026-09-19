@@ -13,4 +13,4 @@ content/catalog/<category-id>/<vendor-id>/<tool-id>/
 
 `<category-id>` is a path from [`content/taxonomy/categories.json`](../taxonomy/categories.json). The vendor directory is the lowercase kebab-case form of `vendor.json.name`; its identity is shared by all products in that category. The tool directory equals `tool.json.id`. A release filename equals its `version` plus `.json`; versions are ordered by the explicit `order` in `tool.json`, not filesystem order.
 
-Do not put private licence, procurement, contract, credential, activation, or user data here. This directory is a public-catalog source and is compiled into the static client bundle.
+Do not put private licence, procurement, contract, credential, activation, or user data here. This directory is a public-catalog source and is compiled into the static client bundle and the `/catalog/v1/` machine feed.
