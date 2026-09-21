@@ -34,7 +34,7 @@ docker compose --env-file .env ps
 
 Keep the deployed application behind Caddy, publish only 80/443, retain the certificate volumes, and verify HTTPS and security headers from a separate network. Roll back by changing `TOOL_ATLAS_IMAGE` to the previously recorded digest and repeating the final two Compose commands.
 
-Caddy JSON access logs (including `/downloads/…`) are the visitor-IP record at the public edge (`docker compose logs proxy`). NGINX JSON access and error logs are on the `app` container stdout/stderr; `remote` is the visitor after Caddy's `X-Forwarded-For`. The companion MCP image, if used, has its own Caddy and tool-call logs; see [the machine catalog contract](./CATALOG_MACHINE_FEED.md).
+Caddy JSON access logs (including `/downloads/…`) are the visitor-IP record at the public edge (`docker compose logs proxy`). NGINX JSON access and error logs are on the `app` container stdout/stderr; `remote` is the visitor after Caddy's `X-Forwarded-For`, trusted only from private Docker peers. The companion MCP image, if used, has its own Caddy and tool-call logs; see [the machine catalog contract](./CATALOG_MACHINE_FEED.md).
 
 ## Windows Server decision
 

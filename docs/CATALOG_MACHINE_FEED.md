@@ -53,6 +53,6 @@ The MCP process never receives the user's chat. Read three streams:
 
 | Question | Where to look |
 | --- | --- |
-| Did someone open the site or download an installer? | Catalog edge: `docker compose logs proxy` (Caddy JSON, visitor IP). `docker compose logs app` (NGINX JSON) confirms origin responses, including `/downloads/…`; `remote` is the visitor after Caddy's `X-Forwarded-For`. On Windows, IIS W3C logs. |
+| Did someone open the site or download an installer? | Catalog edge: `docker compose logs proxy` (Caddy JSON, visitor IP). `docker compose logs app` (NGINX JSON) confirms origin responses, including `/downloads/…`; `remote` is the visitor after Caddy's `X-Forwarded-For`, trusted only from private Docker peers. On Windows, IIS W3C logs. |
 | Did an IDE search the catalog? | MCP container: one JSON line per `search_software` / `get_software` call (tool name, query or id, hit ids, duration, error, client IP). |
 | Is MCP up? | `GET /health` is process up. `GET /ready` is “catalog feed fetched and schemaVersion is 1”. |

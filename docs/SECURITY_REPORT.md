@@ -26,7 +26,7 @@ The previous direct-container pattern published plaintext HTTP on port 8080. It 
 | Catalog contribution | Local content is schema-validated before generation; public Issue Form data can create a PR only after a trusted maintainer applies `catalog-approved`. | `scripts/catalog-content.mjs`, `.github/workflows/catalog-issue-to-pr.yml` |
 | GitLab catalog contribution | A GitLab template is untrusted input; a manually triggered default-branch job rechecks `catalog-approved` before a protected project token can create a branch and merge request. | `.gitlab/issue_templates/Add catalog software.md`, `.gitlab-ci.yml` |
 | Local Developer Studio | Loopback is the default; non-loopback startup requires an explicit TLS-proxy assertion; bootstrap credentials use a URL fragment and protected APIs accept headers rather than query tokens. | `scripts/server.mjs`, `src/App.tsx`, `windows/Start-ToolAtlas.ps1` |
-| Edge logs | Caddy JSON access logs are the visitor-IP record at the public edge. NGINX JSON access/error to stdout/stderr includes `/downloads/…`; `remote` is the visitor after `X-Forwarded-For` from Caddy, the only peer that can reach the origin. | `Caddyfile`, `nginx.conf` |
+| Edge logs | Caddy JSON access logs are the visitor-IP record at the public edge. NGINX JSON access/error to stdout/stderr includes `/downloads/…`; `remote` is the visitor after `X-Forwarded-For` from Caddy. NGINX trusts that header only from private Docker peers. | `Caddyfile`, `nginx.conf` |
 | Companion MCP | Separate image. It reads `/catalog/v1` and never runs inside the catalog NGINX container. | `docs/CATALOG_MACHINE_FEED.md` |
 
 ## Findings

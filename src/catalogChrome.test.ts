@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { copyLinkAnnouncement, copyLinkLabel, searchShortcutHint } from "./catalogChrome";
+import {
+  COPY_FEEDBACK_MS,
+  armCopyFeedbackTimer,
+  copyLinkAnnouncement,
+  copyLinkLabel,
+  searchShortcutHint,
+} from "./catalogChrome";
 
 describe("searchShortcutHint", () => {
   it("shows Ctrl+K on Linux and Windows", () => {
@@ -27,5 +33,25 @@ describe("copyLinkAnnouncement", () => {
     expect(copyLinkAnnouncement("unavailable")).toBe(
       "Could not copy the link. Copy the address from your browser instead.",
     );
+  });
+});
+
+describe("armCopyFeedbackTimer", () => {
+  it("clears the previous timer so a second copy restarts the full window", () => {
+    const cleared: number[] = [];
+    const started: number[] = [];
+    let nextId = 1;
+    const clearTimer = (id: number) => {
+      cleared.push(id);
+    };
+    const startTimer = (_callback: () => void, ms: number) => {
+      started.push(ms);
+      return nextId++;
+    };
+    const first = armCopyFeedbackTimer(undefined, clearTimer, startTimer, () => {});
+    const second = armCopyFeedbackTimer(first, clearTimer, startTimer, () => {});
+    expect(cleared).toEqual([first]);
+    expect(started).toEqual([COPY_FEEDBACK_MS, COPY_FEEDBACK_MS]);
+    expect(second).not.toBe(first);
   });
 });

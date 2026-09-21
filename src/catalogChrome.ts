@@ -19,3 +19,14 @@ export function copyLinkAnnouncement(state: CopyLinkState) {
   }
   return "";
 }
+
+export function armCopyFeedbackTimer(
+  currentTimer: number | undefined,
+  clearTimer: (id: number) => void,
+  startTimer: (callback: () => void, ms: number) => number,
+  onIdle: () => void,
+  duration = COPY_FEEDBACK_MS,
+) {
+  if (currentTimer !== undefined) clearTimer(currentTimer);
+  return startTimer(onIdle, duration);
+}
