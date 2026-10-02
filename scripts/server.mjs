@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { existsSync, createReadStream } from "node:fs";
-import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import {
@@ -228,6 +228,7 @@ export function assertSafeBindHost(host, behindTlsProxy = false) {
 export function createToolAtlasServer({
   distDirectory = distDir,
   packagesDirectory = packagesDir,
+  guideLibraryDirectory = guideLibraryDir,
 } = {}) {
   const server = createServer(async (req, res) => {
     let pathname;
@@ -269,6 +270,12 @@ export function createToolAtlasServer({
           }
           // Invalid JSON is equivalent to an invalid credential here and does
           // not reveal parsing details.
+        }
+        if (
+          body === null || typeof body !== "object" || Array.isArray(body) ||
+          (body.token !== undefined && typeof body.token !== "string")
+        ) {
+          return sendJson(res, 401, { valid: false, error: "Invalid developer token" });
         }
         let token = body.token || "";
         if (!token) {
@@ -477,9 +484,9 @@ export function createToolAtlasServer({
       if (guideMatch) {
         if (req.method !== "GET" && req.method !== "HEAD") return sendText(res, 405, "Method Not Allowed");
         const [, toolId, filename] = guideMatch;
-        const filePath = join(guideLibraryDir, toolId, filename);
+        const filePath = join(guideLibraryDirectory, toolId, filename);
         if (!existsSync(filePath) || !(await stat(filePath)).isFile()) return sendText(res, 404, "Guide not found");
-        const [realRoot, realFile] = await Promise.all([realpath(guideLibraryDir), realpath(filePath)]);
+        const [realRoot, realFile] = await Promise.all([realpath(guideLibraryDirectory), realpath(filePath)]);
         if (!isPathInside(realRoot, realFile)) return sendText(res, 403, "Forbidden");
         applySecurityHeaders(res, false);
         res.setHeader("Content-Type", mimeTypes[extname(realFile).toLowerCase()] || "application/octet-stream");

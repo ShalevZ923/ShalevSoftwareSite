@@ -11,7 +11,7 @@
     "catalog:check": "node scripts/build-catalog.mjs --check",
     "dev": "pnpm build && node scripts/server.mjs",
     "dev:client": "pnpm catalog:build && vite",
-    "test": "pnpm catalog:check && vitest run",
+    "test": "pnpm catalog:check && vitest run && vitest run scripts/*.test.mjs",
     "build": "pnpm catalog:build && tsc -b && vite build",
     "verify": "pnpm test && pnpm build && node scripts/verify-dist.mjs",
     "preview": "vite preview",
