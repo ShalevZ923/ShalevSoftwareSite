@@ -1,5 +1,6 @@
+import { saveCatalogEntry } from "./catalog-persistence.mjs";
 import { createServer } from "node:http";
-import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { existsSync, createReadStream } from "node:fs";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,9 +10,6 @@ import {
   catalogEntryDirectory,
   loadCatalogEntries,
   loadTaxonomy,
-  nextCatalogOrder,
-  renderCatalogEntryFiles,
-  writeGeneratedCatalog,
 } from "./catalog-content.mjs";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -199,23 +197,6 @@ async function categoryIdForLabel(label) {
   return category.id;
 }
 
-async function writeCatalogEntry(metadata, guide) {
-  const categoryId = await categoryIdForLabel(metadata.category);
-  const { files } = renderCatalogEntryFiles(metadata, guide, categoryId);
-  const vendorFile = files[0];
-  try {
-    const existingVendor = JSON.parse(await readFile(vendorFile.path, "utf8"));
-    if (existingVendor.name !== metadata.company) throw new Error(`Vendor directory already belongs to ${existingVendor.name}`);
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-  for (const file of files) {
-    await mkdir(dirname(file.path), { recursive: true });
-    await writeFile(file.path, file.content, "utf8");
-  }
-  await writeGeneratedCatalog();
-}
-
 export function assertSafeBindHost(host, behindTlsProxy = false) {
   if (!isLoopbackHost(host) && !behindTlsProxy) {
     throw new Error(
@@ -229,6 +210,8 @@ export function createToolAtlasServer({
   distDirectory = distDir,
   packagesDirectory = packagesDir,
   guideLibraryDirectory = guideLibraryDir,
+  catalogDirectory = contentDirectory,
+  catalogOutputs = {},
 } = {}) {
   const server = createServer(async (req, res) => {
     let pathname;
@@ -243,6 +226,29 @@ export function createToolAtlasServer({
     }
 
     try {
+      // Authenticate protected namespaces before disclosing routes or methods.
+      if (pathname.startsWith("/api/developer/") && pathname !== "/api/developer/verify" && !verifyToken(req)) {
+        return sendJson(res, 401, { error: "Unauthorized: Invalid or missing developer token" });
+      }
+      const apiRoutes = [
+        [/^\/api\/health$/, ["GET"]],
+        [/^\/api\/catalog$/, ["GET"]],
+        [/^\/api\/developer\/verify$/, ["POST"]],
+        [/^\/api\/developer\/tools$/, ["GET", "POST"]],
+        [/^\/api\/developer\/tools\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["GET", "PUT"]],
+        [/^\/api\/developer\/guide-library\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["GET"]],
+        [/^\/api\/developer\/docs$/, ["GET"]],
+        [/^\/api\/developer\/docs\/[A-Za-z0-9_.-]+\.md$/, ["GET", "PUT"]],
+      ];
+      if (pathname === "/api" || pathname.startsWith("/api/")) {
+        const route = apiRoutes.find(([pattern]) => pattern.test(pathname));
+        if (!route) return sendJson(res, 404, { error: "API endpoint not found" });
+        // API HEAD and OPTIONS are deliberately unsupported, like other unlisted methods.
+        if (!route[1].includes(req.method)) {
+          res.setHeader("Allow", route[1].join(", "));
+          return sendJson(res, 405, { error: "Method Not Allowed" });
+        }
+      }
       // 1. Health check
       if (pathname === "/api/health" && req.method === "GET") {
         return sendJson(res, 200, { status: "ok" });
@@ -250,7 +256,7 @@ export function createToolAtlasServer({
 
       // 2. Public Live Catalog API
       if (pathname === "/api/catalog" && req.method === "GET") {
-        const entries = await loadCatalogEntries(contentDirectory);
+        const entries = await loadCatalogEntries(catalogDirectory);
         const tools = entries.map(({ metadata }) => {
           const { order, ...tool } = metadata;
           return tool;
@@ -304,7 +310,7 @@ export function createToolAtlasServer({
 
         // List all tools (with metadata and raw markdown guide)
         if (pathname === "/api/developer/tools" && req.method === "GET") {
-          const entries = await loadCatalogEntries(contentDirectory);
+          const entries = await loadCatalogEntries(catalogDirectory);
           return sendJson(
             res,
             200,
@@ -324,19 +330,15 @@ export function createToolAtlasServer({
           }
 
           const categoryId = await categoryIdForLabel(metadata.category);
-          const targetDirectory = catalogEntryDirectory(categoryId, metadata.company, metadata.id);
+          const targetDirectory = catalogEntryDirectory(categoryId, metadata.company, metadata.id, catalogDirectory);
           if (existsSync(targetDirectory)) {
             return sendJson(res, 409, { error: `Tool ${metadata.id} already exists` });
-          }
-
-          if (!metadata.order) {
-            metadata.order = await nextCatalogOrder();
           }
 
           try {
             await verifyGuideLibraryResources(metadata.id, metadata.resources);
             await verifyGuideLinks(metadata.resources);
-            await writeCatalogEntry(metadata, guide);
+            await saveCatalogEntry(metadata, guide, { directory: catalogDirectory, ...catalogOutputs, create: true });
           } catch (error) {
             return sendJson(res, 400, {
               error: error instanceof Error ? error.message : "Catalog validation failed",
@@ -350,7 +352,7 @@ export function createToolAtlasServer({
         if (toolMatch) {
           const toolId = toolMatch[1];
           if (req.method === "GET") {
-            const entries = await loadCatalogEntries(contentDirectory);
+            const entries = await loadCatalogEntries(catalogDirectory);
             const entry = entries.find((item) => item.metadata.id === toolId);
             if (!entry) return sendJson(res, 404, { error: `Tool ${toolId} not found` });
             return sendJson(res, 200, { metadata: entry.metadata, guide: entry.guide });
@@ -365,7 +367,7 @@ export function createToolAtlasServer({
               return sendJson(res, 400, { error: "metadata.id cannot be changed" });
             }
 
-            const entries = await loadCatalogEntries(contentDirectory);
+            const entries = await loadCatalogEntries(catalogDirectory);
             const current = entries.find((item) => item.metadata.id === toolId);
             if (!current) return sendJson(res, 404, { error: `Tool ${toolId} not found` });
             if (metadata.company !== current.metadata.company || metadata.category !== current.metadata.category) {
@@ -374,7 +376,7 @@ export function createToolAtlasServer({
             try {
               await verifyGuideLibraryResources(toolId, metadata.resources);
               await verifyGuideLinks(metadata.resources);
-              await writeCatalogEntry(metadata, guide);
+              await saveCatalogEntry(metadata, guide, { directory: catalogDirectory, ...catalogOutputs });
             } catch (error) {
               return sendJson(res, 400, {
                 error: error instanceof Error ? error.message : "Catalog validation failed",

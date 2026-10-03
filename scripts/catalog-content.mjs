@@ -1,5 +1,5 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -225,19 +225,19 @@ export function validateCatalogEntry(source, metadata, guide) {
 
 function releaseFilename(version) { return `${version}.json`; }
 
-export function catalogEntryDirectory(categoryId, company, id) {
-  return join(contentDirectory, ...categoryId.split("/"), slugifyId(company), id);
+export function catalogEntryDirectory(categoryId, company, id, directory = contentDirectory) {
+  return join(directory, ...categoryId.split("/"), slugifyId(company), id);
 }
 
-export function renderCatalogEntryFiles(metadata, guide, categoryId) {
+export function renderCatalogEntryFiles(metadata, guide, categoryId, root = contentDirectory) {
   const source = `catalog entry ${metadata.id}`;
   const category = requiredString(categoryId, "categoryId", source);
-  const directory = catalogEntryDirectory(category, metadata.company, metadata.id);
+  const directory = catalogEntryDirectory(category, metadata.company, metadata.id, root);
   const { company, category: ignoredCategory, releases, ...tool } = metadata;
   validateCatalogEntry(source, metadata, guide.trim());
   return { directory, files: [
     { path: join(dirname(directory), "vendor.json"), content: `${JSON.stringify({ name: company }, null, 2)}\n` },
-    { path: join(directory, "tool.json"), content: `${JSON.stringify(tool, null, 2)}\n` },
+    { path: join(directory, "tool.json"), content: `${JSON.stringify({ ...tool, releaseOrder: releases.map(({ version }) => version) }, null, 2)}\n` },
     { path: join(directory, "guide.md"), content: `${guide.trim()}\n` },
     ...releases.map((release) => ({ path: join(directory, "releases", releaseFilename(release.version)), content: `${JSON.stringify(release, null, 2)}\n` })),
   ] };
@@ -249,7 +249,7 @@ export async function loadCatalogEntries(directory = contentDirectory) {
   if (toolPaths.length === 0) fail(directory, "must contain at least one tool.json entry");
   const entries = await Promise.all(toolPaths.map(async (toolPath) => {
     const source = toolPath;
-    const relativeSegments = relative(directory, toolPath).split("/");
+    const relativeSegments = relative(directory, toolPath).split(sep);
     const category = findCategoryForPath(relativeSegments, categories, source);
     const remaining = relativeSegments.slice(category.id.split("/").length);
     if (remaining.length !== 3 || remaining[2] !== "tool.json" || !idPattern.test(remaining[0]) || !idPattern.test(remaining[1])) fail(source, "must use <category>/<vendor>/<tool>/tool.json");
@@ -282,7 +282,16 @@ export async function loadCatalogEntries(directory = contentDirectory) {
       if (artifactVersion !== version) fail(releasePath, "artifact version must match the release filename");
       return { version, artifact };
     }));
-    return validateCatalogEntry(source, { ...tool, company, category: category.label, releases }, guide);
+    const { releaseOrder, ...metadata } = tool;
+    if (releaseOrder !== undefined) {
+      if (!Array.isArray(releaseOrder) || releaseOrder.length !== releases.length ||
+          new Set(releaseOrder).size !== releases.length ||
+          releaseOrder.some((version) => !releases.some((release) => release.version === version))) {
+        fail(source, "releaseOrder must list every release version exactly once; first is the default");
+      }
+      releases.sort((left, right) => releaseOrder.indexOf(left.version) - releaseOrder.indexOf(right.version));
+    }
+    return validateCatalogEntry(source, { ...metadata, company, category: category.label, releases }, guide);
   }));
   const ids = new Set(); const orders = new Set();
   for (const { metadata } of entries) {

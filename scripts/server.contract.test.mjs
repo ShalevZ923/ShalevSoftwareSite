@@ -21,7 +21,10 @@ describe("guide delivery and credential HTTP contracts", () => {
     if (process.platform !== "win32") {
       await symlink(join(root, "secret.pdf"), join(library, "test-tool", "escape.pdf"));
     }
-    server = createToolAtlasServer({ guideLibraryDirectory: library });
+    const dist = join(root, "dist");
+    await mkdir(dist);
+    await writeFile(join(dist, "index.html"), "<div>SPA fixture</div>");
+    server = createToolAtlasServer({ guideLibraryDirectory: library, distDirectory: dist });
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     baseUrl = `http://127.0.0.1:${server.address().port}`;
   });
@@ -101,4 +104,41 @@ describe("guide delivery and credential HTTP contracts", () => {
     expect(response.status).toBe(413);
     expect(await response.json()).toMatchObject({ valid: false });
   });
+  it.each(["GET", "HEAD", "OPTIONS", "POST"])("reserves unknown API routes for JSON 404 on %s", async (method) => {
+    const response = await fetch(`${baseUrl}/api/not-an-endpoint`, { method });
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    if (method === "HEAD") expect(await response.text()).toBe("");
+    else expect(await response.json()).toMatchObject({ error: expect.any(String) });
+  });
+
+  it.each([
+    ["/api/health", "GET"], ["/api/catalog", "GET"],
+    ["/api/developer/verify", "POST"], ["/api/developer/tools", "GET, POST"],
+    ["/api/developer/tools/docker", "GET, PUT"], ["/api/developer/docs", "GET"],
+    ["/api/developer/docs/README.md", "GET, PUT"], ["/api/developer/guide-library/docker", "GET"],
+  ])("rejects unsupported methods with accurate Allow for %s", async (path, allow) => {
+    for (const method of ["HEAD", "OPTIONS", "DELETE"]) {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method, headers: { Authorization: `Bearer ${developerToken}` },
+      });
+      expect(response.status).toBe(405);
+      expect(response.headers.get("allow")).toBe(allow);
+      expect(response.headers.get("content-type")).toContain("application/json");
+      if (method === "HEAD") expect(await response.text()).toBe("");
+    }
+  });
+
+  it.each(["/api/developer/tools", "/api/developer/not-an-endpoint"])("authenticates before exposing route details for %s", async (path) => {
+    const response = await fetch(`${baseUrl}${path}`, { method: "OPTIONS" });
+    expect(response.status).toBe(401);
+    expect(response.headers.get("allow")).toBeNull();
+  });
+
+  it("keeps ordinary SPA deep links working", async () => {
+    const response = await fetch(`${baseUrl}/documentation/deep-link`);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("SPA fixture");
+  });
+
 });

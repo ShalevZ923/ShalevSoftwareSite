@@ -31,7 +31,9 @@ pnpm verify
 - Vendor and tool directories use lowercase kebab-case. `vendor.json.name` must map to its vendor directory and `tool.json.id` must equal its tool directory, for example `development/ides-and-editors/jetbrains/intellij/tool.json`.
 - Keep product metadata in `tool.json`, support guidance in `guide.md`, and each approved release in `releases/<version>.json`. Release filenames must match their version exactly; add a new release file instead of replacing history unless a reviewed correction is needed.
 - `order` is a unique positive integer that preserves the catalog's curated “recently updated” ordering. The helper assigns the next value automatically.
-- Releases must be listed newest first. Each release has a unique version and exactly one approved target:
+- `tool.json.releaseOrder` lists every approved release version exactly once; the first is the default. Developer Studio persists the submitted order. Older records without this field retain filename order until their next save. Missing, duplicate, or unknown versions in `releaseOrder` fail validation.
+- Saving a release removal or rename reconciles obsolete release JSON files only; installer binaries are never deleted. Saves are serialized, validated in a staging tree, and published with rollback if any file replacement fails.
+- Each release has a unique version and exactly one approved target:
   - A credential-free HTTPS URL in `download` for an external vendor download.
   - An `artifact` pointer in the exact form `tool-id/version/filename` for an installer published on the same server. The tool and version path segments must match the catalog entry and release. Example: `example-tool/26.1/example-tool-26.1-x64.msi`.
 - Hosted artifact pointers are public catalog metadata, not secret or authorization controls. The web server maps them below `/downloads/`, forces attachment download, and disables directory browsing. See [Windows deployment](./docs/WINDOWS_DEPLOYMENT.md) for publishing, checksums, permissions, logging, and recovery.
