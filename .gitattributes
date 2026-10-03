@@ -1,0 +1,2 @@
+# Keep tracked text deterministic across Linux and Windows checkouts.
+* text=auto eol=lf

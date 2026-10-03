@@ -263,7 +263,7 @@ export async function loadCatalogEntries(directory = contentDirectory) {
     if (!tool || typeof tool !== "object" || Array.isArray(tool)) fail(toolPath, "must be an object");
     if (tool.id !== toolId) fail(toolPath, "id must match its tool directory");
     if (Object.hasOwn(tool, "company") || Object.hasOwn(tool, "category") || Object.hasOwn(tool, "releases")) fail(toolPath, "company, category, and releases belong in the directory, taxonomy, and releases directory");
-    const guide = (await readFile(join(dirname(toolPath), "guide.md"), "utf8")).trim();
+    const guide = (await readFile(join(dirname(toolPath), "guide.md"), "utf8")).replace(/\r\n/g, "\n").trim();
     const releasesDirectory = join(dirname(toolPath), "releases");
     const releasePaths = (await readdir(releasesDirectory, { withFileTypes: true })).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => join(releasesDirectory, entry.name)).sort();
     if (releasePaths.length === 0) fail(releasesDirectory, "must contain at least one release JSON file");
@@ -306,6 +306,11 @@ export function renderGeneratedCatalog(entries) {
   const tools = entries.map(({ metadata }) => { const { order, ...tool } = metadata; return tool; });
   const docs = Object.fromEntries(entries.map(({ metadata, guide }) => [metadata.id, guide]));
   return `// Generated from content/catalog/**/{tool.json,guide.md,releases/*.json} by scripts/build-catalog.mjs. Do not edit manually.\n\nexport const tools = ${JSON.stringify(tools, null, 2)};\n\nexport const docs = ${JSON.stringify(docs, null, 2)};\n`;
+}
+
+/** Git can materialize tracked text with CRLF on native Windows checkouts. */
+export function generatedCatalogIsCurrent(current, entries) {
+  return current.replace(/\r\n/g, "\n") === renderGeneratedCatalog(entries);
 }
 
 function publicCatalogFields(metadata) {
