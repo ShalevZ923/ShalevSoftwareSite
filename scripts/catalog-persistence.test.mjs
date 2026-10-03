@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createToolAtlasServer, developerToken } from "./server.mjs";
@@ -46,6 +46,8 @@ describe("isolated software release HTTP round trips", () => {
     root = await mkdtemp(join(tmpdir(), "tool-atlas-release-"));
     directory = join(root, "catalog");
     await cp(contentDirectory, directory, { recursive: true });
+    // Match the server's canonical source root, including Windows short-name expansion.
+    directory = await realpath(directory);
     outputs = { generatedPath: join(root, "catalog.ts"), indexPath: join(root, "index.json"), toolsPath: join(root, "tools.json") };
     const entries = await loadCatalogEntries(directory);
     const feed = renderMachineCatalog(entries);
