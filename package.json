@@ -9,14 +9,14 @@
     "catalog:add": "node scripts/add-catalog-tool.mjs",
     "catalog:build": "node scripts/build-catalog.mjs",
     "catalog:check": "node scripts/build-catalog.mjs --check",
-    "dev": "pnpm build && node scripts/server.mjs",
-    "dev:client": "pnpm catalog:build && vite",
-    "test": "pnpm catalog:check && vitest run",
-    "build": "pnpm catalog:build && tsc -b && vite build",
-    "verify": "pnpm test && pnpm build && node scripts/verify-dist.mjs",
+    "dev": "npm run build && node scripts/server.mjs",
+    "dev:client": "npm run catalog:build && vite",
+    "test": "npm run catalog:check && vitest run",
+    "build": "npm run catalog:build && tsc -b && vite build",
+    "verify": "npm run test && npm run build && node scripts/verify-dist.mjs",
     "preview": "vite preview",
-    "serve": "node scripts/server.mjs",
-    "start": "node scripts/server.mjs"
+    "serve": "npm run start",
+    "start": "npm run build && node scripts/server.mjs"
   },
   "dependencies": {
     "react": "19.3.0",

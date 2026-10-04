@@ -8,18 +8,18 @@ Developer Studio is an optional local authoring interface. It runs `scripts/serv
 2. Install dependencies and validate the current tree:
 
    ```bash
-   pnpm install --frozen-lockfile
-   pnpm verify
+   npm ci
+   npm run verify
    ```
 
 3. Start the Studio development server:
 
    ```bash
-   pnpm dev
+   npm run dev
    ```
 
-4. Open the Developer Studio link printed by the process. It uses a URL fragment such as `?page=developer#token=...`; fragments are not sent in HTTP requests or Referer headers. The app removes the token from the address bar before verification and stores it only for the current browser session. `pnpm dev:client` remains available for a Vite-only public-catalog UI session; it deliberately does not expose Developer Studio or issue a token.
-5. After editing, inspect `git diff`, run `pnpm verify`, and submit the change through normal review. Do not publish directly from Developer Studio.
+4. Open the Developer Studio link printed by the process. It uses a URL fragment such as `?page=developer#token=...`; fragments are not sent in HTTP requests or Referer headers. The app removes the token from the address bar before verification and stores it only for the current browser session. `npm run dev:client` remains available for a Vite-only public-catalog UI session; it deliberately does not expose Developer Studio or issue a token.
+5. After editing, inspect `git diff`, run `npm run verify`, and submit the change through normal review. Do not publish directly from Developer Studio.
 6. Select **Exit Studio** when finished. This clears the browser session token. Restarting the Node.js process invalidates the old token and creates a new one.
 
 By default the server listens only on `127.0.0.1`. Treat anyone with the startup link or token as able to read and modify the supported catalog and documentation files.
@@ -43,7 +43,7 @@ Run the same loopback-only workflow from PowerShell:
 .\windows\Start-ToolAtlas.ps1
 ```
 
-The launcher also defaults to `127.0.0.1`. `-SkipBuild` may be used only when `dist/` already contains the intended reviewed build.
+The launcher uses `npm.cmd` to build before startup and stops on a failed build. Install dependencies first with `npm.cmd ci`. The launcher also defaults to `127.0.0.1`. `-SkipBuild` may be used only when `dist/` already contains the intended reviewed build.
 
 ## Local Docker container
 
@@ -68,4 +68,4 @@ If network access is required, place the server behind a trusted TLS reverse pro
 - Server-library loading, failure, and empty states are distinct. Use **Refresh server files** after an administrator adds a PDF/PPTX to `guide-library/<tool-id>/`. Save a new tool before attaching its server files. Only available files matching the selected format can be selected; missing existing references remain visible as unavailable.
 - **Applies to versions** accepts comma-separated versions without removing separators while typing. Saved metadata trims whitespace and removes duplicate/empty items.
 
-Validation: `pnpm verify` passed (78 tests, TypeScript, production build, artifact checks). Browser checks confirmed empty-library guidance, disabled unavailable source, and typing a comma/space followed by a second version with the value retained after Refresh. These focused checks do not replace deployment acceptance.
+Validation: `npm run verify` passed (78 tests, TypeScript, production build, artifact checks). Browser checks confirmed empty-library guidance, disabled unavailable source, and typing a comma/space followed by a second version with the value retained after Refresh. These focused checks do not replace deployment acceptance.

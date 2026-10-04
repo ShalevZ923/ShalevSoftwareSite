@@ -46,17 +46,27 @@ Open `http://127.0.0.1:8081/?page=developer` and paste the **Developer Studio To
 
 ## Local development
 
-```bash
-pnpm install --frozen-lockfile
-pnpm dev
-```
-
-To use the local Developer Studio, build and start the guarded loopback server instead:
+Use Node.js 24 LTS and npm (included with Node.js). No pnpm installation is required:
 
 ```bash
-pnpm build
-pnpm serve
+npm ci
+npm start
 ```
+
+`npm start` builds the production app before starting the guarded loopback server at `http://127.0.0.1:8080/`. `npm run dev` and `npm run serve` also build before serving, so a fresh checkout does not require an existing `dist/` directory. Stop the server with Ctrl+C.
+
+For separate build and startup steps:
+
+```bash
+npm run build
+node scripts/server.mjs
+```
+
+The direct Node command serves an existing build; rerun `npm run build` after source changes. If you see “Application dist directory not found”, run the build from the repository root, or use `npm start`. `npm run dev:client` starts the Vite frontend without the Studio API.
+
+On Windows, use `npm.cmd ci` and `npm.cmd start` if PowerShell blocks the `npm.ps1` shim. The Windows launcher also uses `npm.cmd` and stops if the build fails.
+
+pnpm remains supported with `pnpm install --frozen-lockfile` and `pnpm run dev`. All package scripts also work with `npm run <script>`. When dependencies change, update and commit both `package-lock.json` and `pnpm-lock.yaml`.
 
 Open the fragment-based access link printed at startup. The token is removed from the address bar before verification and is never accepted from a query string. Exiting the studio clears it from browser session storage.
 
