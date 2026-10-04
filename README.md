@@ -16,15 +16,15 @@ The catalog supports shareable filter URLs and a saved-tools list. Saved tools a
 
 ## Run the published Docker image
 
-The ready-made release image contains only the static catalog served by unprivileged NGINX; it does not include the local Developer Studio server or its write APIs.
+The `1.7.1-beta.1` prerelease image contains only the static catalog served by unprivileged NGINX; it does not include the local Developer Studio server or its write APIs.
 
 Pull the current release:
 
 ```bash
-docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.7.0
+docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.7.1-beta.1
 docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   -p 127.0.0.1:8080:8080 \
-  ghcr.io/shalevz923/shalevsoftwaresite:1.7.0
+  ghcr.io/shalevz923/shalevsoftwaresite:1.7.1-beta.1
 ```
 
 Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing. For a production deployment, pin the reviewed image digest and use the [production deployment guide](./docs/PRODUCTION_DEPLOYMENT.md).
@@ -85,7 +85,7 @@ Conflicting filters are cleared so a linked tool is visible; compatible filters 
 
 ## Website version
 
-Set `VITE_APP_VERSION=1.7.0` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.7.0`.
+Set `VITE_APP_VERSION=1.7.1-beta.1` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.7.1-beta.1`.
 
 After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
 
@@ -193,7 +193,7 @@ The app container runs as the unprivileged `nginx` user with a read-only filesys
 
 See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
 
-For the `v1.7.0` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
+For the `v1.7.1-beta.1` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
 
 The catalog website remains backend-free. A separate Tool Atlas MCP image can search `/catalog/v1` for IDEs. It is not packed into the NGINX image. See [the machine catalog contract](docs/CATALOG_MACHINE_FEED.md).
 

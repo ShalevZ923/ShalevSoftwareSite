@@ -12,7 +12,7 @@ COPY public ./public
 COPY content ./content
 COPY scripts ./scripts
 COPY src ./src
-ARG VITE_APP_VERSION=1.7.0
+ARG VITE_APP_VERSION=1.7.1-beta.1
 RUN pnpm build
 
 # Optional local authoring image; the default final target remains static NGINX.
