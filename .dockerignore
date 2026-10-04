@@ -13,7 +13,6 @@ dist
 output
 packages
 coverage
-docs
 poc
 windows
 compose*.yaml

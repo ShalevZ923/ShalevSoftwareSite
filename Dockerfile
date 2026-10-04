@@ -15,6 +15,15 @@ COPY src ./src
 ARG VITE_APP_VERSION=1.7.0
 RUN pnpm build
 
+# Optional local authoring image; the default final target remains static NGINX.
+FROM build AS studio
+COPY --chown=node:node docs ./docs
+RUN mkdir -p /app/guide-library /app/packages && chown -R node:node /app
+USER node
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD node -e "fetch('http://127.0.0.1:8080/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+CMD ["node", "scripts/server.mjs"]
+
 FROM nginx:1.31-alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3 AS runtime
 
 ARG VERSION=dev
@@ -31,6 +40,6 @@ RUN rm /usr/share/nginx/html/_headers
 
 USER nginx
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/ || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/api/health || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

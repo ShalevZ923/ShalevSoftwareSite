@@ -45,9 +45,13 @@ Run the same loopback-only workflow from PowerShell:
 
 The launcher also defaults to `127.0.0.1`. `-SkipBuild` may be used only when `dist/` already contains the intended reviewed build.
 
+## Local Docker container
+
+The static production image has no Node process or Studio token. Use `docker compose -f compose.studio.yaml up --build --detach` for the opt-in local Studio container. Retrieve its current token with `docker compose -f compose.studio.yaml logs --tail=50 studio`, then open `http://127.0.0.1:8081/?page=developer` and paste it. Its localhost-only port mapping is independent of public Caddy routing. See [Docker operation](./DOCKER_OPERATIONS.md) for writable mounts, health checks, and token rotation.
+
 ## Network access
 
-Do not expose the Node.js server directly over plaintext HTTP. A non-loopback bind is refused unless `TOOL_ATLAS_BEHIND_TLS_PROXY=true` is explicitly set; the Windows launcher sets it only when `-BehindTlsProxy` is supplied. That flag is an operator assertion, not a TLS implementation.
+Do not expose the Node.js server directly over plaintext HTTP. For normal host startup, a non-loopback bind is refused unless `TOOL_ATLAS_BEHIND_TLS_PROXY=true` is explicitly set; the Windows launcher sets it only when `-BehindTlsProxy` is supplied. That flag is an operator assertion, not a TLS implementation. The separate local Docker mode above permits container interfaces only behind its localhost port mapping.
 
 If network access is required, place the server behind a trusted TLS reverse proxy, restrict source networks at the firewall, keep the origin port private, and prevent proxy/access logs from recording authorization headers. In this mode the server cannot know the proxy's external hostname, so it prints the token separately: open the configured HTTPS Developer Studio URL and paste the token into the authentication gate. Never use the printed HTTP origin URL from another machine. The current token is a single-session bearer credential with no user identity, roles, audit trail, or per-change approval, so this mode is not suitable for public or multi-user production administration.
 

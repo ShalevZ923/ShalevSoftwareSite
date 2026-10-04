@@ -1,12 +1,12 @@
 {
 	# Certificate contact address comes from the deployment environment.
-	email {$ACME_EMAIL}
+	email "{$ACME_EMAIL}"
 	admin off
 }
 
-# Caddy obtains and renews a public ACME certificate automatically. The hostname
-# must resolve to this host and ports 80 and 443 must be reachable publicly.
-{$SITE_DOMAIN} {
+# With no domain, use plain HTTP on :80. A configured public hostname enables
+# automatic HTTPS; DNS and public ports 80/443 must then reach this host.
+{$SITE_DOMAIN::80} {
 	encode zstd gzip
 
 	log {
@@ -14,10 +14,9 @@
 		format json
 	}
 
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		-Server
-	}
+	@https protocol https
+	header @https Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header -Server
 
 	reverse_proxy app:8080
 }

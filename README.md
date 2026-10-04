@@ -29,6 +29,21 @@ docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
 
 Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing. For a production deployment, pin the reviewed image digest and use the [production deployment guide](./docs/PRODUCTION_DEPLOYMENT.md).
 
+## Docker health, optional HTTPS, and local Studio
+
+The default Docker image serves the static catalog; it has no Developer Studio token. Check it with `docker compose ps` or `curl --fail http://localhost/api/health` (include your `HTTP_PORT` if different). The health response is `{"status":"ok"}`. Use `docker compose logs --tail=100 app proxy` for serving/proxy logs.
+
+`SITE_DOMAIN` and `ACME_EMAIL` can be omitted or empty. With no domain, Caddy serves HTTP on port 80. Set `SITE_DOMAIN=atlas.example.com` to enable automatic HTTPS; `ACME_EMAIL` is an optional certificate contact. See [the Docker operator guide](./docs/DOCKER_OPERATIONS.md) for startup and health commands.
+
+For local Developer Studio in Docker, use the separate configuration:
+
+```bash
+docker compose -f compose.studio.yaml up --build --detach
+docker compose -f compose.studio.yaml logs --tail=50 studio
+```
+
+Open `http://127.0.0.1:8081/?page=developer` and paste the **Developer Studio Token** from the current startup log. This container writes catalog/document changes to the mounted checkout and publishes only on localhost. Restarting it rotates the token. The public Caddy proxy has no route to Studio. Studio edits still need a reviewed rebuild/deployment before they appear in the static Docker site.
+
 ## Local development
 
 ```bash
@@ -89,7 +104,7 @@ pnpm audit --prod
 
 ## Production deployment with Docker and HTTPS
 
-The included Compose deployment keeps the static app private on an internal Docker network and exposes only Caddy, which obtains and renews a public ACME TLS certificate automatically. Configuration is read from a host-local `.env` file; it is intentionally ignored by Git.
+The included Compose deployment keeps the static app private on an internal Docker network and exposes only Caddy, which obtains and renews a public ACME TLS certificate automatically. Set `SITE_DOMAIN` to enable HTTPS. Without a domain, Caddy serves HTTP for local/trusted network access. Optional configuration is read from a host-local `.env` file; it is intentionally ignored by Git.
 
 ```mermaid
 flowchart LR
@@ -112,7 +127,7 @@ flowchart LR
 
 ### 2. Configure the environment
 
-Copy the template and replace every example value with the production values:
+For production HTTPS, copy the template and set the hostname and any optional deployment values:
 
 ```bash
 cp .env.example .env
@@ -123,8 +138,8 @@ chmod 600 .env
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `SITE_DOMAIN` | Yes | Public hostname, without `https://`, a path, or a port. |
-| `ACME_EMAIL` | Yes | Certificate-expiry/contact address supplied to the ACME CA. |
+| `SITE_DOMAIN` | For HTTPS | Public hostname, without `https://`, a path, or a port. Empty uses HTTP on port 80. |
+| `ACME_EMAIL` | No | Optional contact address supplied to the ACME CA. |
 | `HTTP_PORT` | No | Host HTTP port; use `80` in production. |
 | `HTTPS_PORT` | No | Host HTTPS port; use `443` in production. |
 

@@ -102,6 +102,8 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(() => assertSafeBindHost("127.0.0.1")).not.toThrow();
     expect(() => assertSafeBindHost("0.0.0.0")).toThrow(/Refusing a non-loopback bind/);
     expect(() => assertSafeBindHost("0.0.0.0", true)).not.toThrow();
+    expect(() => assertSafeBindHost("0.0.0.0", false, true)).not.toThrow();
+    expect(() => assertSafeBindHost("192.168.1.10", false, true)).toThrow(/Refusing a non-loopback bind/);
   });
 
   it("uses short request timeouts for the optional authoring server", () => {

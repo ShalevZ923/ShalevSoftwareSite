@@ -197,7 +197,10 @@ async function categoryIdForLabel(label) {
   return category.id;
 }
 
-export function assertSafeBindHost(host, behindTlsProxy = false) {
+export function assertSafeBindHost(host, behindTlsProxy = false, localContainer = false) {
+  // This explicit mode is only for compose.studio.yaml, which publishes the
+  // container port on host loopback and isolates it from the public proxy.
+  if (localContainer && host === "0.0.0.0") return;
   if (!isLoopbackHost(host) && !behindTlsProxy) {
     throw new Error(
       "Refusing a non-loopback bind without TOOL_ATLAS_BEHIND_TLS_PROXY=true. " +
@@ -589,7 +592,11 @@ export function createToolAtlasServer({
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    assertSafeBindHost(HOST, process.env.TOOL_ATLAS_BEHIND_TLS_PROXY === "true");
+    assertSafeBindHost(
+      HOST,
+      process.env.TOOL_ATLAS_BEHIND_TLS_PROXY === "true",
+      process.env.TOOL_ATLAS_LOCAL_CONTAINER === "true",
+    );
   } catch (error) {
     process.stderr.write(`${error.message}\n`);
     process.exitCode = 1;
@@ -600,7 +607,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     server.listen(PORT, HOST, () => {
       const displayHost = HOST === "::1" ? "[::1]" : HOST;
       const localUrl = `http://${displayHost}:${PORT}/`;
-      const developerAccess = isLoopbackHost(HOST)
+      const developerAccess = process.env.TOOL_ATLAS_LOCAL_CONTAINER === "true"
+        ? `Developer Studio Token (paste into Studio on the Docker host localhost port):\n  ${developerToken}`
+        : isLoopbackHost(HOST)
         ? `Developer Studio Access Link (Ephemeral startup token):\n  ${localUrl}?page=developer#token=${developerToken}`
         : `Developer Studio Token (paste only through the configured HTTPS proxy):\n  ${developerToken}`;
 
