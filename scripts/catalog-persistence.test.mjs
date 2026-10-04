@@ -143,6 +143,25 @@ describe("isolated software release HTTP round trips", () => {
     await assertConsistent("docker", versions(second));
   });
 
+  it("allows retrying a new tool after a rolled-back publish", async () => {
+    const entry = await get();
+    entry.metadata.id = "retry-tool";
+    delete entry.metadata.order;
+    entry.metadata.releases = [{ version: "1", download: "https://example.com/1" }];
+    const originalEntries = await loadCatalogEntries(directory);
+    const originalOutputs = await Promise.all(Object.values(outputs).map((path) => readFile(path, "utf8")));
+    const create = () => fetch(`${baseUrl}/api/developer/tools`, {
+      method: "POST", headers, body: JSON.stringify(entry),
+    });
+    faults.target = outputs.toolsPath;
+    expect((await create()).status).toBe(400);
+    expect(await loadCatalogEntries(directory)).toEqual(originalEntries);
+    expect(await Promise.all(Object.values(outputs).map((path) => readFile(path, "utf8")))).toEqual(originalOutputs);
+    expect((await create()).status).toBe(201);
+    await assertConsistent("retry-tool", ["1"]);
+    expect((await create()).status).toBe(409);
+  });
+
   it("rejects missing or ambiguous persisted defaults", async () => {
     const path = join(directory, "development", "ides-and-editors", "jetbrains", "intellij", "tool.json");
     const tool = JSON.parse(await readFile(path, "utf8"));

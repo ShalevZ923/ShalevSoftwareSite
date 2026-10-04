@@ -331,7 +331,9 @@ export function createToolAtlasServer({
 
           const categoryId = await categoryIdForLabel(metadata.category);
           const targetDirectory = catalogEntryDirectory(categoryId, metadata.company, metadata.id, catalogDirectory);
-          if (existsSync(targetDirectory)) {
+          // A rolled-back create can leave empty directories; only persisted
+          // tool metadata means this entry already exists.
+          if (existsSync(join(targetDirectory, "tool.json"))) {
             return sendJson(res, 409, { error: `Tool ${metadata.id} already exists` });
           }
 
