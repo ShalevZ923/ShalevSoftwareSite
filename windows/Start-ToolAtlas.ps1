@@ -16,19 +16,28 @@ Set-Location $repoRoot
 # 1. Verify Node.js
 $node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $node) {
-  Write-Error "Node.js is not installed or not found in PATH. Please install Node.js 18+ to run Tool Atlas."
+  Write-Error "Node.js is not installed or not found in PATH. Please install Node.js 24 LTS to run Tool Atlas."
   exit 1
 }
 
-# 2. Check dist/ directory
-$distPath = Join-Path $repoRoot "dist"
-if (-not (Test-Path $distPath) -and -not $SkipBuild) {
-  Write-Host "Production build not found in $distPath. Running initial build..." -ForegroundColor Cyan
-  $pnpm = Get-Command pnpm -ErrorAction SilentlyContinue
-  if ($pnpm) {
-    & pnpm run build
-  } else {
-    & npm run build
+# 2. Build with npm.cmd to avoid the PowerShell npm.ps1 execution-policy shim.
+$distIndex = Join-Path $repoRoot "dist/index.html"
+if ($SkipBuild) {
+  if (-not (Test-Path $distIndex -PathType Leaf)) {
+    throw "-SkipBuild requires dist/index.html. Run npm.cmd run build first."
+  }
+} else {
+  $npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
+  if (-not $npm) {
+    throw "npm.cmd is not installed or not found in PATH. Install Node.js 24 LTS with npm."
+  }
+  Write-Host "Building Tool Atlas with npm..." -ForegroundColor Cyan
+  & $npm.Source run build
+  if ($LASTEXITCODE -ne 0) {
+    throw "Build failed. Run npm.cmd ci, then npm.cmd run build and resolve any errors before starting the server."
+  }
+  if (-not (Test-Path $distIndex -PathType Leaf)) {
+    throw "Build did not produce dist/index.html."
   }
 }
 

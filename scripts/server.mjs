@@ -544,7 +544,7 @@ export function createToolAtlasServer({
           return sendText(
             res,
             503,
-            "Application dist directory not found. Please run: pnpm build",
+            "Application dist directory not found. Please run: npm run build (or pnpm run build), then restart with npm start",
           );
         }
       }

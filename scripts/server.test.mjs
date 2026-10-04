@@ -264,3 +264,20 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(res.status).toBe(404);
   });
 });
+
+
+describe("missing production build", () => {
+  it("returns npm-compatible recovery instructions when dist is absent", async () => {
+    const root = await mkdtemp(join(tmpdir(), "tool-atlas-missing-dist-"));
+    const server = createToolAtlasServer({ distDirectory: join(root, "dist") });
+    try {
+      await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const response = await fetch(`http://127.0.0.1:${server.address().port}/`);
+      expect(response.status).toBe(503);
+      expect(await response.text()).toContain("npm run build");
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
