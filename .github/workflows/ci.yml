@@ -35,6 +35,17 @@ jobs:
       - name: Verify
         run: pnpm verify
 
+  verify-required:
+    name: Verify source and production artifact
+    needs: verify
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful verification on every platform
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        run: test "$VERIFY_RESULT" = "success"
+
   container-smoke:
     name: Build and smoke-test production image
     needs: verify
