@@ -1,11 +1,11 @@
-# Production deployment and `v1.7.0`
+# Production deployment and `v1.7.1-beta.1`
 
 ## Release artifacts
 
-`v1.7.0` publishes a Linux/amd64 static-site image to GitHub Container Registry:
+`v1.7.1-beta.1` is a beta release that publishes a Linux/amd64 static-site image to GitHub Container Registry:
 
 ```text
-ghcr.io/shalevz923/shalevsoftwaresite:1.7.0
+ghcr.io/shalevz923/shalevsoftwaresite:1.7.1-beta.1
 ```
 
 The version tag is a convenience tag, not an immutable deployment identity. After the release workflow succeeds, record its published digest and deploy `ghcr.io/shalevz923/shalevsoftwaresite@sha256:...` instead. The image contains only the built static site and NGINX; it does not include the Node.js Developer Studio server, its write APIs, or the companion MCP process.
@@ -19,8 +19,8 @@ CI runs on Node 24. The production image builds with Node 26 (Corepack installed
 The public GitHub Container Registry package can be pulled without authentication:
 
 ```bash
-docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.7.0
-docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:8080:8080 ghcr.io/shalevz923/shalevsoftwaresite:1.7.0
+docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.7.1-beta.1
+docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -p 127.0.0.1:8080:8080 ghcr.io/shalevz923/shalevsoftwaresite:1.7.1-beta.1
 curl --fail --head http://127.0.0.1:8080/
 ```
 

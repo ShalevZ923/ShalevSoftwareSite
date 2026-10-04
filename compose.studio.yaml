@@ -7,7 +7,7 @@ services:
       context: .
       target: studio
       args:
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-1.7.0}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-1.7.1-beta.1}
     image: tool-atlas:studio-local
     user: "${STUDIO_UID:-1000}:${STUDIO_GID:-1000}"
     init: true
