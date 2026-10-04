@@ -1,11 +1,11 @@
 import { readFile } from "node:fs/promises";
 import {
   generatedCatalogPath,
+  generatedCatalogIsCurrent,
   loadCatalogEntries,
   machineCatalogIndexPath,
   machineCatalogIsCurrent,
   machineCatalogToolsPath,
-  renderGeneratedCatalog,
   writeGeneratedCatalog,
 } from "./catalog-content.mjs";
 
@@ -17,7 +17,7 @@ if (process.argv.includes("--check")) {
   } catch {
     // The comparison below reports the actionable remediation.
   }
-  if (current !== renderGeneratedCatalog(entries)) {
+  if (!generatedCatalogIsCurrent(current, entries)) {
     throw new Error("Catalog output is stale. Run: pnpm catalog:build");
   }
 

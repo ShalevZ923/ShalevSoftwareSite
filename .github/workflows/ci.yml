@@ -16,7 +16,10 @@ concurrency:
 jobs:
   verify:
     name: Verify source and production artifact
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,6 +34,17 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify
         run: pnpm verify
+
+  verify-required:
+    name: Verify source and production artifact
+    needs: verify
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful verification on every platform
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        run: test "$VERIFY_RESULT" = "success"
 
   container-smoke:
     name: Build and smoke-test production image
