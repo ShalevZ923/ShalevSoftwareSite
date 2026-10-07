@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "./data";
+import { agents as staticAgents, type AgentPackage } from "./agents";
 import {
   catalogFiltersToSearch,
   defaultFilters,
@@ -13,8 +14,13 @@ import { Field, Icon, PageHeader, PlatformMark, ToolGlyph, type IconName } from 
 import { getReleaseDownloadTarget } from "./downloads";
 import { focusableElements, wrapTabTarget } from "./focusTrap";
 import { applyTheme, readStoredTheme, resolveTheme, systemTheme, writeTheme, type Theme } from "./theme";
+import { agentPageHref } from "./agentLinks";
 import { catalogTargetFromSearch, resolveToolRelease, toolPageHref, type CatalogTarget } from "./toolLinks";
 
+const AgentCatalog = lazy(async () => {
+  const module = await import("./components/AgentCatalog");
+  return { default: module.AgentCatalog };
+});
 const About = lazy(async () => {
   const module = await import("./components/About");
   return { default: module.About };
@@ -44,7 +50,7 @@ function PageFallback() {
   );
 }
 
-type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
+type Page = "catalog" | "agents" | "documentation" | "updates" | "about" | "developer";
 
 const platforms: Array<"All platforms" | Platform> = [
   "All platforms",
@@ -57,9 +63,13 @@ const lifecycles = ["All lifecycles", "Current", "New", "Legacy"];
 
 function pageFromSearch(search: string): Page {
   const page = new URLSearchParams(search).get("page");
-  return page === "documentation" || page === "updates" || page === "about" || page === "developer"
+  return page === "catalog" || page === "agents" ||
+    page === "documentation" ||
+    page === "updates" ||
+    page === "about" ||
+    page === "developer"
     ? page
-    : "catalog";
+    : "agents";
 }
 
 function Sidebar({
@@ -86,7 +96,8 @@ function Sidebar({
   compact: boolean;
 }) {
   const links: Array<[Page, string, IconName]> = [
-    ["catalog", "Catalog", "catalog"],
+    ["agents", "Agent catalog", "agents"],
+    ["catalog", "Software catalog", "catalog"],
     ["documentation", "Documentation", "book"],
     ["updates", "Updates", "updates"],
     ["about", "About", "info"],
@@ -108,7 +119,7 @@ function Sidebar({
         className="brand"
         aria-label="Tool Atlas home"
         onClick={() => {
-          navigate("catalog");
+          navigate("agents");
           close();
         }}
       >
@@ -209,6 +220,9 @@ function App() {
     applyTheme(theme);
   }, [theme]);
   useEffect(() => {
+    document.title = page === "agents" ? "Tool Atlas — Agent catalog" : page === "catalog" ? "Tool Atlas — Software catalog" : "Tool Atlas";
+  }, [page]);
+  useEffect(() => {
     if (!themeFollowsSystem) return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const update = () => setTheme(media.matches ? "dark" : "light");
@@ -222,6 +236,7 @@ function App() {
   const canLeaveStudio = () => !studioSaving.current && (!studioDirty.current || window.confirm("Discard unsaved changes?"));
   const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
   const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
+  const [agentPackages, setAgentPackages] = useState<AgentPackage[]>(staticAgents);
   const [devToken, setDevToken] = useState<string>(() => {
     try {
       return window.sessionStorage.getItem("tool-atlas-dev-token") || "";
@@ -238,20 +253,22 @@ function App() {
   const initialPageRender = useRef(true);
 
   const refreshCatalog = async () => {
-    try {
-      const res = await fetch("/api/catalog");
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.tools) && data.tools.length > 0) {
-          setCatalogTools(data.tools);
+    await Promise.allSettled([
+      (async () => {
+        const res = await fetch("/api/catalog");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.tools) && data.tools.length > 0) setCatalogTools(data.tools);
+          if (data.docs && typeof data.docs === "object") setCatalogDocs(data.docs);
         }
-        if (data.docs && typeof data.docs === "object") {
-          setCatalogDocs(data.docs);
-        }
-      }
-    } catch {
-      // Offline or static fallback
-    }
+      })(),
+      (async () => {
+        const res = await fetch("/api/agents");
+        if (!res.ok) return;
+        const data: AgentPackage[] = await res.json();
+        if (Array.isArray(data)) setAgentPackages(data);
+      })(),
+    ]);
   };
 
   const verifyDeveloperToken = async (candidateToken: string) => {
@@ -310,8 +327,13 @@ function App() {
     if (nextPage !== "developer" && !canLeaveStudio()) return;
     studioDirty.current = false;
     const url = new URL(window.location.href);
-    if (nextPage === "catalog") url.searchParams.delete("page");
+    if (nextPage === "agents") url.searchParams.delete("page");
     else url.searchParams.set("page", nextPage);
+    if (page === "agents" && nextPage !== "agents") {
+      for (const key of ["agent", "saved", "type", "p", "capability", "publisher", "risk", "status", "query", "sort"]) {
+        url.searchParams.delete(key);
+      }
+    }
 
     if (nextPage === "documentation") url.searchParams.set("tool", nextTool);
     else url.searchParams.delete("tool");
@@ -334,6 +356,16 @@ function App() {
     setRouteSearch(href);
     setRouteRevision((revision) => revision + 1);
     setPage("catalog");
+  };
+
+  const openAgent = (agentId: string) => {
+    if (!canLeaveStudio()) return;
+    const href = agentPageHref(agentId);
+    window.history.pushState(null, "", href);
+    studioDirty.current = false;
+    setRouteSearch(href);
+    setRouteRevision((revision) => revision + 1);
+    setPage("agents");
   };
 
   const exitDeveloperStudio = () => {
@@ -489,6 +521,16 @@ function App() {
             hotkeysEnabled={!drawerOpen}
           />
         )}
+        {page === "agents" && (
+          <Suspense fallback={<PageFallback />}>
+            <AgentCatalog
+              key={`agents:${routeRevision}:${routeSearch}`}
+              search={routeSearch}
+              agents={agentPackages}
+              hotkeysEnabled={!drawerOpen}
+            />
+          </Suspense>
+        )}
         {page === "documentation" && (
           <Suspense fallback={<PageFallback />}>
             <DocumentationPage
@@ -505,7 +547,9 @@ function App() {
           <Suspense fallback={<PageFallback />}>
             <UpdatesPage
               tools={catalogTools}
+              agents={agentPackages}
               onCatalog={openCatalogTool}
+              onAgent={openAgent}
               onDocs={(tool) => navigate("documentation", tool.id)}
             />
           </Suspense>
@@ -593,8 +637,8 @@ function Catalog({
   useEffect(() => {
     const current = new URL(window.location.href);
     const params = new URLSearchParams(catalogFiltersToSearch(filters));
+    params.set("page", "catalog");
     if (target) {
-      params.set("page", "catalog");
       params.set("tool", target.toolId);
       if (target.version) params.set("version", target.version);
     }

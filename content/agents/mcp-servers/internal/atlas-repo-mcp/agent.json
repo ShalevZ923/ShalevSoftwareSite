@@ -1,0 +1,81 @@
+{
+  "$schema": "../../../../schemas/agent.schema.json",
+  "schemaVersion": 1,
+  "id": "atlas-repo-mcp",
+  "name": "Atlas Repo MCP",
+  "icon": "AR",
+  "description": "Browse and read authorized internal GitLab repositories.",
+  "highlights": ["Repository search", "File reading"],
+  "riskLevel": "Unknown",
+  "permissions": [
+    "Read GitLab projects the signed-in identity can already access on the internal network",
+    "Run the unpacked stdio binary on the local machine"
+  ],
+  "risks": [
+    "The binary runs on the workstation with the user's identity.",
+    "VS Code will prompt you to trust the server before starting it."
+  ],
+  "contents": [
+    {
+      "path": "atlas-repo-mcp",
+      "kind": "script",
+      "note": "Stdio MCP server binary for Linux and Windows."
+    },
+    {
+      "path": "mcp.json",
+      "kind": "config",
+      "note": "Example stdio configuration for VS Code."
+    }
+  ],
+  "maintainer": {
+    "name": "Unassigned",
+    "team": "Owner needed",
+    "initials": "\u2014",
+    "email": "unassigned@example.invalid"
+  },
+  "tags": [
+    "MCP",
+    "GitLab",
+    "Internal",
+    "Stdio"
+  ],
+  "updatedAt": "2026-09-23",
+  "status": "example",
+  "review": {
+    "status": "pending"
+  },
+  "capabilities": [
+    "repository-access",
+    "development"
+  ],
+  "mcp": {
+    "transport": "stdio",
+    "hosting": "local",
+    "authentication": "unknown",
+    "tools": [
+      {
+        "name": "search_repositories",
+        "description": "Find repositories by name or metadata. Example capability; behavior is unverified.",
+        "effect": "read"
+      },
+      {
+        "name": "read_repository_file",
+        "description": "Read a file from an authorized repository. Example capability; behavior is unverified.",
+        "effect": "read"
+      }
+    ],
+    "resources": [],
+    "prompts": []
+  },
+  "requirements": [
+    "Access to an internal GitLab instance",
+    "An MCP client with stdio support"
+  ],
+  "compatibility": [
+    {
+      "target": "mcp-clients",
+      "status": "unverified",
+      "notes": "Illustrative target only. No compatibility test has been recorded."
+    }
+  ]
+}

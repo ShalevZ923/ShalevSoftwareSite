@@ -6,14 +6,23 @@ Tool Atlas remains a static, backend-free public catalog. Its source tree separa
 .
 ├── content/
 │   ├── taxonomy/categories.json       # Canonical category IDs and display labels
+│   ├── taxonomy/agent-types.json      # Canonical agent package types
+│   ├── taxonomy/agent-facets.json     # Capabilities and compatibility targets
+│   ├── schemas/agent*.schema.json     # Versioned agent and release records
 │   ├── catalog/<category>/<vendor>/<tool>/
 │   │   ├── vendor.json                # Shared vendor name for this category
 │   │   ├── tool.json                  # Product metadata and support ownership
 │   │   ├── guide.md                   # Catalog-safe install and support guidance
 │   │   └── releases/<version>.json    # One reviewed download target per version
+│   ├── agents/<type>/<publisher>/<package>/
+│   │   ├── publisher.json             # Shared publisher name for this type
+│   │   ├── agent.json                 # Discovery metadata, support state, compatibility
+│   │   ├── guide.md                   # Overview and support guidance
+│   │   └── releases/<version>.json    # Optional version record
 │   └── templates/                     # Copy-only starting points; never catalog input
 ├── src/                               # React application source and unit tests
-│   └── generated/catalog.ts           # Generated only; checked for staleness in CI
+│   ├── generated/catalog.ts           # Generated only; checked for staleness in CI
+│   └── generated/agents.ts            # Generated agent catalog; checked for staleness in CI
 ├── scripts/                           # Content validation, generation, and contribution adapters
 ├── public/                            # Static assets and host response-header configuration
 │   └── catalog/v1/{index,tools}.json  # Generated machine feed; no backend, no guides
@@ -45,4 +54,4 @@ The initial taxonomy covers editors and IDEs, IDE/extensions, debuggers, profile
 - Run `pnpm verify` for every content, taxonomy, script, or deployment change. It validates sources, checks generated data, runs tests, builds the production bundle, and verifies the `dist/` artifact.
 - Keep deployment files separate from application and catalog changes in review. The application container and Caddy edge configuration are production controls, not content configuration.
 
-For day-to-day additions, use [the catalog content guide](../CATALOG_CONTENT_GUIDE.md). For TLS deployment and operational host setup, use [the README deployment guide](../README.md#production-deployment-with-docker-and-https).
+For day-to-day additions, use [the catalog content guide](../CATALOG_CONTENT_GUIDE.md) or [the agent catalog content guide](../AGENT_CATALOG_CONTENT_GUIDE.md). For TLS deployment and operational host setup, use [the README deployment guide](../README.md#production-deployment-with-docker-and-https).

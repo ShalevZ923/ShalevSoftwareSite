@@ -11,6 +11,8 @@ import {
   loadCatalogEntries,
   loadTaxonomy,
 } from "./catalog-content.mjs";
+import { agentsDirectory, generatedAgentsPath, loadAgentEntries } from "./agents-content.mjs";
+import { saveAgentStudioEntry } from "./agent-studio.mjs";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const distDir = join(rootDir, "dist");
@@ -215,6 +217,8 @@ export function createToolAtlasServer({
   guideLibraryDirectory = guideLibraryDir,
   catalogDirectory = contentDirectory,
   catalogOutputs = {},
+  agentContentDirectory = agentsDirectory,
+  agentGeneratedFile = generatedAgentsPath,
 } = {}) {
   const server = createServer(async (req, res) => {
     let pathname;
@@ -236,7 +240,10 @@ export function createToolAtlasServer({
       const apiRoutes = [
         [/^\/api\/health$/, ["GET"]],
         [/^\/api\/catalog$/, ["GET"]],
+        [/^\/api\/agents$/, ["GET"]],
         [/^\/api\/developer\/verify$/, ["POST"]],
+        [/^\/api\/developer\/agents$/, ["GET", "POST"]],
+        [/^\/api\/developer\/agents\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["PUT"]],
         [/^\/api\/developer\/tools$/, ["GET", "POST"]],
         [/^\/api\/developer\/tools\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["GET", "PUT"]],
         [/^\/api\/developer\/guide-library\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["GET"]],
@@ -266,6 +273,10 @@ export function createToolAtlasServer({
         });
         const docs = Object.fromEntries(entries.map(({ metadata, guide }) => [metadata.id, guide]));
         return sendJson(res, 200, { tools, docs });
+      }
+      if (pathname === "/api/agents" && req.method === "GET") {
+        const entries = await loadAgentEntries(agentContentDirectory);
+        return sendJson(res, 200, entries.map(({ metadata, guidePath }) => ({ ...metadata, guidePath })));
       }
 
       // 3. Developer Token Verification
@@ -309,6 +320,34 @@ export function createToolAtlasServer({
       if (pathname.startsWith("/api/developer/")) {
         if (!verifyToken(req)) {
           return sendJson(res, 401, { error: "Unauthorized: Invalid or missing developer token" });
+        }
+
+        if (pathname === "/api/developer/agents" && req.method === "GET") {
+          const entries = await loadAgentEntries(agentContentDirectory);
+          return sendJson(res, 200, entries.map(({ metadata, guide }) => ({ id: metadata.id, metadata, guide })));
+        }
+        if (pathname === "/api/developer/agents" && req.method === "POST") {
+          try {
+            const body = await readJsonBody(req);
+            const { metadata, guide } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+            const agent = await saveAgentStudioEntry({ metadata, guide, directory: agentContentDirectory, generatedPath: agentGeneratedFile });
+            return sendJson(res, 201, { success: true, agent });
+          } catch (error) {
+            if (error?.statusCode === 413) return sendJson(res, 413, { error: error.message });
+            return sendJson(res, 400, { error: error instanceof Error ? error.message : "Agent validation failed" });
+          }
+        }
+        const agentMatch = /^\/api\/developer\/agents\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
+        if (agentMatch && req.method === "PUT") {
+          try {
+            const body = await readJsonBody(req);
+            const { metadata, guide } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+            const agent = await saveAgentStudioEntry({ metadata, guide, existingId: agentMatch[1], directory: agentContentDirectory, generatedPath: agentGeneratedFile });
+            return sendJson(res, 200, { success: true, agent });
+          } catch (error) {
+            if (error?.statusCode === 413) return sendJson(res, 413, { error: error.message });
+            return sendJson(res, 400, { error: error instanceof Error ? error.message : "Agent validation failed" });
+          }
         }
 
         // List all tools (with metadata and raw markdown guide)

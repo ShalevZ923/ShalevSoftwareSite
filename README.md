@@ -8,17 +8,17 @@ catalog material. See [CONTRIBUTING.md](./CONTRIBUTING.md),
 [open-source readiness checklist](./docs/OPEN_SOURCE_READINESS.md)
 before changing repository visibility.
 
-Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. The production Docker and IIS deployments remain backend-free and contain no application secrets.
+Tool Atlas is a static catalog for MCP servers, skills, agent packages, and developer software. The Agent Catalog is the primary discovery view, with short descriptions and capability tags, searchable resource metadata, compact filters, support states, and details available on demand. The software catalog remains available as a separate view. The production Docker and IIS deployments remain backend-free and contain no application secrets.
 
 An optional local Node.js server provides Developer Studio, an authenticated local authoring interface. It has filesystem-write APIs and an ephemeral startup token, so it is not part of the public static deployment. See [the Developer Studio guide](./docs/DEVELOPER_STUDIO.md) before using it.
 
-The catalog supports shareable filter URLs and a saved-tools list. Saved tools are stored only in the visitor's browser; they are never sent to a server or included in shared links.
+The catalog supports shareable filter URLs and a saved-tools list. Saved tools and agent packages are stored only in the visitor's browser; they are never sent to a server or included in shared links.
 
 ## Run the published Docker image
 
-The `1.7.1-beta.1` prerelease image contains only the static catalog served by unprivileged NGINX; it does not include the local Developer Studio server or its write APIs.
+The `1.7.1-beta.1` prerelease image contains only the static published catalog served by unprivileged NGINX; it does not include the local Developer Studio server or this branch's experimental Agent Catalog. This branch is `1.8.0` and remains experimental while those listings are evaluated.
 
-Pull the current release:
+Pull the current published prerelease:
 
 ```bash
 docker pull ghcr.io/shalevz923/shalevsoftwaresite:1.7.1-beta.1
@@ -78,6 +78,8 @@ Each tool guide has a **View in catalog** link. It opens that tool's catalog ent
 - Open JMeter directly in the catalog: `?page=catalog&tool=jmeter`
 - Request a release: `?page=catalog&tool=jmeter&version=5.6.3`
 - Carry a release through a guide: `?page=documentation&tool=intellij&version=2026.01-Mac`
+- Open the Agent Catalog: `?page=agents`
+- Open Atlas Repo MCP in the Agent Catalog: `?page=agents&agent=atlas-repo-mcp`
 
 Append these query strings to the site's normal URL. Tool IDs and version strings must match catalog metadata exactly. Without a version, the first approved release is selected. If a version is unavailable, the tool still opens with its default release and a short explanation. A removed tool shows a notice instead of expanding an unrelated entry.
 
@@ -85,7 +87,7 @@ Conflicting filters are cleared so a linked tool is visible; compatible filters 
 
 ## Website version
 
-Set `VITE_APP_VERSION=1.7.1-beta.1` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.7.1-beta.1`.
+Set `VITE_APP_VERSION=1.8.0` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page for this experimental branch. If unset or blank, the label defaults to `1.8.0`. The published `v1.7.1-beta.1` image is unchanged and does not include the experimental Agent Catalog.
 
 After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
 
@@ -93,11 +95,13 @@ After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `
 
 Catalog source is organized for long-term ownership: [`content/catalog/<category>/<vendor>/<tool>`](./content/catalog), with a `tool.json`, `guide.md`, and one `releases/<version>.json` record per approved version. Categories are controlled by [`content/taxonomy/categories.json`](./content/taxonomy/categories.json), so a new category is an explicit, reviewed taxonomy change—not a spelling variation. Add a tool interactively with `pnpm catalog:add`, or edit its source directory and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` and the machine feed in `public/catalog/v1/` are checked into Git and must not be edited by hand. Machine clients read `/catalog/v1/index.json` and `/catalog/v1/tools.json`; see [the machine catalog contract](./docs/CATALOG_MACHINE_FEED.md).
 
-Every entry has a stable ID, ownership details, platform/lifecycle metadata, one approved target per release, tags, and a guide containing `## Install` and `## Support`. A target can be a trusted HTTPS URL or a same-server artifact pointer such as `intellij/2025.1/ideaIU-2025.1.exe`. The validator rejects duplicate IDs/orders, unsafe URLs or artifact paths, remote guide images, invalid support details, and credential-like fact labels.
+The Agent Catalog source tree is [`content/agents/<type>/<publisher>/<package>`](./content/agents), with `agent.json`, `guide.md`, and optional release records. Types and facets come from [`content/taxonomy`](./content/taxonomy), and JSON Schemas are in [`content/schemas`](./content/schemas). The local, authenticated Developer Studio has an Agent Catalog tab for editing listings, status, review evidence, release metadata, guide text, and the download button label. Saves validate source and regenerate `src/generated/agents.ts`; they do not publish to the static site automatically. Three seeded listings remain examples. Four pinned-source items have reviewed evaluation ZIPs: two standalone skills, one pack, and one Time MCP server. Run `npm run agents:packages` to build and audit the local ZIPs (Python 3 required), then use `npm run dev:client` to test their download links. See [the source review](./docs/AGENT_SOURCE_REVIEW.md) and [the content guide](./AGENT_CATALOG_CONTENT_GUIDE.md) for the evidence and promotion gate. Air-gapped artifact delivery is covered separately in [the operator guide](./docs/AIRGAPPED_AGENT_CATALOG.md).
+
+Every software entry has a stable ID, ownership details, platform/lifecycle metadata, one approved target per release, tags, and a guide containing `## Install` and `## Support`. A target can be a trusted HTTPS URL or a same-server artifact pointer such as `intellij/2025.1/ideaIU-2025.1.exe`. The validator rejects duplicate IDs/orders, unsafe URLs or artifact paths, remote guide images, invalid support details, and credential-like fact labels.
 
 For browser-based contribution, open the **Add software to the catalog** GitHub Issue Form. A maintainer reviews the submission and applies the `catalog-approved` label; only then does the workflow create a validated pull request for normal review and merge. GitLab projects receive the matching Issue Template and an approval-gated manual CI job that creates a merge request. See [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md) for both paths and the [GitLab catalog contribution guide](./docs/GITLAB_CATALOG_CONTRIBUTION.md) for the one-time setup and operating steps.
 
-For copy-paste examples, images, optional catalog facts such as license references, and the safety boundary for sensitive values, see [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md).
+For copy-paste examples, images, optional catalog facts such as license references, and the safety boundary for sensitive values, see [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md). For agent packages, see [AGENT_CATALOG_CONTENT_GUIDE.md](./AGENT_CATALOG_CONTENT_GUIDE.md).
 
 The production-oriented source boundaries, catalog hierarchy, taxonomy expansion policy, and operating rules are documented in [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md).
 

@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../../schemas/agent-release.schema.json",
+  "version": "1.0.0",
+  "releasedAt": "2026-09-24",
+  "notes": "Tool Atlas evaluation snapshot of the pinned Anthropic skill; not an upstream release number.",
+  "artifact": "theme-factory/1.0.0/theme-factory-1.0.0.zip",
+  "sha256": "58c2acd4f32ec5e89188bc17fc8698e189308ce795b168399af981618c162a1a",
+  "archiveRoot": "theme-factory",
+  "contents": [
+    {
+      "path": "SKILL.md",
+      "kind": "skill"
+    },
+    {
+      "path": "LICENSE.txt",
+      "kind": "doc"
+    },
+    {
+      "path": "themes",
+      "kind": "doc"
+    },
+    {
+      "path": "theme-showcase.pdf",
+      "kind": "asset"
+    }
+  ],
+  "review": {
+    "date": "2026-09-24",
+    "evidence": "docs/AGENT_SOURCE_REVIEW.md; pnpm agents:artifacts"
+  }
+}

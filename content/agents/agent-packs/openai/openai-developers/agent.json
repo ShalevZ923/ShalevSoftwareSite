@@ -1,0 +1,97 @@
+{
+  "$schema": "../../../../schemas/agent.schema.json",
+  "schemaVersion": 1,
+  "id": "openai-developers",
+  "name": "OpenAI Developers Pack",
+  "icon": "OA",
+  "description": "Build agent apps, work with APIs, and troubleshoot integrations.",
+  "highlights": ["Agents SDK", "ChatGPT Apps", "API troubleshooting"],
+  "riskLevel": "Unknown",
+  "permissions": [
+    "Run the bundled local MCP helper used by the API-key setup flow",
+    "Create or update local environment files when the API-key skill is used"
+  ],
+  "risks": [
+    "The API-key skill can write local env files after you confirm the destination.",
+    "The bundled MCP helper is a local script; review it before enabling the pack.",
+    "Plugin skills may change project files as part of Agents SDK and ChatGPT App workflows."
+  ],
+  "contents": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "kind": "config",
+      "note": "Codex plugin manifest and OpenAI Developers branding."
+    },
+    {
+      "path": ".app.json",
+      "kind": "config",
+      "note": "OpenAI Platform app connector."
+    },
+    {
+      "path": ".mcp.json",
+      "kind": "config",
+      "note": "Local MCP helper used during API-key setup."
+    },
+    {
+      "path": "mcp/server.mjs",
+      "kind": "script",
+      "note": "Destination confirmation form for the API-key flow."
+    },
+    {
+      "path": "skills/agents-sdk",
+      "kind": "skill",
+      "note": "Build, run, and evaluate Agents SDK apps."
+    },
+    {
+      "path": "skills/build-chatgpt-app",
+      "kind": "skill",
+      "note": "Scaffold and troubleshoot ChatGPT Apps SDK projects."
+    },
+    {
+      "path": "skills/chatgpt-app-submission",
+      "kind": "prompt",
+      "note": "Produce chatgpt-app-submission.json."
+    },
+    {
+      "path": "skills/openai-api-troubleshooting",
+      "kind": "skill",
+      "note": "Classify common API failures."
+    },
+    {
+      "path": "skills/openai-platform-api-key",
+      "kind": "skill",
+      "note": "Encrypted API-key creation and local project setup."
+    }
+  ],
+  "maintainer": {
+    "name": "Unassigned",
+    "team": "Owner needed",
+    "initials": "\u2014",
+    "email": "unassigned@example.invalid"
+  },
+  "tags": [
+    "OpenAI",
+    "Agent pack",
+    "Codex",
+    "Agents SDK"
+  ],
+  "updatedAt": "2026-09-23",
+  "status": "example",
+  "review": {
+    "status": "pending"
+  },
+  "capabilities": [
+    "development",
+    "automation"
+  ],
+  "requirements": [
+    "A compatible agent host; supported versions need verification"
+  ],
+  "compatibility": [
+    {
+      "target": "codex",
+      "status": "unverified",
+      "notes": "Illustrative target only. No compatibility test has been recorded."
+    }
+  ]
+}

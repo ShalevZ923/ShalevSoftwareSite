@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../../../schemas/agent-release.schema.json",
+  "version": "0.6.2",
+  "releasedAt": "2026-09-24",
+  "notes": "Pinned upstream 0.6.2 source snapshot; no bundled dependencies or ready-to-run binary.",
+  "artifact": "mcp-server-time/0.6.2/mcp-server-time-0.6.2.zip",
+  "sha256": "4f7001626e3059b00075a1df06bdcbdb013622993bc61bcb3631c060b19c0e98",
+  "archiveRoot": "mcp-server-time",
+  "contents": [
+    {
+      "path": ".python-version",
+      "kind": "config"
+    },
+    {
+      "path": "LICENSE",
+      "kind": "doc"
+    },
+    {
+      "path": "README.md",
+      "kind": "doc"
+    },
+    {
+      "path": "pyproject.toml",
+      "kind": "config"
+    },
+    {
+      "path": "uv.lock",
+      "kind": "config"
+    },
+    {
+      "path": "src",
+      "kind": "script"
+    }
+  ],
+  "review": {
+    "date": "2026-09-24",
+    "evidence": "docs/AGENT_SOURCE_REVIEW.md; pnpm agents:artifacts"
+  }
+}
