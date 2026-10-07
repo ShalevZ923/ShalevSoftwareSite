@@ -1,0 +1,107 @@
+{
+  "$schema": "../../../../schemas/agent.schema.json",
+  "schemaVersion": 1,
+  "id": "mcp-server-time",
+  "name": "Time MCP Server",
+  "icon": "TM",
+  "description": "Read the current time and convert times between IANA time zones.",
+  "highlights": [
+    "Current time",
+    "Time zones",
+    "Read only"
+  ],
+  "capabilities": [
+    "automation"
+  ],
+  "riskLevel": "Low",
+  "permissions": [
+    "Read the local clock and time-zone configuration",
+    "Run local Python code and installed dependencies"
+  ],
+  "risks": [
+    "Installing Python dependencies may contact a package registry.",
+    "Runtime safety of dependencies and each host has not been independently audited."
+  ],
+  "requirements": [
+    "Python 3.10 or later and uv",
+    "Install dependencies from the pinned uv.lock before running",
+    "An MCP client with local stdio support; host compatibility unverified"
+  ],
+  "license": "MIT package metadata; repository notices included",
+  "source": {
+    "url": "https://github.com/modelcontextprotocol/servers/tree/f46d9578190b476b3501923ea8977d899e8db2cb/src/time",
+    "revision": "f46d9578190b476b3501923ea8977d899e8db2cb"
+  },
+  "compatibility": [
+    {
+      "target": "mcp-clients",
+      "status": "unverified",
+      "notes": "The upstream unit tests passed locally; named MCP hosts and a full stdio session have not been verified."
+    }
+  ],
+  "tags": [
+    "MCP",
+    "Time",
+    "Local"
+  ],
+  "mcp": {
+    "transport": "stdio",
+    "hosting": "local",
+    "authentication": "none",
+    "tools": [
+      {
+        "name": "get_current_time",
+        "description": "Return current time in a requested IANA time zone.",
+        "effect": "read"
+      },
+      {
+        "name": "convert_time",
+        "description": "Convert a supplied time between IANA time zones.",
+        "effect": "read"
+      }
+    ],
+    "resources": [],
+    "prompts": []
+  },
+  "contents": [
+    {
+      "path": ".python-version",
+      "kind": "config"
+    },
+    {
+      "path": "LICENSE",
+      "kind": "doc"
+    },
+    {
+      "path": "README.md",
+      "kind": "doc"
+    },
+    {
+      "path": "pyproject.toml",
+      "kind": "config"
+    },
+    {
+      "path": "uv.lock",
+      "kind": "config"
+    },
+    {
+      "path": "src",
+      "kind": "script"
+    }
+  ],
+  "maintainer": {
+    "name": "Unassigned",
+    "team": "Evaluation",
+    "initials": "—",
+    "email": "unassigned@example.invalid"
+  },
+  "updatedAt": "2026-09-24",
+  "status": "evaluation",
+  "review": {
+    "status": "reviewed",
+    "date": "2026-09-24",
+    "version": "0.6.2",
+    "evidence": "docs/AGENT_SOURCE_REVIEW.md"
+  },
+  "currentVersion": "0.6.2"
+}

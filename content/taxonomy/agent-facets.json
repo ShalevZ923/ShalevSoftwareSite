@@ -1,0 +1,54 @@
+{
+  "capabilities": [
+    {
+      "id": "development",
+      "label": "Software development"
+    },
+    {
+      "id": "repository-access",
+      "label": "Repository access"
+    },
+    {
+      "id": "documents",
+      "label": "Documents & PDFs"
+    },
+    {
+      "id": "data-analysis",
+      "label": "Data analysis"
+    },
+    {
+      "id": "automation",
+      "label": "Workflow automation"
+    },
+    {
+      "id": "knowledge",
+      "label": "Search & knowledge"
+    }
+  ],
+  "targets": [
+    {
+      "id": "mcp-clients",
+      "label": "MCP clients"
+    },
+    {
+      "id": "agent-skills",
+      "label": "Agent Skills hosts"
+    },
+    {
+      "id": "codex",
+      "label": "Codex"
+    },
+    {
+      "id": "claude-code",
+      "label": "Claude Code"
+    },
+    {
+      "id": "vscode",
+      "label": "VS Code"
+    },
+    {
+      "id": "internal-llm",
+      "label": "Internal LLM"
+    }
+  ]
+}

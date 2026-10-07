@@ -1,16 +1,7 @@
-# Agent catalog source layout
+# Agent catalog source
 
-The agent catalog is the authoritative, reviewable source for public Tool Atlas agent packages on an air-gapped network. Its hierarchy is deliberately stable:
+Catalog records live at `content/agents/<type>/<publisher>/<package>/agent.json`, with a `guide.md` next to each record and `publisher.json` in the publisher directory. `releases/<version>.json` is optional. The build validates the records against `content/schemas/` and the controlled facets in `content/taxonomy/` before generating the static index.
 
-```text
-content/agents/<type-id>/<publisher-id>/<package-id>/
-  publisher.json
-  agent.json
-  guide.md
-  releases/
-    <version>.json
-```
+See [the contributor guide](../../AGENT_CATALOG_CONTENT_GUIDE.md) for field meanings and promotion rules. Do not put credentials, private procurement data, or unverified support claims here.
 
-`<type-id>` is a path from [`content/taxonomy/agent-types.json`](../taxonomy/agent-types.json): `skills`, `agent-packs`, `role-packs`, or `mcp-servers`. The publisher directory is the lowercase kebab-case form of `publisher.json.name`. The package directory equals `agent.json.id`. A release filename equals its `version` plus `.json`. Each release is a same-server ZIP artifact pointer plus a SHA-256 digest. The ZIP bytes live under the host `packages/` directory, not in this tree.
-
-Do not put private licence, procurement, contract, credential, activation, or user data here. Do not record npm or npx install commands. This directory is a catalog source and is compiled into the static client bundle. Tool Atlas does not execute package scripts.
+Four pinned-source evaluation archives are documented in [the source review](../../docs/AGENT_SOURCE_REVIEW.md). Run `pnpm agents:packages` to rebuild their local ZIPs before testing downloads.

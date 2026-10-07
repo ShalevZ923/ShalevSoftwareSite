@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import type { AgentPackage } from "../agentTypes";
+import { formatAgentDate, supportLabels } from "../agentCatalog";
 import {
   catalogUpdateKind,
   catalogUpdateKindLabel,
@@ -26,11 +28,15 @@ function updateSummary(tool: Tool): string {
 
 export function UpdatesPage({
   tools,
+  agents,
   onCatalog,
+  onAgent,
   onDocs,
 }: {
   tools: Tool[];
+  agents: AgentPackage[];
   onCatalog: (tool: Tool) => void;
+  onAgent: (agentId: string) => void;
   onDocs: (tool: Tool) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -63,6 +69,12 @@ export function UpdatesPage({
     }
     return next;
   }, [visible]);
+  const agentUpdates = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    return [...agents]
+      .filter((agent) => !needle || [agent.name, agent.publisher, agent.packageType, agent.description, ...agent.tags].join(" ").toLocaleLowerCase().includes(needle))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.name.localeCompare(b.name));
+  }, [agents, query]);
 
   return (
     <section className="page updates-page">
@@ -144,6 +156,31 @@ export function UpdatesPage({
             </section>
           ))}
         </div>
+      )}
+      {agentUpdates.length > 0 && (
+        <section className="updates-group" aria-labelledby="agent-catalog-updates">
+          <h2 id="agent-catalog-updates">Agent catalog</h2>
+          <p>Experimental listings for evaluation. These are not approved software releases.</p>
+          {agentUpdates.map((agent) => (
+            <article className="update-card" key={agent.id}>
+              <ToolGlyph tool={agent} />
+              <div>
+                <div className="update-card-head">
+                  <span className="update-kind">{agent.packageType}</span>
+                  <span className={`agent-support agent-support-${agent.status}`}>{supportLabels[agent.status]}</span>
+                </div>
+                <h3>{agent.name}{agent.currentVersion ? ` ${agent.currentVersion}` : ""}</h3>
+                <p>{agent.description}</p>
+                <p className="update-card-meta">{formatAgentDate(agent.updatedAt)} · {agent.publisher}</p>
+                <div className="update-card-actions">
+                  <button type="button" className="text-action" onClick={() => onAgent(agent.id)}>
+                    <Icon name="agents" size={15} /> View in agent catalog
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
       )}
     </section>
   );

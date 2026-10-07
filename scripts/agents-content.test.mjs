@@ -1,135 +1,77 @@
 import { describe, expect, it } from "vitest";
-import { loadAgentEntries, validateAgentEntry, validateInstall } from "./agents-content.mjs";
+import { loadAgentEntries, validateAgentEntry, validateAgentReleaseRecords } from "./agents-content.mjs";
 
-const guide = "## Install\n\nInstall it.\n\n## Support\n\nContact the owner.";
-
+const guide = "## Overview\n\nExample.\n\n## Support\n\nAsk the owner.";
 const metadata = {
-  id: "test-skill",
-  order: 1,
-  name: "Test Skill",
-  publisher: "Example",
-  packageType: "Skill",
-  icon: "TS",
-  updated: "Today",
-  description: "A test agent catalog entry.",
-  riskLevel: "Low",
-  permissions: ["Read the skill files"],
-  contents: [{ path: "SKILL.md", kind: "skill" }],
-  tags: ["test"],
-  maintainer: { name: "Test Owner", team: "Test Team", initials: "TO", email: "owner@example.com" },
-  install: {
-    unpack: {
-      project: ".agents/skills/test-skill",
-      global: "~/.agents/skills/test-skill",
-    },
-  },
-  releases: [
-    {
-      version: "1.0",
-      artifact: "test-skill/1.0/test-skill-1.0.zip",
-      sha256: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-    },
-  ],
+  schemaVersion: 1, id: "test-skill", name: "Test Skill", publisher: "Example", packageType: "Skill",
+  icon: "TS", updatedAt: "2026-09-22", status: "example", review: { status: "pending" },
+  description: "Search and process test files.", highlights: ["File search"], riskLevel: "Unknown", permissions: [],
+  capabilities: ["development"], compatibility: [{ target: "agent-skills", status: "unverified", notes: "Untested" }],
+  requirements: [], contents: [{ path: "SKILL.md", kind: "skill" }], tags: ["test"],
+  maintainer: { name: "Unassigned", team: "Owner needed", initials: "U", email: "owner@example.invalid" },
+  releases: [],
 };
 
-describe("agent install validation", () => {
-  it("accepts an internal stdio MCP config", () => {
-    expect(() =>
-      validateInstall(
-        {
-          unpack: { project: ".agents/mcp/demo", global: "~/.agents/mcp/demo" },
-          mcp: { name: "atlas-repo", config: { type: "stdio", command: "atlas-repo-mcp", args: [] } },
-        },
-        "test",
-        true,
-      ),
-    ).not.toThrow();
-  });
-
-  it("accepts an internal HTTPS MCP URL and rejects public SaaS endpoints", () => {
-    expect(() =>
-      validateInstall(
-        {
-          unpack: { project: ".agents/mcp/demo", global: "~/.agents/mcp/demo" },
-          mcp: { name: "gitlab", config: { type: "http", url: "https://mcp.gitlab.atlas.local/mcp" } },
-        },
-        "test",
-        true,
-      ),
-    ).not.toThrow();
-    expect(() =>
-      validateInstall(
-        {
-          unpack: { project: ".agents/mcp/demo", global: "~/.agents/mcp/demo" },
-          mcp: { name: "Vercel", config: { type: "http", url: "https://mcp.vercel.com" } },
-        },
-        "test",
-        true,
-      ),
-    ).toThrow("internal MCP host");
-  });
-
-  it("rejects npm/npx MCP commands and missing ZIP artifacts", () => {
-    expect(() =>
-      validateInstall(
-        {
-          unpack: { project: ".agents/mcp/demo", global: "~/.agents/mcp/demo" },
-          mcp: { name: "demo", config: { type: "stdio", command: "npx", args: ["-y", "demo"] } },
-        },
-        "test",
-        true,
-      ),
-    ).toThrow("cannot use npm, npx");
-    expect(() =>
-      validateInstall(
-        { unpack: { project: ".agents/skills/demo", global: "~/.agents/skills/demo" } },
-        "test",
-        false,
-      ),
-    ).toThrow("ZIP artifact release");
-  });
-});
-
-describe("agent entry validation", () => {
-  it("accepts a complete skill record", () => {
-    expect(() => validateAgentEntry("test-skill", metadata, guide)).not.toThrow();
-  });
-
-  it("rejects parent-directory content paths, public downloads, and unknown risk levels", () => {
-    expect(() =>
-      validateAgentEntry("test-skill", { ...metadata, contents: [{ path: "../secret", kind: "script" }] }, guide),
-    ).toThrow("relative file path");
-    expect(() =>
-      validateAgentEntry(
-        "test-skill",
-        { ...metadata, releases: [{ version: "1.0", download: "https://github.com/example/skill.zip" }] },
-        guide,
-      ),
-    ).toThrow("same-server ZIP artifact");
-    expect(() => validateAgentEntry("test-skill", { ...metadata, riskLevel: "Critical" }, guide)).toThrow(
-      "riskLevel must be Low, Medium, or High",
-    );
-  });
-});
-
-describe("hierarchical agent catalog source", () => {
-  it("assembles packages from type, publisher, guide, and per-version release files", async () => {
+describe("agent catalog content validation", () => {
+  it("accepts metadata-only entries and the checked-in source hierarchy", async () => {
+    expect(() => validateAgentEntry("test", metadata, guide)).not.toThrow();
     const entries = await loadAgentEntries();
-    const pdf = entries.find(({ metadata: item }) => item.id === "anthropic-pdf");
-    expect(pdf?.metadata).toMatchObject({
-      publisher: "Anthropic",
-      packageType: "Skill",
-      install: {
-        unpack: { project: ".agents/skills/pdf", global: "~/.agents/skills/pdf" },
-      },
-      releases: expect.arrayContaining([
-        {
-          version: "1.0",
-          artifact: "anthropic-pdf/1.0/anthropic-pdf-1.0.zip",
-          sha256: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-        },
-      ]),
-    });
-    expect(pdf?.guide).toContain("## Install");
+    expect(entries).toHaveLength(7);
+    expect(entries.find((entry) => entry.metadata.id === "atlas-repo-mcp")?.metadata.mcp?.transport).toBe("stdio");
+  });
+  it("rejects unsupported status claims without provenance and review evidence", () => {
+    expect(() => validateAgentEntry("test", { ...metadata, status: "supported" }, guide)).toThrow("supported entries require");
+    expect(() => validateAgentEntry("test", { ...metadata, review: { status: "reviewed" } }, guide)).toThrow("reviewed entries require");
+  });
+  it("rejects unknown capabilities, duplicate targets, and invalid dates", () => {
+    expect(() => validateAgentEntry("test", { ...metadata, capabilities: ["other"] }, guide)).toThrow("unknown capability");
+    expect(() => validateAgentEntry("test", { ...metadata, compatibility: [...metadata.compatibility, ...metadata.compatibility] }, guide)).toThrow();
+    expect(() => validateAgentEntry("test", { ...metadata, updatedAt: "Yesterday" }, guide)).toThrow("updatedAt");
+  });
+  it("requires an explicit current version when a release is published", () => {
+    const release = { version: "1.0", releasedAt: "2026-09-22" };
+    expect(validateAgentReleaseRecords([release], "test", metadata.id)).toEqual([release]);
+    expect(() => validateAgentEntry("test", { ...metadata, releases: [release] }, guide)).toThrow("currentVersion must reference");
+    expect(() => validateAgentEntry("test", { ...metadata, currentVersion: "1.0", releases: [release] }, guide)).not.toThrow();
+  });
+  it("accepts a supported entry only when review and target evidence match its current version", () => {
+    const supported = {
+      ...metadata,
+      status: "supported",
+      riskLevel: "Low",
+      currentVersion: "1.0",
+      releases: [{ version: "1.0", releasedAt: "2026-09-22" }],
+      review: { status: "reviewed", date: "2026-09-22", version: "1.0", evidence: "Internal review ABC-123" },
+      source: { url: "https://source.example.org/test-skill", revision: "abc123" },
+      license: "Apache-2.0",
+      maintainer: { ...metadata.maintainer, email: "owner@example.org" },
+      compatibility: [{ target: "agent-skills", status: "verified", notes: "Host smoke test", version: "1.0", verifiedOn: "2026-09-22", evidence: "Internal run ABC-124" }],
+    };
+    expect(() => validateAgentEntry("test", supported, guide)).not.toThrow();
+    expect(() => validateAgentEntry("test", { ...supported, currentVersion: "1.1", releases: [...supported.releases, { version: "1.1", releasedAt: "2026-09-23" }] }, guide)).toThrow("verified compatibility requires");
+  });
+  it("requires distinct structured MCP tool names and local stdio hosting", () => {
+    const mcp = { transport: "stdio", hosting: "local", authentication: "unknown", tools: [
+      { name: "read_repo", description: "Read an authorized repository", effect: "read" },
+    ], resources: [], prompts: [] };
+    const server = { ...metadata, packageType: "MCP Server", mcp };
+    expect(() => validateAgentEntry("test", server, guide)).not.toThrow();
+    expect(() => validateAgentEntry("test", { ...server, mcp: { ...mcp, tools: [...mcp.tools, ...mcp.tools] } }, guide)).toThrow();
+    expect(() => validateAgentEntry("test", { ...server, mcp: { ...mcp, hosting: "remote" } }, guide)).toThrow("local hosting");
+  });
+  it("allows a reviewed remote MCP configuration without a ZIP, but requires evidence for downloadable releases", () => {
+    const remote = {
+      ...metadata, packageType: "MCP Server",
+      mcp: { transport: "streamable-http", hosting: "remote", authentication: "oauth", tools: [], resources: [], prompts: [] },
+      install: { mcp: { name: "test", config: { type: "http", url: "https://mcp.example.internal/api" } } },
+    };
+    expect(() => validateAgentEntry("test", remote, guide)).not.toThrow();
+    expect(() => validateAgentEntry("test", { ...remote, install: { mcp: { name: "test", config: { type: "stdio", command: "test-mcp" } } } }, guide)).toThrow("must match the declared MCP transport");
+    const artifact = { version: "1.0", releasedAt: "2026-09-22", artifact: "test-skill/1.0/test-skill-1.0.zip", sha256: "a".repeat(64), archiveRoot: "test-skill", contents: [{ path: "SKILL.md", kind: "skill" }] };
+    expect(() => validateAgentReleaseRecords([artifact], "test", metadata.id)).toThrow("requires release review");
+    expect(() => validateAgentReleaseRecords([{ ...artifact, review: { date: "2026-09-22", evidence: "Review A-1" } }], "test", metadata.id)).not.toThrow();
+    expect(() => validateAgentReleaseRecords([{ ...artifact, archiveRoot: "../escape", review: { date: "2026-09-22", evidence: "Review A-1" } }], "test", metadata.id)).toThrow();
+    expect(() => validateAgentEntry("test", { ...metadata, currentVersion: "1.0", releases: [{ ...artifact, review: { date: "2026-09-22", evidence: "Review A-1" } }], install: { unpack: { project: ".agents/skills/other", global: "~/.agents/skills/other" } } }, guide)).toThrow("must match release archiveRoot");
+    expect(() => validateAgentEntry("test", { ...metadata, currentVersion: "1.0", releases: [{ ...artifact, contents: [{ path: "OTHER.md", kind: "doc" }], review: { date: "2026-09-22", evidence: "Review A-1" } }] }, guide)).toThrow("current release contents must match");
   });
 });

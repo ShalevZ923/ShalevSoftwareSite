@@ -1,0 +1,79 @@
+{
+  "$schema": "../../../../schemas/agent.schema.json",
+  "schemaVersion": 1,
+  "id": "internal-comms",
+  "riskLevel": "Low",
+  "permissions": [
+    "Read the skill instructions and reference files",
+    "Write output only when the user requests it"
+  ],
+  "risks": [
+    "Agent behavior depends on the host and the information supplied in a prompt."
+  ],
+  "requirements": [
+    "An Agent Skills compatible host; host loading has not been tested"
+  ],
+  "compatibility": [
+    {
+      "target": "agent-skills",
+      "status": "unverified",
+      "notes": "Format appears compatible; host-specific loading has not been tested."
+    }
+  ],
+  "name": "Internal Comms",
+  "icon": "IC",
+  "description": "Templates and guidance for updates, newsletters, FAQs, and other internal messages.",
+  "highlights": [
+    "Writing",
+    "Status updates",
+    "FAQs"
+  ],
+  "capabilities": [
+    "documents"
+  ],
+  "license": "Apache-2.0",
+  "source": {
+    "url": "https://github.com/anthropics/skills/tree/34040c9c568585f6929bedeaad110ad08f079624/skills/internal-comms",
+    "revision": "34040c9c568585f6929bedeaad110ad08f079624"
+  },
+  "tags": [
+    "Anthropic",
+    "Skill",
+    "Writing"
+  ],
+  "install": {
+    "unpack": {
+      "project": ".agents/skills/internal-comms",
+      "global": "~/.agents/skills/internal-comms"
+    }
+  },
+  "contents": [
+    {
+      "path": "SKILL.md",
+      "kind": "skill"
+    },
+    {
+      "path": "LICENSE.txt",
+      "kind": "doc"
+    },
+    {
+      "path": "examples",
+      "kind": "doc"
+    }
+  ],
+  "maintainer": {
+    "name": "Unassigned",
+    "team": "Evaluation",
+    "initials": "—",
+    "email": "unassigned@example.invalid"
+  },
+  "updatedAt": "2026-09-24",
+  "status": "evaluation",
+  "review": {
+    "status": "reviewed",
+    "date": "2026-09-24",
+    "version": "1.0.0",
+    "evidence": "docs/AGENT_SOURCE_REVIEW.md"
+  },
+  "currentVersion": "1.0.0"
+}

@@ -14,7 +14,8 @@ export function agentPageHref(agentId: string, version?: string) {
 }
 
 export function resolveAgentRelease(agent: AgentPackage, version?: string | null) {
-  return agent.releases.find((release) => release.version === version) ?? agent.releases[0];
+  return agent.releases.find((release) => release.version === version) ??
+    agent.releases.find((release) => release.version === agent.currentVersion);
 }
 
 export function agentTargetFromSearch(search: string, catalog: AgentPackage[]) {
@@ -42,6 +43,6 @@ export function agentTargetFromSearch(search: string, catalog: AgentPackage[]) {
     missingAgent: !!requestedAgent && !agent,
     unavailableVersion:
       !!agent && !!requestedVersion && requestedVersion !== release?.version,
-    defaultVersion: agent?.releases[0].version,
+    defaultVersion: agent?.currentVersion,
   };
 }

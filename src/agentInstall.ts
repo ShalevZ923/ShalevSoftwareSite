@@ -13,7 +13,7 @@ export function mcpInstallHref(mcp: AgentMcpInstall, scheme: McpInstallScheme = 
 }
 
 export function unpackPathForScope(install: AgentInstall, scope: InstallScope) {
-  return scope === "global" ? install.unpack.global : install.unpack.project;
+  return scope === "global" ? install.unpack?.global : install.unpack?.project;
 }
 
 export function agentReleaseSha256(sha256?: string) {

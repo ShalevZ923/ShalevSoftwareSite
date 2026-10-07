@@ -12,6 +12,7 @@ import {
   type ValidationRecovery,
 } from "./studio/saveValidation";
 import { Icon, ToolGlyph } from "./ui";
+import { AgentStudio } from "./studio/AgentStudio";
 
 type DocFile = {
   name: string;
@@ -60,7 +61,9 @@ export function DeveloperStudio({
   onCatalogUpdated: () => void;
   onDraftStateChange: (dirty: boolean, saving: boolean) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"tools" | "docs">("tools");
+  const [activeTab, setActiveTab] = useState<"tools" | "agents" | "docs">("tools");
+  const [agentDirty, setAgentDirty] = useState(false);
+  const [agentSaving, setAgentSaving] = useState(false);
   const [toolsList, setToolsList] = useState<ToolEntryPayload[]>([]);
   const [selectedToolId, setSelectedToolId] = useState<string>("");
   const [editingTool, setEditingTool] = useState<ToolEntryPayload | null>(null);
@@ -122,22 +125,22 @@ export function DeveloperStudio({
     !!editingTool &&
     (isCreatingNewTool || JSON.stringify(editingTool) !== savedTool);
   const docDirty = !!selectedDocName && editingDocContent !== savedDoc;
-  const dirty = toolDirty || docDirty;
+  const dirty = toolDirty || docDirty || agentDirty;
   const canDiscard = (hasChanges: boolean) =>
     !isSaving && (!hasChanges || window.confirm("Discard unsaved changes?"));
   useEffect(() => {
-    onDraftStateChange(dirty, isSaving);
+    onDraftStateChange(dirty, isSaving || agentSaving);
     const guard = (event: BeforeUnloadEvent) => {
-      if (dirty || isSaving) {
+      if (dirty || isSaving || agentSaving) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
-  }, [dirty, isSaving, onDraftStateChange]);
-  const switchWorkspace = (tab: "tools" | "docs") => {
-    if (isSaving) return;
+  }, [dirty, isSaving, agentSaving, onDraftStateChange]);
+  const switchWorkspace = (tab: "tools" | "agents" | "docs") => {
+    if (isSaving || agentSaving || (activeTab === "agents" && agentDirty && !window.confirm("Discard unsaved agent changes?"))) return;
     setActiveTab(tab);
     setStatusMessage(null);
     setValidationRecovery(null);
@@ -402,7 +405,7 @@ export function DeveloperStudio({
               Developer Studio
             </h1>
             <p className="dev-header-copy">
-              Maintain software and documentation.
+              Maintain software, agents, and documentation.
             </p>
             <span className="dev-badge-connected">Local editing</span>
           </div>
@@ -416,6 +419,12 @@ export function DeveloperStudio({
           >
             <Icon name="catalog" size={16} /> Software Catalog (
             {toolsList.length})
+          </button>
+          <button
+            className={`dev-tab-btn ${activeTab === "agents" ? "active" : ""}`}
+            onClick={() => switchWorkspace("agents")}
+          >
+            <Icon name="agents" size={16} /> Agent Catalog
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "docs" ? "active" : ""}`}
@@ -470,7 +479,8 @@ export function DeveloperStudio({
       )}
 
       {/* Main Studio Body */}
-      {activeTab === "tools" ? (
+      {activeTab === "agents" ? <AgentStudio token={token} onCatalogUpdated={onCatalogUpdated}
+        onDraftStateChange={(nextDirty, nextSaving) => { setAgentDirty(nextDirty); setAgentSaving(nextSaving); }} /> : activeTab === "tools" ? (
         <div className="dev-workspace">
           {/* Left Column: Tool Explorer */}
           <nav aria-label="Catalog Tools" className="dev-sidebar">

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "internal-comms",
+    "version": "1.0.0",
+    "archiveRoot": "internal-comms",
+    "sources": [
+      { "directory": "vendor/agent-catalog/anthropic/internal-comms", "destination": "" }
+    ]
+  },
+  {
+    "id": "theme-factory",
+    "version": "1.0.0",
+    "archiveRoot": "theme-factory",
+    "sources": [
+      { "directory": "vendor/agent-catalog/anthropic/theme-factory", "destination": "" }
+    ]
+  },
+  {
+    "id": "workplace-content-pack",
+    "version": "1.0.0",
+    "archiveRoot": "workplace-content-pack",
+    "sources": [
+      { "directory": "vendor/agent-catalog/workplace-content-pack", "destination": "" },
+      { "directory": "vendor/agent-catalog/anthropic/internal-comms", "destination": "skills/internal-comms" },
+      { "directory": "vendor/agent-catalog/anthropic/theme-factory", "destination": "skills/theme-factory" }
+    ]
+  },
+  {
+    "id": "mcp-server-time",
+    "version": "0.6.2",
+    "archiveRoot": "mcp-server-time",
+    "sources": [
+      { "directory": "vendor/agent-catalog/modelcontextprotocol/time", "destination": "" }
+    ]
+  }
+]
