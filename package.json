@@ -10,13 +10,15 @@
     "catalog:build": "node scripts/build-catalog.mjs",
     "catalog:check": "node scripts/build-catalog.mjs --check",
     "dev": "npm run build && node scripts/server.mjs",
-    "dev:client": "npm run catalog:build && vite",
-    "test": "npm run catalog:check && vitest run",
-    "build": "npm run catalog:build && tsc -b && vite build",
+    "dev:client": "npm run catalog:build && npm run agents:build && vite",
+    "test": "npm run catalog:check && npm run agents:check && vitest run",
+    "build": "npm run catalog:build && npm run agents:build && tsc -b && vite build",
     "verify": "npm run test && npm run build && node scripts/verify-dist.mjs",
     "preview": "vite preview",
     "serve": "npm run start",
-    "start": "npm run build && node scripts/server.mjs"
+    "start": "npm run build && node scripts/server.mjs",
+    "agents:build": "node scripts/build-agents.mjs",
+    "agents:check": "node scripts/build-agents.mjs --check"
   },
   "dependencies": {
     "react": "19.3.0",

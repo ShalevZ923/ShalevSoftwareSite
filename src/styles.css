@@ -580,6 +580,30 @@ main {
 .lifecycle.legacy {
   color: #a15e14;
 }
+.lifecycle.risk-low {
+  color: #16815d;
+}
+.lifecycle.risk-medium {
+  color: #a15e14;
+}
+.lifecycle.risk-high {
+  color: #be2c39;
+}
+.glyph-anthropic-pdf {
+  background: #c05621;
+}
+.glyph-atlas-repo-mcp {
+  background: #1f4b8f;
+}
+.glyph-openai-developers {
+  background: #0f7a5a;
+}
+.platforms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
 .platform-mark {
   font-size: 10px;
   display: inline-flex;
@@ -1843,7 +1867,6 @@ html[data-theme="dark"] .dev-section-invalid { background: rgba(220, 38, 38, 0.1
   .catalog-page .field, .catalog-page .field select { min-width: 0; max-width: 100%; }
   .catalog-page .field select { width: 100%; }
 }
-
 /* Catalog width is viewport minus the sidebar. Size the table to that
    column, not the window, so mid-width desktops do not overflow. */
 .tool-summary,
@@ -1926,5 +1949,105 @@ html[data-theme="dark"] .dev-section-invalid { background: rgba(220, 38, 38, 0.1
   .details-support-kicker,
   .support-owner {
     margin: 0;
+  }
+}
+
+.agent-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 18px;
+  margin: 16px 0 0;
+  max-width: 720px;
+}
+.agent-meta h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.agent-contents,
+.agent-permissions,
+.agent-risks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+.agent-contents li,
+.agent-permissions li,
+.agent-risks li {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.agent-contents li {
+  display: grid;
+  gap: 2px;
+}
+.agent-contents code {
+  font:
+    11px "DM Mono",
+    monospace;
+  color: var(--text);
+}
+.agent-content-kind {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-chip);
+  color: var(--text-tag);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.agent-install-actions {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.agent-command {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+.scope-toggle {
+  display: inline-flex;
+  gap: 6px;
+}
+.agent-command-text {
+  display: block;
+  overflow-x: auto;
+  padding: 9px 11px;
+  border-radius: 4px;
+  background: var(--bg-code);
+  color: var(--text);
+  font:
+    11px "DM Mono",
+    monospace;
+  white-space: pre;
+}
+.agent-unpack-copy {
+  margin: 0;
+  max-width: 520px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.agent-sha256 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.agent-sha256 code {
+  font:
+    11px "DM Mono",
+    monospace;
+  word-break: break-all;
+}
+@media (max-width: 760px) {
+  .agent-meta {
+    grid-template-columns: 1fr;
   }
 }

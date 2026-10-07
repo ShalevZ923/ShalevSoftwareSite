@@ -8,11 +8,11 @@ catalog material. See [CONTRIBUTING.md](./CONTRIBUTING.md),
 [open-source readiness checklist](./docs/OPEN_SOURCE_READINESS.md)
 before changing repository visibility.
 
-Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. The production Docker and IIS deployments remain backend-free and contain no application secrets.
+Tool Atlas is a static software catalog for developers. It provides searchable software records, a second Agent Catalog for reviewed skills, agent packs, role packs, and MCP servers, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. The production Docker and IIS deployments remain backend-free and contain no application secrets.
 
 An optional local Node.js server provides Developer Studio, an authenticated local authoring interface. It has filesystem-write APIs and an ephemeral startup token, so it is not part of the public static deployment. See [the Developer Studio guide](./docs/DEVELOPER_STUDIO.md) before using it.
 
-The catalog supports shareable filter URLs and a saved-tools list. Saved tools are stored only in the visitor's browser; they are never sent to a server or included in shared links.
+The catalog supports shareable filter URLs and a saved-tools list. Saved tools and agent packages are stored only in the visitor's browser; they are never sent to a server or included in shared links.
 
 ## Run the published Docker image
 
@@ -78,6 +78,8 @@ Each tool guide has a **View in catalog** link. It opens that tool's catalog ent
 - Open JMeter directly in the catalog: `?page=catalog&tool=jmeter`
 - Request a release: `?page=catalog&tool=jmeter&version=5.6.3`
 - Carry a release through a guide: `?page=documentation&tool=intellij&version=2026.01-Mac`
+- Open the Agent Catalog: `?page=agents`
+- Open Atlas Repo MCP in the Agent Catalog: `?page=agents&agent=atlas-repo-mcp`
 
 Append these query strings to the site's normal URL. Tool IDs and version strings must match catalog metadata exactly. Without a version, the first approved release is selected. If a version is unavailable, the tool still opens with its default release and a short explanation. A removed tool shows a notice instead of expanding an unrelated entry.
 
@@ -93,11 +95,13 @@ After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `
 
 Catalog source is organized for long-term ownership: [`content/catalog/<category>/<vendor>/<tool>`](./content/catalog), with a `tool.json`, `guide.md`, and one `releases/<version>.json` record per approved version. Categories are controlled by [`content/taxonomy/categories.json`](./content/taxonomy/categories.json), so a new category is an explicit, reviewed taxonomy change—not a spelling variation. Add a tool interactively with `pnpm catalog:add`, or edit its source directory and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` and the machine feed in `public/catalog/v1/` are checked into Git and must not be edited by hand. Machine clients read `/catalog/v1/index.json` and `/catalog/v1/tools.json`; see [the machine catalog contract](./docs/CATALOG_MACHINE_FEED.md).
 
-Every entry has a stable ID, ownership details, platform/lifecycle metadata, one approved target per release, tags, and a guide containing `## Install` and `## Support`. A target can be a trusted HTTPS URL or a same-server artifact pointer such as `intellij/2025.1/ideaIU-2025.1.exe`. The validator rejects duplicate IDs/orders, unsafe URLs or artifact paths, remote guide images, invalid support details, and credential-like fact labels.
+The Agent Catalog is a parallel source tree: [`content/agents/<type>/<publisher>/<package>`](./content/agents), with `agent.json`, `guide.md`, and per-version ZIP release records. Types are controlled by [`content/taxonomy/agent-types.json`](./content/taxonomy/agent-types.json). Edit a package directory and run `pnpm agents:build`. The generated app data in `src/generated/agents.ts` is also checked into Git. Listings ship a hashed ZIP on `/downloads` and an unpack path for project or global scope. MCP servers may add a VS Code `vscode:mcp/install` link only for stdio binaries or internal HTTPS endpoints. Users do not need Node or npm. Tool Atlas indexes and validates those packages; it does not execute their scripts. On air-gapped GitLab, follow [the air-gapped Agent Catalog guide](./docs/AIRGAPPED_AGENT_CATALOG.md).
+
+Every software entry has a stable ID, ownership details, platform/lifecycle metadata, one approved target per release, tags, and a guide containing `## Install` and `## Support`. A target can be a trusted HTTPS URL or a same-server artifact pointer such as `intellij/2025.1/ideaIU-2025.1.exe`. The validator rejects duplicate IDs/orders, unsafe URLs or artifact paths, remote guide images, invalid support details, and credential-like fact labels.
 
 For browser-based contribution, open the **Add software to the catalog** GitHub Issue Form. A maintainer reviews the submission and applies the `catalog-approved` label; only then does the workflow create a validated pull request for normal review and merge. GitLab projects receive the matching Issue Template and an approval-gated manual CI job that creates a merge request. See [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md) for both paths and the [GitLab catalog contribution guide](./docs/GITLAB_CATALOG_CONTRIBUTION.md) for the one-time setup and operating steps.
 
-For copy-paste examples, images, optional catalog facts such as license references, and the safety boundary for sensitive values, see [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md).
+For copy-paste examples, images, optional catalog facts such as license references, and the safety boundary for sensitive values, see [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md). For agent packages, see [AGENT_CATALOG_CONTENT_GUIDE.md](./AGENT_CATALOG_CONTENT_GUIDE.md).
 
 The production-oriented source boundaries, catalog hierarchy, taxonomy expansion policy, and operating rules are documented in [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md).
 

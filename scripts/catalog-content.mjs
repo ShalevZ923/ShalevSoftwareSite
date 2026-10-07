@@ -1,8 +1,28 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, join, relative, sep } from "node:path";
+import {
+  fail,
+  findFiles,
+  idPattern,
+  parseReleaseList,
+  readJson,
+  requiredArtifactPointer,
+  requiredHttpsUrl,
+  requiredString,
+  requiredVersion,
+  requireInstallOrGuideSections,
+  requireStringList,
+  repositoryRoot,
+  slugifyId,
+  validateOptionalFacts,
+  validateOptionalImage,
+  validateOptionalNotice,
+  validateOwner,
+  validateReleaseRecords,
+} from "./content-shared.mjs";
 
-export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+export { parseReleaseList, repositoryRoot, slugifyId };
+
 export const contentDirectory = join(repositoryRoot, "content", "catalog");
 export const taxonomyPath = join(repositoryRoot, "content", "taxonomy", "categories.json");
 export const generatedCatalogPath = join(repositoryRoot, "src", "generated", "catalog.ts");
@@ -13,107 +33,9 @@ export const machineCatalogToolsPath = join(machineCatalogDirectory, "tools.json
 
 const platforms = new Set(["Windows", "Linux", "macOS", "Web"]);
 const lifecycles = new Set(["Current", "New", "Legacy"]);
-const idPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const versionPattern = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
-const localImagePattern = /^\/tool-images\/[A-Za-z0-9][A-Za-z0-9._/-]*$/;
-const artifactPointerPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const sensitiveFactPattern = /key|activation|password|token/i;
-const noticeTones = new Set(["info", "warning"]);
 const guideKinds = new Set(["official-manual", "internal-guide", "training"]);
 const guideFormats = new Set(["pdf", "pptx", "web"]);
 const guideFilePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx)$/;
-
-function fail(source, message) {
-  throw new Error(`${source}: ${message}`);
-}
-
-function requiredString(value, field, source) {
-  if (typeof value !== "string" || !value.trim()) fail(source, `${field} must be a non-empty string`);
-  return value.trim();
-}
-
-function requireStringList(value, field, source) {
-  if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== "string" || !item.trim())) {
-    fail(source, `${field} must be a non-empty list of strings`);
-  }
-  return value.map((item) => item.trim());
-}
-
-function requiredHttpsUrl(value, field, source) {
-  const download = requiredString(value, field, source);
-  try {
-    const url = new URL(download);
-    if (url.protocol !== "https:" || url.username || url.password) fail(source, `${field} must be a credential-free HTTPS URL`);
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith(`${source}:`)) throw error;
-    fail(source, `${field} must be a valid HTTPS URL`);
-  }
-  return download;
-}
-
-function requiredArtifactPointer(value, field, source) {
-  const artifact = requiredString(value, field, source);
-  if (!artifactPointerPattern.test(artifact)) {
-    fail(source, `${field} must use tool-id/version/filename with safe path characters`);
-  }
-  return artifact;
-}
-
-function requiredVersion(value, source, field = "releases.version") {
-  const version = requiredString(value, field, source);
-  if (!versionPattern.test(version)) fail(source, `${field} must be filename-safe`);
-  return version;
-}
-
-export function parseReleaseList(value, source) {
-  const releases = value
-    .split(/\r?\n|;/u)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const separator = line.indexOf("|");
-      if (separator < 1) {
-        fail(source, "each approved release must use: version | HTTPS URL or artifact:tool-id/version/filename");
-      }
-      const version = requiredVersion(line.slice(0, separator), source);
-      const target = requiredString(line.slice(separator + 1), "releases.target", source);
-      if (target.startsWith("artifact:")) {
-        return {
-          version,
-          artifact: requiredArtifactPointer(target.slice("artifact:".length), "releases.artifact", source),
-        };
-      }
-      return {
-        version,
-        download: requiredHttpsUrl(target, "releases.download", source),
-      };
-    });
-  if (releases.length === 0) fail(source, "releases must contain at least one approved release");
-  if (new Set(releases.map((release) => release.version)).size !== releases.length) fail(source, "releases must not repeat a version");
-  return releases;
-}
-
-export function slugifyId(value) {
-  return value.toLocaleLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-}
-
-async function readJson(path, source = path) {
-  try {
-    return JSON.parse(await readFile(path, "utf8"));
-  } catch (error) {
-    fail(source, `must contain valid JSON (${error instanceof Error ? error.message : String(error)})`);
-  }
-}
-
-async function findFiles(directory, filename) {
-  const entries = await readdir(directory, { withFileTypes: true });
-  const nested = await Promise.all(entries.map(async (entry) => {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) return findFiles(path, filename);
-    return entry.isFile() && entry.name === filename ? [path] : [];
-  }));
-  return nested.flat();
-}
 
 export async function loadTaxonomy() {
   const taxonomy = await readJson(taxonomyPath);
@@ -144,54 +66,12 @@ export function validateCatalogEntry(source, metadata, guide) {
   const entryPlatforms = requireStringList(metadata.platforms, "platforms", source);
   if (entryPlatforms.some((platform) => !platforms.has(platform))) fail(source, "platforms contains an unsupported value");
   if (!lifecycles.has(metadata.lifecycle)) fail(source, "lifecycle must be Current, New, or Legacy");
-  if (!metadata.support || typeof metadata.support !== "object" || Array.isArray(metadata.support)) fail(source, "support must be an object");
-  for (const field of ["name", "team", "initials", "email"]) requiredString(metadata.support[field], `support.${field}`, source);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(metadata.support.email)) fail(source, "support.email must be an email address");
-  if (!Array.isArray(metadata.releases)) fail(source, "releases must be a list");
-  const releaseVersions = new Set();
-  for (const [releaseIndex, release] of metadata.releases.entries()) {
-    const releaseField = `releases[${releaseIndex}]`;
-    if (!release || typeof release !== "object" || Array.isArray(release)) fail(source, "each release must be an object");
-    const version = requiredVersion(release.version, source, `${releaseField}.version`);
-    if (releaseVersions.has(version)) fail(source, `${releaseField}.version must not repeat a version`);
-    releaseVersions.add(version);
-    const hasDownload = release.download !== undefined;
-    const hasArtifact = release.artifact !== undefined;
-    if (hasDownload === hasArtifact) {
-      fail(source, "each release must define exactly one download or artifact target");
-    }
-    if (hasDownload) {
-      requiredHttpsUrl(release.download, `${releaseField}.download`, source);
-    } else {
-      const artifact = requiredArtifactPointer(release.artifact, `${releaseField}.artifact`, source);
-      const [artifactToolId, artifactVersion] = artifact.split("/");
-      if (artifactToolId !== id) fail(source, `${releaseField}.artifact tool-id must match the catalog id`);
-      if (artifactVersion !== version) fail(source, `${releaseField}.artifact version must match the release version`);
-    }
-  }
-  if (releaseVersions.size === 0) fail(source, "releases must contain at least one approved release");
+  validateOwner(metadata.support, "support", source);
+  validateReleaseRecords(metadata.releases, source, id);
   requireStringList(metadata.tags, "tags", source);
-  if (metadata.facts !== undefined) {
-    if (!Array.isArray(metadata.facts)) fail(source, "facts must be a list when supplied");
-    for (const fact of metadata.facts) {
-      if (!fact || typeof fact !== "object" || Array.isArray(fact)) fail(source, "each fact must be an object");
-      const label = requiredString(fact.label, "facts.label", source);
-      requiredString(fact.value, "facts.value", source);
-      if (sensitiveFactPattern.test(label)) fail(source, "fact labels cannot describe credentials or activation material");
-    }
-  }
-  if (metadata.notice !== undefined) {
-    if (!metadata.notice || typeof metadata.notice !== "object" || Array.isArray(metadata.notice)) fail(source, "notice must be an object when supplied");
-    if (!noticeTones.has(metadata.notice.tone)) fail(source, "notice.tone must be info or warning");
-    requiredString(metadata.notice.title, "notice.title", source);
-    requiredString(metadata.notice.message, "notice.message", source);
-  }
-  if (metadata.image !== undefined) {
-    if (!metadata.image || typeof metadata.image !== "object" || Array.isArray(metadata.image)) fail(source, "image must be an object when supplied");
-    const imagePath = requiredString(metadata.image.src, "image.src", source);
-    requiredString(metadata.image.alt, "image.alt", source);
-    if (!localImagePattern.test(imagePath) || imagePath.includes("..")) fail(source, "image.src must be a local /tool-images/ path");
-  }
+  validateOptionalFacts(metadata.facts, source);
+  validateOptionalNotice(metadata.notice, source);
+  validateOptionalImage(metadata.image, source);
   if (metadata.resources !== undefined) {
     if (!Array.isArray(metadata.resources)) fail(source, "resources must be a list when supplied");
     const resourceIds = new Set();
@@ -219,7 +99,7 @@ export function validateCatalogEntry(source, metadata, guide) {
     }
   }
 
-  if (!/^## Install\b/mu.test(guide) || !/^## Support\b/mu.test(guide)) fail(source, "guide must include ## Install and ## Support sections");
+  requireInstallOrGuideSections(guide, source);
   return { metadata, guide };
 }
 

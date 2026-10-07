@@ -1,4 +1,5 @@
 const savedToolsKey = "tool-atlas.saved-tools.v1";
+const savedAgentsKey = "tool-atlas.saved-agents.v1";
 const maximumSavedTools = 100;
 
 /** Keeps browser-local selections valid when the catalog is refreshed or changed. */
@@ -37,6 +38,33 @@ export function writeSavedToolIds(toolIds: readonly string[]) {
 
   try {
     window.localStorage.setItem(savedToolsKey, JSON.stringify(toolIds.slice(0, maximumSavedTools)));
+  } catch {
+    // Storage is optional: privacy settings and quota limits must not break the catalog.
+  }
+}
+
+export function readSavedAgentIds(knownAgentIds: ReadonlySet<string>) {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(savedAgentsKey);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return filterSavedToolIds(
+      parsed.filter((id): id is string => typeof id === "string"),
+      knownAgentIds,
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function writeSavedAgentIds(agentIds: readonly string[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(savedAgentsKey, JSON.stringify(agentIds.slice(0, maximumSavedTools)));
   } catch {
     // Storage is optional: privacy settings and quota limits must not break the catalog.
   }

@@ -2,10 +2,12 @@
 
 This guide enables the GitLab issue-to-merge-request path. It keeps catalog publication behind two human decisions: a maintainer applies the approval label, then an authorized user starts the manual CI job. The issue itself never writes to the default branch.
 
+Agent packages use a separate [issue template](../.gitlab/issue_templates/Add%20catalog%20agent.md) and the [air-gapped operator flow](./AIRGAPPED_AGENT_CATALOG.md). The manual `create_catalog_merge_request` job currently writes software-catalog tools only; after `catalog-approved`, a maintainer adds agent files on a branch.
+
 ## Prerequisites
 
 1. Merge this repository's GitLab contribution files into the GitLab project's protected default branch: [`.gitlab-ci.yml`](../.gitlab-ci.yml), [issue template](../.gitlab/issue_templates/Add%20catalog%20software.md), and the catalog scripts.
-2. Confirm a GitLab Runner can pull the digest-pinned `node:24-alpine` image and execute the regular `verify` job.
+2. Confirm a GitLab Runner can pull the digest-pinned `node:24-alpine` image **from your internal Container Registry mirror** and execute the regular `verify` job. Air-gapped runners must not pull Docker Hub.
 3. Protect the default branch. Limit its merge permission and the `catalog-approved` label to maintainers you trust to publish catalog content.
 4. Under **Settings > CI/CD > Pipeline variables**, set **Minimum role to use pipeline variables** to **Maintainer**. The job needs two non-secret pipeline variables, but they must not be available to lower-privileged users.
 

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "./data";
+import { agents as staticAgents, type AgentPackage } from "./agents";
 import {
   catalogFiltersToSearch,
   defaultFilters,
@@ -15,6 +16,10 @@ import { focusableElements, wrapTabTarget } from "./focusTrap";
 import { applyTheme, readStoredTheme, resolveTheme, systemTheme, writeTheme, type Theme } from "./theme";
 import { catalogTargetFromSearch, resolveToolRelease, toolPageHref, type CatalogTarget } from "./toolLinks";
 
+const AgentCatalog = lazy(async () => {
+  const module = await import("./components/AgentCatalog");
+  return { default: module.AgentCatalog };
+});
 const About = lazy(async () => {
   const module = await import("./components/About");
   return { default: module.About };
@@ -44,7 +49,7 @@ function PageFallback() {
   );
 }
 
-type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
+type Page = "catalog" | "agents" | "documentation" | "updates" | "about" | "developer";
 
 const platforms: Array<"All platforms" | Platform> = [
   "All platforms",
@@ -57,7 +62,11 @@ const lifecycles = ["All lifecycles", "Current", "New", "Legacy"];
 
 function pageFromSearch(search: string): Page {
   const page = new URLSearchParams(search).get("page");
-  return page === "documentation" || page === "updates" || page === "about" || page === "developer"
+  return page === "agents" ||
+    page === "documentation" ||
+    page === "updates" ||
+    page === "about" ||
+    page === "developer"
     ? page
     : "catalog";
 }
@@ -87,6 +96,7 @@ function Sidebar({
 }) {
   const links: Array<[Page, string, IconName]> = [
     ["catalog", "Catalog", "catalog"],
+    ["agents", "Agent Catalog", "agents"],
     ["documentation", "Documentation", "book"],
     ["updates", "Updates", "updates"],
     ["about", "About", "info"],
@@ -222,6 +232,7 @@ function App() {
   const canLeaveStudio = () => !studioSaving.current && (!studioDirty.current || window.confirm("Discard unsaved changes?"));
   const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
   const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
+  const [agentPackages] = useState<AgentPackage[]>(staticAgents);
   const [devToken, setDevToken] = useState<string>(() => {
     try {
       return window.sessionStorage.getItem("tool-atlas-dev-token") || "";
@@ -488,6 +499,15 @@ function App() {
             onUpdates={() => navigate("updates")}
             hotkeysEnabled={!drawerOpen}
           />
+        )}
+        {page === "agents" && (
+          <Suspense fallback={<PageFallback />}>
+            <AgentCatalog
+              key={`agents:${routeRevision}:${routeSearch}`}
+              search={routeSearch}
+              agents={agentPackages}
+            />
+          </Suspense>
         )}
         {page === "documentation" && (
           <Suspense fallback={<PageFallback />}>
