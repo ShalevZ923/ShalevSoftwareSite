@@ -24,10 +24,22 @@ export type IconName =
   | "updates";
 
 const CONCEPT_BOX = "0 0 40 40";
-const conceptIcons = new Set<IconName>(["book", "bookmark", "catalog", "external", "info", "updates"]);
+const conceptIcons = new Set<IconName>([
+  "book",
+  "bookmark",
+  "catalog",
+  "external",
+  "info",
+  "updates",
+]);
 
 const iconPaths: Record<IconName, ReactNode> = {
-  atlas: <><path d="m12 2 9 18H3L12 2Z" /><path d="m12 7 4 9H8l4-9Z" /></>,
+  atlas: (
+    <>
+      <path d="m12 2 9 18H3L12 2Z" />
+      <path d="m12 7 4 9H8l4-9Z" />
+    </>
+  ),
   catalog: (
     <>
       <path d="M4 6h13v13H4zM23 6h13v13H23zM4 25h13v11H4z" />
@@ -66,12 +78,39 @@ const iconPaths: Record<IconName, ReactNode> = {
       <path d="M32 23v10a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3h10" />
     </>
   ),
-  search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></>,
+  search: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m16 16 4 4" />
+    </>
+  ),
   chevron: <path d="m7 10 5 5 5-5" />,
-  arrow: <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>,
-  download: <><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></>,
-  mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
-  menu: <><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></>,
+  arrow: (
+    <>
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </>
+  ),
+  mail: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </>
+  ),
+  menu: (
+    <>
+      <path d="M4 7h16" />
+      <path d="M4 12h16" />
+      <path d="M4 17h16" />
+    </>
+  ),
   moon: <path d="M15 4a8 8 0 1 0 5 14 7 7 0 0 1-5-14Z" />,
   sun: (
     <>
@@ -79,9 +118,25 @@ const iconPaths: Record<IconName, ReactNode> = {
       <path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.2 6.2l1.4 1.4M16.4 16.4l1.4 1.4M6.2 17.8l1.4-1.4M16.4 7.6l1.4-1.4" />
     </>
   ),
-  close: <><path d="m6 6 12 12" /><path d="m18 6-12 12" /></>,
-  document: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" /><path d="M14 2v6h6" /><path d="M8 13h8M8 17h6" /></>,
-  link: <><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" /><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 1 0 12 20l1.1-1.1" /></>,
+  close: (
+    <>
+      <path d="m6 6 12 12" />
+      <path d="m18 6-12 12" />
+    </>
+  ),
+  document: (
+    <>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" />
+      <path d="M14 2v6h6" />
+      <path d="M8 13h8M8 17h6" />
+    </>
+  ),
+  link: (
+    <>
+      <path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
+      <path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 1 0 12 20l1.1-1.1" />
+    </>
+  ),
   check: <path d="m5 12 4.2 4.2L19 6.5" />,
 };
 
@@ -106,9 +161,19 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 }
 
 export function PlatformMark({ platform }: { platform: Platform }) {
-  const labels: Record<Platform, string> = { Windows: "Win", Linux: "Lin", macOS: "Mac", Web: "Web" };
+  const labels: Record<Platform, string> = {
+    Windows: "Win",
+    Linux: "Lin",
+    macOS: "Mac",
+    Web: "Web",
+  };
 
-  return <span className="platform-mark" title={platform}><span aria-hidden="true">{labels[platform]}</span>{platform}</span>;
+  return (
+    <span className="platform-mark" title={platform}>
+      <span aria-hidden="true">{labels[platform]}</span>
+      {platform}
+    </span>
+  );
 }
 
 export function ToolGlyph({ tool }: { tool: Tool }) {
@@ -122,7 +187,16 @@ export function ToolGlyph({ tool }: { tool: Tool }) {
 }
 
 export function PageHeader({ title, copy }: { title: string; copy: string }) {
-  return <header className="page-header"><div><h1 id="page-title" tabIndex={-1}>{title}</h1><p>{copy}</p></div></header>;
+  return (
+    <header className="page-header">
+      <div>
+        <h1 id="page-title" tabIndex={-1}>
+          {title}
+        </h1>
+        <p>{copy}</p>
+      </div>
+    </header>
+  );
 }
 
 export function Field({
@@ -134,5 +208,10 @@ export function Field({
   children: ReactNode;
   invalid?: boolean;
 }) {
-  return <label className={invalid ? "field field-invalid" : "field"}><span>{label}</span>{children}</label>;
+  return (
+    <label className={invalid ? "field field-invalid" : "field"}>
+      <span>{label}</span>
+      {children}
+    </label>
+  );
 }

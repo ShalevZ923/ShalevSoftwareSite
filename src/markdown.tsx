@@ -13,9 +13,7 @@ export function getTrustedLinkTarget(href?: string) {
 
   try {
     const url = new URL(href);
-    return url.protocol === "https:" || url.protocol === "mailto:"
-      ? url.toString()
-      : undefined;
+    return url.protocol === "https:" || url.protocol === "mailto:" ? url.toString() : undefined;
   } catch {
     return undefined;
   }
@@ -37,13 +35,7 @@ export function getHeadingText(children: ReactNode): string {
   return "";
 }
 
-function MarkdownLink({
-  href,
-  children,
-}: {
-  href?: string;
-  children?: ReactNode;
-}) {
+function MarkdownLink({ href, children }: { href?: string; children?: ReactNode }) {
   const target = getTrustedLinkTarget(href);
   if (!target) return <span>{children}</span>;
 
@@ -62,12 +54,7 @@ function MarkdownLink({
 function MarkdownImage({ src, alt }: { src?: string; alt?: string }) {
   const source = getTrustedImageSource(src);
   return source ? (
-    <img
-      src={source}
-      alt={alt ?? ""}
-      loading="lazy"
-      referrerPolicy="no-referrer"
-    />
+    <img src={source} alt={alt ?? ""} loading="lazy" referrerPolicy="no-referrer" />
   ) : null;
 }
 
@@ -77,9 +64,7 @@ export function MarkdownDocument({ content }: { content: string }) {
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        h2: ({ children }) => (
-          <h2 id={slugifyHeading(getHeadingText(children))}>{children}</h2>
-        ),
+        h2: ({ children }) => <h2 id={slugifyHeading(getHeadingText(children))}>{children}</h2>,
         a: MarkdownLink,
         img: MarkdownImage,
       }}

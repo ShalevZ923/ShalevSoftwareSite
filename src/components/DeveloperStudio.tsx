@@ -1,16 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDraft } from "./studio/useDraft";
+import { decodeToolEntries, decodeToolEntry, studioResponse, StudioApiError } from "./studio/api";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { MarkdownDocument } from "../markdown";
 import type { ToolEntryPayload } from "./studio/types";
-import {
-  OverviewEditor,
-  SupportEditor,
-  ReleasesEditor,
-  GuidesEditor,
-} from "./studio/ToolSections";
-import {
-  getToolValidationRecovery,
-  type ValidationRecovery,
-} from "./studio/saveValidation";
+import { OverviewEditor, SupportEditor, ReleasesEditor, GuidesEditor } from "./studio/ToolSections";
+import { getToolValidationRecovery, type ValidationRecovery } from "./studio/saveValidation";
 import { Icon, ToolGlyph } from "./ui";
 
 type DocFile = {
@@ -63,24 +57,27 @@ export function DeveloperStudio({
   const [activeTab, setActiveTab] = useState<"tools" | "docs">("tools");
   const [toolsList, setToolsList] = useState<ToolEntryPayload[]>([]);
   const [selectedToolId, setSelectedToolId] = useState<string>("");
-  const [editingTool, setEditingTool] = useState<ToolEntryPayload | null>(null);
+  const toolDraft = useDraft<ToolEntryPayload | null>(null);
+  const editingTool = toolDraft.draft;
+  const setEditingTool = toolDraft.edit;
   const [toolSearch, setToolSearch] = useState("");
   const [isCreatingNewTool, setIsCreatingNewTool] = useState(false);
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
 
   const [docsList, setDocsList] = useState<DocFile[]>([]);
   const [selectedDocName, setSelectedDocName] = useState<string>("");
-  const [editingDocContent, setEditingDocContent] = useState<string>("");
+  const docDraft = useDraft("");
+  const editingDocContent = docDraft.draft;
+  const setEditingDocContent = docDraft.edit;
+  const [docRevision, setDocRevision] = useState("");
   const [guideLibraryFiles, setGuideLibraryFiles] = useState<string[]>([]);
-  const [guideLibraryStatus, setGuideLibraryStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [guideLibraryStatus, setGuideLibraryStatus] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
   const [guideLibraryRevision, setGuideLibraryRevision] = useState(0);
 
-  const [guideViewMode, setGuideViewMode] = useState<
-    "split" | "edit" | "preview"
-  >("split");
-  const [docViewMode, setDocViewMode] = useState<"split" | "edit" | "preview">(
-    "split",
-  );
+  const [guideViewMode, setGuideViewMode] = useState<"split" | "edit" | "preview">("split");
+  const [docViewMode, setDocViewMode] = useState<"split" | "edit" | "preview">("split");
 
   const [statusMessage, setStatusMessage] = useState<{
     tone: "success" | "error" | "info";
@@ -100,8 +97,12 @@ export function DeveloperStudio({
   useEffect(() => {
     if (statusMessage?.tone !== "error") return;
     const target = validationRecovery
-      ? document.querySelector<HTMLElement>(`[data-validation-field="${validationRecovery.field}"]`) ||
-        document.querySelector<HTMLElement>(`[data-validation-section="${validationRecovery.section}"]`)
+      ? document.querySelector<HTMLElement>(
+          `[data-validation-field="${validationRecovery.field}"]`,
+        ) ||
+        document.querySelector<HTMLElement>(
+          `[data-validation-section="${validationRecovery.section}"]`,
+        )
       : statusRef.current;
     requestAnimationFrame(() => target?.focus());
   }, [statusMessage, validationRecovery]);
@@ -119,8 +120,7 @@ export function DeveloperStudio({
   }, []);
 
   const toolDirty =
-    !!editingTool &&
-    (isCreatingNewTool || JSON.stringify(editingTool) !== savedTool);
+    !!editingTool && (isCreatingNewTool || JSON.stringify(editingTool) !== savedTool);
   const docDirty = !!selectedDocName && editingDocContent !== savedDoc;
   const dirty = toolDirty || docDirty;
   const canDiscard = (hasChanges: boolean) =>
@@ -158,12 +158,20 @@ export function DeveloperStudio({
       if (!res.ok) {
         throw new Error(`Failed to load tools: ${res.statusText}`);
       }
-      const data: ToolEntryPayload[] = await res.json();
+      const data = await studioResponse(res, decodeToolEntries);
       setToolsList(data);
-      if (selectInitial && data.length > 0 && !editingTool) {
-        setSelectedToolId(data[0].id);
-        setEditingTool(JSON.parse(JSON.stringify(data[0])));
-        setSavedTool(JSON.stringify(data[0]));
+      if (
+        selectInitial &&
+        data.length > 0 &&
+        (!editingTool ||
+          window.confirm(
+            "Replace this draft with the saved version? Copy any changes you need before reloading.",
+          ))
+      ) {
+        const refreshed = data.find((entry) => entry.id === selectedToolId) ?? data[0];
+        setSelectedToolId(refreshed.id);
+        toolDraft.load(structuredClone(refreshed));
+        setSavedTool(JSON.stringify(refreshed));
       }
     } catch (err: unknown) {
       setStatusMessage({
@@ -202,14 +210,14 @@ export function DeveloperStudio({
     const request = ++docRequest.current;
     setLoadingDoc(true);
     try {
-      const res = await fetch(
-        `/api/developer/docs/${encodeURIComponent(docName)}`,
-        { headers },
-      );
+      const res = await fetch(`/api/developer/docs/${encodeURIComponent(docName)}`, { headers });
       if (!res.ok) throw new Error("Failed to load document");
       const data = await res.json();
       if (request !== docRequest.current) return;
-      setEditingDocContent(data.content || "");
+      if (typeof data.content !== "string" || typeof data.revision !== "string")
+        throw new Error("Invalid document response");
+      docDraft.load(data.content);
+      setDocRevision(data.revision);
       setSavedDoc(data.content || "");
       setSelectedDocName(docName);
     } catch (err: unknown) {
@@ -222,20 +230,26 @@ export function DeveloperStudio({
     }
   };
 
+  const loadInitialLists = useEffectEvent(() => {
+    void loadTools();
+    void loadDocs();
+  });
   useEffect(() => {
-    loadTools();
-    loadDocs();
+    loadInitialLists();
   }, [headers]);
 
   useEffect(() => {
     setGuideLibraryFiles([]);
-    if (!selectedToolId) { setGuideLibraryStatus("ready"); return; }
+    if (!selectedToolId) {
+      setGuideLibraryStatus("ready");
+      return;
+    }
     setGuideLibraryStatus("loading");
     const controller = new AbortController();
-    fetch(
-      `/api/developer/guide-library/${encodeURIComponent(selectedToolId)}`,
-      { headers, signal: controller.signal },
-    )
+    fetch(`/api/developer/guide-library/${encodeURIComponent(selectedToolId)}`, {
+      headers,
+      signal: controller.signal,
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Unable to load guide library");
         return res.json();
@@ -259,7 +273,7 @@ export function DeveloperStudio({
     if (!canDiscard(toolDirty)) return;
     setIsCreatingNewTool(false);
     setSelectedToolId(tool.id);
-    setEditingTool(JSON.parse(JSON.stringify(tool)));
+    toolDraft.load(structuredClone(tool));
     setSavedTool(JSON.stringify(tool));
     setSection("Overview");
     setStatusMessage(null);
@@ -279,13 +293,8 @@ export function DeveloperStudio({
     if (!canDiscard(toolDirty)) return;
     setSection("Overview");
     const nextOrder =
-      toolsList.reduce(
-        (max, item) => Math.max(max, item.metadata.order || 0),
-        0,
-      ) + 1;
-    const freshTool: ToolEntryPayload = JSON.parse(
-      JSON.stringify(defaultNewTool),
-    );
+      toolsList.reduce((max, item) => Math.max(max, item.metadata.order || 0), 0) + 1;
+    const freshTool: ToolEntryPayload = JSON.parse(JSON.stringify(defaultNewTool));
     freshTool.metadata.order = nextOrder;
     setIsCreatingNewTool(true);
     setSelectedToolId("");
@@ -313,27 +322,32 @@ export function DeveloperStudio({
         body: JSON.stringify({
           metadata: editingTool.metadata,
           guide: editingTool.guide,
+          revision: editingTool.revision,
         }),
       });
 
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || `Server responded with ${res.status}`);
-      }
+      const result = await studioResponse(res, (value) => {
+        const entry = decodeToolEntry((value as { entry: unknown }).entry);
+        return { entry };
+      });
+      toolDraft.load(result.entry);
 
       setStatusMessage({
         tone: "success",
         text: `Successfully saved ${editingTool.metadata.name}! Catalog regenerated.`,
       });
       setValidationRecovery(null);
-      setSavedTool(JSON.stringify(editingTool));
+      setSavedTool(JSON.stringify(result.entry));
       setIsCreatingNewTool(false);
       setSelectedToolId(editingTool.id);
       await loadTools(false);
-      onCatalogUpdated();
+      await onCatalogUpdated();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Save failed";
-      const recovery = getToolValidationRecovery(message);
+      const recovery = getToolValidationRecovery(
+        message,
+        err instanceof StudioApiError ? err.field : undefined,
+      );
       setSection(recovery.section);
       setValidationRecovery(recovery);
       setStatusMessage({
@@ -352,18 +366,18 @@ export function DeveloperStudio({
     setStatusMessage({ tone: "info", text: "Saving documentation..." });
 
     try {
-      const res = await fetch(
-        `/api/developer/docs/${encodeURIComponent(selectedDocName)}`,
-        {
-          method: "PUT",
-          headers,
-          body: JSON.stringify({ content: editingDocContent }),
-        },
-      );
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result.error || `Failed to save ${selectedDocName}`);
-      }
+      const res = await fetch(`/api/developer/docs/${encodeURIComponent(selectedDocName)}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ content: editingDocContent, revision: docRevision }),
+      });
+      const result = await studioResponse(res, (value) => {
+        const item = value as { revision: string };
+        if (typeof item.revision !== "string") throw new Error("Invalid save response");
+        return item;
+      });
+      setDocRevision(result.revision);
+      docDraft.saved(editingDocContent);
       setStatusMessage({
         tone: "success",
         text: `Successfully saved docs/${selectedDocName}!`,
@@ -401,9 +415,7 @@ export function DeveloperStudio({
             <h1 id="page-title" tabIndex={-1}>
               Developer Studio
             </h1>
-            <p className="dev-header-copy">
-              Maintain software and documentation.
-            </p>
+            <p className="dev-header-copy">Maintain software and documentation.</p>
             <span className="dev-badge-connected">Local editing</span>
           </div>
         </div>
@@ -414,8 +426,7 @@ export function DeveloperStudio({
               switchWorkspace("tools");
             }}
           >
-            <Icon name="catalog" size={16} /> Software Catalog (
-            {toolsList.length})
+            <Icon name="catalog" size={16} /> Software Catalog ({toolsList.length})
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "docs" ? "active" : ""}`}
@@ -425,11 +436,7 @@ export function DeveloperStudio({
           >
             <Icon name="book" size={16} /> System docs ({docsList.length})
           </button>
-          <button
-            className="dev-exit-btn"
-            onClick={onExit}
-            title="Exit Developer Studio"
-          >
+          <button className="dev-exit-btn" onClick={onExit} title="Exit Developer Studio">
             <Icon name="close" size={16} /> Exit Studio
           </button>
         </div>
@@ -521,8 +528,7 @@ export function DeveloperStudio({
                 </p>
               )}
               {filteredTools.map((tool) => {
-                const isSelected =
-                  !isCreatingNewTool && tool.id === selectedToolId;
+                const isSelected = !isCreatingNewTool && tool.id === selectedToolId;
                 return (
                   <button
                     key={tool.id}
@@ -532,12 +538,9 @@ export function DeveloperStudio({
                   >
                     <ToolGlyph tool={tool.metadata} />
                     <div className="dev-item-info">
-                      <strong className="dev-item-name">
-                        {tool.metadata.name}
-                      </strong>
+                      <strong className="dev-item-name">{tool.metadata.name}</strong>
                       <small className="dev-item-sub">
-                        {tool.metadata.category} &bull;{" "}
-                        {tool.metadata.lifecycle}
+                        {tool.metadata.category} &bull; {tool.metadata.lifecycle}
                       </small>
                     </div>
                   </button>
@@ -553,22 +556,12 @@ export function DeveloperStudio({
                 {/* Editor Top Bar */}
                 <div className="dev-editor-bar">
                   <div>
-                    <h2>
-                      {isCreatingNewTool
-                        ? "New Software Entry"
-                        : editingTool.metadata.name}
-                    </h2>
-                    <span className="dev-record-detail">
-                      {editingTool.metadata.company}
-                    </span>
+                    <h2>{isCreatingNewTool ? "New Software Entry" : editingTool.metadata.name}</h2>
+                    <span className="dev-record-detail">{editingTool.metadata.company}</span>
                   </div>
                   <div className="dev-action-group">
                     <span className="dev-save-state" role="status">
-                      {isSaving
-                        ? "Saving…"
-                        : toolDirty
-                          ? "Unsaved changes"
-                          : "All changes saved"}
+                      {isSaving ? "Saving…" : toolDirty ? "Unsaved changes" : "All changes saved"}
                     </span>
                     <button
                       className="dev-save-btn"
@@ -626,7 +619,9 @@ export function DeveloperStudio({
                       setEditingTool={setEditingTool}
                       guideLibraryFiles={guideLibraryFiles}
                       guideLibraryStatus={guideLibraryStatus}
-                      refreshGuideLibrary={() => setGuideLibraryRevision((revision) => revision + 1)}
+                      refreshGuideLibrary={() =>
+                        setGuideLibraryRevision((revision) => revision + 1)
+                      }
                       guideViewMode={guideViewMode}
                       setGuideViewMode={setGuideViewMode}
                       validation={validationRecovery}
@@ -634,16 +629,12 @@ export function DeveloperStudio({
                   </div>
                 </fieldset>
                 <p className="dev-local-note">
-                  Saves to your local working tree. Review changes before
-                  publishing.
+                  Saves to your local working tree. Review changes before publishing.
                 </p>
               </div>
             ) : (
               <div className="dev-placeholder">
-                <p>
-                  Select a software record from the list or click "+ Add
-                  Software" to begin.
-                </p>
+                <p>Select a software record from the list or click "+ Add Software" to begin.</p>
               </div>
             )}
           </div>
@@ -675,15 +666,11 @@ export function DeveloperStudio({
                   doc.name.toLowerCase().includes(docSearch.toLowerCase()),
                 ) && (
                   <p className="dev-list-message">
-                    {docSearch
-                      ? "No matching documents."
-                      : "No system documents available."}
+                    {docSearch ? "No matching documents." : "No system documents available."}
                   </p>
                 )}
               {docsList
-                .filter((doc) =>
-                  doc.name.toLowerCase().includes(docSearch.toLowerCase()),
-                )
+                .filter((doc) => doc.name.toLowerCase().includes(docSearch.toLowerCase()))
                 .map((doc) => {
                   const isSelected = doc.name === selectedDocName;
                   return (
@@ -722,11 +709,7 @@ export function DeveloperStudio({
                   </div>
                   <div className="dev-action-group">
                     <span className="dev-save-state" role="status">
-                      {isSaving
-                        ? "Saving…"
-                        : docDirty
-                          ? "Unsaved changes"
-                          : "All changes saved"}
+                      {isSaving ? "Saving…" : docDirty ? "Unsaved changes" : "All changes saved"}
                     </span>
                     <button
                       className="dev-save-btn"
@@ -739,10 +722,7 @@ export function DeveloperStudio({
                 </div>
 
                 <div className="dev-form-sections">
-                  <fieldset
-                    className="dev-section"
-                    aria-labelledby="studio-doc-title"
-                  >
+                  <fieldset className="dev-section" aria-labelledby="studio-doc-title">
                     <div className="dev-section-header">
                       <h3 id="studio-doc-title">Markdown document</h3>
                       <div className="dev-mode-toggle">
@@ -785,8 +765,7 @@ export function DeveloperStudio({
                           rows={22}
                         />
                       )}
-                      {(docViewMode === "preview" ||
-                        docViewMode === "split") && (
+                      {(docViewMode === "preview" || docViewMode === "split") && (
                         <div className="dev-preview-pane markdown">
                           <MarkdownDocument content={editingDocContent} />
                         </div>

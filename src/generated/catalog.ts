@@ -1,5 +1,7 @@
 // Generated from content/catalog/**/{tool.json,guide.md,releases/*.json} by scripts/build-catalog.mjs. Do not edit manually.
 
+import type { Tool } from "../data";
+
 export const tools = [
   {
     "id": "intellij",
@@ -307,7 +309,7 @@ export const tools = [
       }
     ]
   }
-];
+] satisfies Tool[];
 
 export const docs = {
   "intellij": "# IntelliJ IDEA\n\nIntelliJ IDEA is the supported default for JVM development. It is licensed through the internal developer portal.\n\n## Install\n\n1. Download the **Ultimate** edition from [JetBrains](https://www.jetbrains.com/idea/download/).\n2. Sign in using your approved JetBrains account.\n3. Import the [team settings repository](https://github.com/) when prompted.\n\n> Need an additional plugin? Check its ownership and compatibility before installing it on a managed workstation.\n\n## Standard add-ons\n\n| Add-on | Use | Owner |\n| --- | --- | --- |\n| SonarLint | Local quality feedback | Quality Engineering |\n| Kubernetes | Cluster manifests | Platform Engineering |\n| Database Tools | SQL exploration | Data Platform |\n\n## Support\n\nContact Developer Experience for licensing, onboarding, or standard configuration. Include your operating system and IDE version in the request.",

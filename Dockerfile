@@ -1,8 +1,8 @@
-FROM node:26-alpine@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868 AS build
+FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS build
 
 WORKDIR /app
-# Node 26 no longer ships Corepack; install it so packageManager (pnpm) still works.
-RUN npm install -g corepack && corepack enable
+# Node 24 is the supported build and development runtime.
+RUN corepack enable
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -12,7 +12,7 @@ COPY public ./public
 COPY content ./content
 COPY scripts ./scripts
 COPY src ./src
-ARG VITE_APP_VERSION=1.7.1-beta.1
+ARG VITE_APP_VERSION=1.7.2
 RUN pnpm build
 
 # Optional local authoring image; the default final target remains static NGINX.

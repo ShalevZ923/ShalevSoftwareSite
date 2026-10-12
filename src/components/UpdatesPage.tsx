@@ -71,7 +71,9 @@ export function UpdatesPage({
         copy="Approved releases and catalog changes, newest first."
       />
       <div className="updates-toolbar">
-        <p className="updates-count">{visible.length} {visible.length === 1 ? "change" : "changes"}</p>
+        <p className="updates-count">
+          {visible.length} {visible.length === 1 ? "change" : "changes"}
+        </p>
         <div className="updates-kinds" role="group" aria-label="Update type">
           {kindFilters.map((filter) => (
             <button
@@ -100,15 +102,28 @@ export function UpdatesPage({
           <Icon name="updates" size={28} />
           <h2>No matching updates</h2>
           <p>Try another search or show all catalog changes.</p>
-          <button type="button" className="primary-button" onClick={() => { setQuery(""); setKind("all"); }}>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => {
+              setQuery("");
+              setKind("all");
+            }}
+          >
             Clear filters
           </button>
         </div>
       ) : (
         <div className="updates-list" aria-label="Recent catalog updates">
           {groups.map((group) => (
-            <section key={group.label} className="updates-group" aria-labelledby={`updates-${group.label.replace(/\s+/g, "-").toLowerCase()}`}>
-              <h2 id={`updates-${group.label.replace(/\s+/g, "-").toLowerCase()}`}>{group.label}</h2>
+            <section
+              key={group.label}
+              className="updates-group"
+              aria-labelledby={`updates-${group.label.replace(/\s+/g, "-").toLowerCase()}`}
+            >
+              <h2 id={`updates-${group.label.replace(/\s+/g, "-").toLowerCase()}`}>
+                {group.label}
+              </h2>
               {group.tools.map((tool) => {
                 const updateKind = catalogUpdateKind(tool);
                 return (
@@ -117,9 +132,13 @@ export function UpdatesPage({
                     <div>
                       <div className="update-card-head">
                         <span className="update-kind">{catalogUpdateKindLabel[updateKind]}</span>
-                        <span className={`lifecycle ${tool.lifecycle.toLowerCase()}`}>{tool.lifecycle}</span>
+                        <span className={`lifecycle ${tool.lifecycle.toLowerCase()}`}>
+                          {tool.lifecycle}
+                        </span>
                       </div>
-                      <h3>{tool.name} {tool.releases[0].version}</h3>
+                      <h3>
+                        {tool.name} {tool.releases[0].version}
+                      </h3>
                       <p>{updateSummary(tool)}</p>
                       {tool.notice && (
                         <p className={`update-notice ${tool.notice.tone}`}>
@@ -130,7 +149,11 @@ export function UpdatesPage({
                         {tool.category} · {tool.support.team}
                       </p>
                       <div className="update-card-actions">
-                        <button type="button" className="text-action" onClick={() => onCatalog(tool)}>
+                        <button
+                          type="button"
+                          className="text-action"
+                          onClick={() => onCatalog(tool)}
+                        >
                           <Icon name="catalog" size={15} /> View in catalog
                         </button>
                         <button type="button" className="text-action" onClick={() => onDocs(tool)}>

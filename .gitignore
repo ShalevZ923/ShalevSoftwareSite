@@ -12,3 +12,8 @@ coverage/
 .pnpm-store/
 .codex*
 deliverables/
+.tool-atlas-state/
+**/.tool-atlas-state/
+
+test-results/
+playwright-report/

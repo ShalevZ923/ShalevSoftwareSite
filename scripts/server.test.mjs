@@ -103,7 +103,9 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(() => assertSafeBindHost("0.0.0.0")).toThrow(/Refusing a non-loopback bind/);
     expect(() => assertSafeBindHost("0.0.0.0", true)).not.toThrow();
     expect(() => assertSafeBindHost("0.0.0.0", false, true)).not.toThrow();
-    expect(() => assertSafeBindHost("192.168.1.10", false, true)).toThrow(/Refusing a non-loopback bind/);
+    expect(() => assertSafeBindHost("192.168.1.10", false, true)).toThrow(
+      /Refusing a non-loopback bind/,
+    );
   });
 
   it("uses short request timeouts for the optional authoring server", () => {
@@ -264,7 +266,6 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(res.status).toBe(404);
   });
 });
-
 
 describe("missing production build", () => {
   it("returns npm-compatible recovery instructions when dist is absent", async () => {

@@ -7,8 +7,8 @@ export type ValidationRecovery = {
 };
 
 /** Maps catalog-validator terms to the editor control most likely to fix them. */
-export function getToolValidationRecovery(message: string): ValidationRecovery {
-  const error = message.toLocaleLowerCase();
+export function getToolValidationRecovery(message: string, field?: string): ValidationRecovery {
+  const error = (field ?? message).toLocaleLowerCase();
   const releaseIndex = error.match(/releases\[(\d+)\]/u)?.[1] ?? "0";
   if (error.includes("resource") || error.includes("guide")) {
     return {
@@ -34,24 +34,50 @@ export function getToolValidationRecovery(message: string): ValidationRecovery {
   if (error.includes("release") || error.includes("download") || error.includes("artifact")) {
     return {
       section: "Releases",
-      field: error.includes("version") ? `release-version-${releaseIndex}` : `release-target-${releaseIndex}`,
+      field: error.includes("version")
+        ? `release-version-${releaseIndex}`
+        : `release-target-${releaseIndex}`,
       guidance: "Check the release version and its approved download source in Releases.",
     };
   }
   if (error.includes("category")) {
-    return { section: "Overview", field: "category", guidance: "Choose a valid catalog category in Overview." };
+    return {
+      section: "Overview",
+      field: "category",
+      guidance: "Choose a valid catalog category in Overview.",
+    };
   }
   if (error.includes("platform")) {
-    return { section: "Overview", field: "platforms", guidance: "Select at least one supported platform in Overview." };
+    return {
+      section: "Overview",
+      field: "platforms",
+      guidance: "Select at least one supported platform in Overview.",
+    };
   }
   if (error.includes("tag")) {
-    return { section: "Overview", field: "tags", guidance: "Add at least one catalog tag in Overview." };
+    return {
+      section: "Overview",
+      field: "tags",
+      guidance: "Add at least one catalog tag in Overview.",
+    };
   }
   if (error.includes("description")) {
-    return { section: "Overview", field: "description", guidance: "Add a short description in Overview." };
+    return {
+      section: "Overview",
+      field: "description",
+      guidance: "Add a short description in Overview.",
+    };
   }
   if (error.includes("name")) {
-    return { section: "Overview", field: "tool-name", guidance: "Complete the tool name in Overview." };
+    return {
+      section: "Overview",
+      field: "tool-name",
+      guidance: "Complete the tool name in Overview.",
+    };
   }
-  return { section: "Overview", field: "overview", guidance: "Review the required details in Overview." };
+  return {
+    section: "Overview",
+    field: "overview",
+    guidance: "Review the required details in Overview.",
+  };
 }

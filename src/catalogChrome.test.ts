@@ -14,7 +14,9 @@ describe("searchShortcutHint", () => {
   });
 
   it("shows ⌘K on Apple platforms", () => {
-    expect(searchShortcutHint("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel")).toBe("⌘K");
+    expect(searchShortcutHint("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel")).toBe(
+      "⌘K",
+    );
   });
 });
 

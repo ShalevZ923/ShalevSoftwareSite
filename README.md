@@ -44,6 +44,8 @@ docker compose -f compose.studio.yaml logs --tail=50 studio
 
 Open `http://127.0.0.1:8081/?page=developer` and paste the **Developer Studio Token** from the current startup log. This container writes catalog/document changes to the mounted checkout and publishes only on localhost. Restarting it rotates the token. The public Caddy proxy has no route to Studio. Studio edits still need a reviewed rebuild/deployment before they appear in the static Docker site.
 
+See [the 1.7.2 developer guide](docs/DEVELOPER_GUIDE.md) for maintenance commands, combined Studio development, revisions and recovery.
+
 ## Local development
 
 Use Node.js 24 LTS and npm (included with Node.js). No pnpm installation is required:
@@ -146,12 +148,12 @@ chmod 600 .env
 
 `.env` controls the deployment without changing tracked files:
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
+| Variable      | Required  | Purpose                                                                             |
+| ------------- | --------- | ----------------------------------------------------------------------------------- |
 | `SITE_DOMAIN` | For HTTPS | Public hostname, without `https://`, a path, or a port. Empty uses HTTP on port 80. |
-| `ACME_EMAIL` | No | Optional contact address supplied to the ACME CA. |
-| `HTTP_PORT` | No | Host HTTP port; use `80` in production. |
-| `HTTPS_PORT` | No | Host HTTPS port; use `443` in production. |
+| `ACME_EMAIL`  | No        | Optional contact address supplied to the ACME CA.                                   |
+| `HTTP_PORT`   | No        | Host HTTP port; use `80` in production.                                             |
+| `HTTPS_PORT`  | No        | Host HTTPS port; use `443` in production.                                           |
 
 The static production app has no application secrets and does not consume browser-visible runtime variables. Keep credentials out of Vite variables (`VITE_*` values are compiled into public JavaScript). The optional Developer Studio token belongs only to its local Node.js process and must not be added to a static deployment.
 

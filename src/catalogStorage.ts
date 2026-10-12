@@ -2,10 +2,7 @@ const savedToolsKey = "tool-atlas.saved-tools.v1";
 const maximumSavedTools = 100;
 
 /** Keeps browser-local selections valid when the catalog is refreshed or changed. */
-export function filterSavedToolIds(
-  toolIds: readonly string[],
-  knownToolIds: ReadonlySet<string>,
-) {
+export function filterSavedToolIds(toolIds: readonly string[], knownToolIds: ReadonlySet<string>) {
   const uniqueIds = new Set<string>();
   for (const id of toolIds) {
     if (knownToolIds.has(id)) uniqueIds.add(id);

@@ -30,7 +30,10 @@ describe("guide delivery and credential HTTP contracts", () => {
   });
 
   afterAll(async () => {
-    if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    if (server)
+      await new Promise((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
     if (root) await rm(root, { recursive: true, force: true });
   });
 
@@ -42,7 +45,9 @@ describe("guide delivery and credential HTTP contracts", () => {
       const response = await fetch(`${baseUrl}/guides/test-tool/setup.${extension}`, { method });
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toBe(mime);
-      expect(response.headers.get("content-disposition")).toBe(`inline; filename="setup.${extension}"`);
+      expect(response.headers.get("content-disposition")).toBe(
+        `inline; filename="setup.${extension}"`,
+      );
       expect(response.headers.get("x-content-type-options")).toBe("nosniff");
       expect(response.headers.get("cache-control")).toBe("private, no-store");
       const body = Buffer.from(await response.arrayBuffer());
@@ -65,11 +70,23 @@ describe("guide delivery and credential HTTP contracts", () => {
   });
 
   it.each([
-    "null", '{"token":123}', '{"token":{}}', '{"token":[]}', '{"token":true}',
-    '{"token":null}', '[]', '123', '"token"', '{', '{}', '{"token":"wrong"}',
+    "null",
+    '{"token":123}',
+    '{"token":{}}',
+    '{"token":[]}',
+    '{"token":true}',
+    '{"token":null}',
+    "[]",
+    "123",
+    '"token"',
+    "{",
+    "{}",
+    '{"token":"wrong"}',
   ])("rejects invalid credential JSON %s", async (body) => {
     const response = await fetch(`${baseUrl}/api/developer/verify`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
     });
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({ valid: false });
@@ -88,7 +105,8 @@ describe("guide delivery and credential HTTP contracts", () => {
 
   it("accepts a valid string token", async () => {
     const response = await fetch(`${baseUrl}/api/developer/verify`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: developerToken }),
     });
     expect(response.status).toBe(200);
@@ -104,23 +122,31 @@ describe("guide delivery and credential HTTP contracts", () => {
     expect(response.status).toBe(413);
     expect(await response.json()).toMatchObject({ valid: false });
   });
-  it.each(["GET", "HEAD", "OPTIONS", "POST"])("reserves unknown API routes for JSON 404 on %s", async (method) => {
-    const response = await fetch(`${baseUrl}/api/not-an-endpoint`, { method });
-    expect(response.status).toBe(404);
-    expect(response.headers.get("content-type")).toContain("application/json");
-    if (method === "HEAD") expect(await response.text()).toBe("");
-    else expect(await response.json()).toMatchObject({ error: expect.any(String) });
-  });
+  it.each(["GET", "HEAD", "OPTIONS", "POST"])(
+    "reserves unknown API routes for JSON 404 on %s",
+    async (method) => {
+      const response = await fetch(`${baseUrl}/api/not-an-endpoint`, { method });
+      expect(response.status).toBe(404);
+      expect(response.headers.get("content-type")).toContain("application/json");
+      if (method === "HEAD") expect(await response.text()).toBe("");
+      else expect(await response.json()).toMatchObject({ error: expect.any(String) });
+    },
+  );
 
   it.each([
-    ["/api/health", "GET"], ["/api/catalog", "GET"],
-    ["/api/developer/verify", "POST"], ["/api/developer/tools", "GET, POST"],
-    ["/api/developer/tools/docker", "GET, PUT"], ["/api/developer/docs", "GET"],
-    ["/api/developer/docs/README.md", "GET, PUT"], ["/api/developer/guide-library/docker", "GET"],
+    ["/api/health", "GET"],
+    ["/api/catalog", "GET"],
+    ["/api/developer/verify", "POST"],
+    ["/api/developer/tools", "GET, POST"],
+    ["/api/developer/tools/docker", "GET, PUT"],
+    ["/api/developer/docs", "GET"],
+    ["/api/developer/docs/README.md", "GET, PUT"],
+    ["/api/developer/guide-library/docker", "GET"],
   ])("rejects unsupported methods with accurate Allow for %s", async (path, allow) => {
     for (const method of ["HEAD", "OPTIONS", "DELETE"]) {
       const response = await fetch(`${baseUrl}${path}`, {
-        method, headers: { Authorization: `Bearer ${developerToken}` },
+        method,
+        headers: { Authorization: `Bearer ${developerToken}` },
       });
       expect(response.status).toBe(405);
       expect(response.headers.get("allow")).toBe(allow);
@@ -129,16 +155,18 @@ describe("guide delivery and credential HTTP contracts", () => {
     }
   });
 
-  it.each(["/api/developer/tools", "/api/developer/not-an-endpoint"])("authenticates before exposing route details for %s", async (path) => {
-    const response = await fetch(`${baseUrl}${path}`, { method: "OPTIONS" });
-    expect(response.status).toBe(401);
-    expect(response.headers.get("allow")).toBeNull();
-  });
+  it.each(["/api/developer/tools", "/api/developer/not-an-endpoint"])(
+    "authenticates before exposing route details for %s",
+    async (path) => {
+      const response = await fetch(`${baseUrl}${path}`, { method: "OPTIONS" });
+      expect(response.status).toBe(401);
+      expect(response.headers.get("allow")).toBeNull();
+    },
+  );
 
   it("keeps ordinary SPA deep links working", async () => {
     const response = await fetch(`${baseUrl}/documentation/deep-link`);
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("SPA fixture");
   });
-
 });
