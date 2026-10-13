@@ -84,6 +84,8 @@ describe("durable transaction recovery", () => {
         }),
       );
       await expect(recoverTransactions(state, [root])).rejects.toThrow(/allowed roots/);
+      await rm(join(state, id + ".json"));
+      await recoverTransactions(state, [root]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

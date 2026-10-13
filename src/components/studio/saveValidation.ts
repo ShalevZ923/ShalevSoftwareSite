@@ -13,7 +13,8 @@ export function getToolValidationRecovery(message: string, field?: string): Vali
   if (error.includes("resource") || error.includes("guide")) {
     return {
       section: "Guides",
-      field: error.includes("guide must") ? "guide-markdown" : "guide-resource",
+      field:
+        field === "guide" || error.includes("guide must") ? "guide-markdown" : "guide-resource",
       guidance: "Review the guide source, metadata, and version applicability in Guides.",
     };
   }

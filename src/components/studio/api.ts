@@ -1,3 +1,4 @@
+import { decodeTool } from "../../contracts";
 export class StudioApiError extends Error {
   constructor(
     message: string,
@@ -52,5 +53,8 @@ export function decodeToolEntry(value: unknown): import("./types").ToolEntryPayl
     typeof record.metadata.support.email !== "string"
   )
     throw new StudioApiError("Invalid tool record", "INVALID_RESPONSE");
+  decodeTool(record.metadata);
+  if (!Number.isSafeInteger(record.metadata.order) || record.metadata.order < 1)
+    throw new StudioApiError("Invalid order", "INVALID_RESPONSE");
   return record;
 }

@@ -1,3 +1,5 @@
+import { parseCatalogSubmission } from "./catalog-submission.mjs";
+import { renderMachineCatalog } from "./catalog-content.mjs";
 import { section, selectedPlatforms, optionalFacts } from "./submission-fields.mjs";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -29,49 +31,13 @@ async function readStandardInput() {
 const taxonomy = await loadTaxonomy();
 
 function parseEntry(issue, order) {
-  const body = issue.description;
-  if (typeof body !== "string") throw new Error("Issue description is unavailable");
-  const name = section(body, "Software name");
-  const supportName = section(body, "Support owner");
-  const id = slugifyId(name);
-  if (!id) throw new Error("Software name cannot produce a valid catalog id");
-  const categoryId = section(body, "Category ID");
-  const category = taxonomy.find(({ id }) => id === categoryId);
-  if (!category)
-    throw new Error(`Category ID is not in content/taxonomy/categories.json: ${categoryId}`);
-  return {
-    categoryId,
-    metadata: {
-      id,
-      order,
-      name,
-      company: section(body, "Vendor or company"),
-      category: category.label,
-      platforms: selectedPlatforms(section(body, "Supported platforms")),
-      lifecycle: section(body, "Lifecycle"),
-      icon: section(body, "Catalog tile"),
-      releases: parseReleaseList(section(body, "Approved releases"), `GitLab issue #${issue.iid}`),
-      updated: new Date(issue.updated_at ?? Date.now()).toISOString().slice(0, 10),
-      description: section(body, "Short description"),
-      support: {
-        name: supportName,
-        team: section(body, "Support team"),
-        initials: supportName
-          .split(/\s+/)
-          .map((part) => part[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase(),
-        email: section(body, "Support email"),
-      },
-      tags: section(body, "Tags")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      facts: optionalFacts(section(body, "Optional facts", false)),
-    },
-    guide: section(body, "Installation and support guide"),
-  };
+  return parseCatalogSubmission({
+    body: issue.description,
+    updatedAt: issue.updated_at ?? new Date().toISOString(),
+    order,
+    taxonomy,
+    source: `GitLab issue #${issue.iid}`,
+  });
 }
 
 async function entryFiles(entry) {
@@ -105,6 +71,8 @@ if (process.argv.includes("--dry-run")) {
     issue,
     Math.max(...existingEntries.map(({ metadata }) => metadata.order)) + 1,
   );
+  if (existingEntries.some(({ metadata }) => metadata.id === entry.metadata.id))
+    throw new Error(`Catalog entry already exists: ${entry.metadata.id}`);
   await entryFiles(entry);
   renderGeneratedCatalog(
     [...existingEntries, entry].sort((left, right) => left.metadata.order - right.metadata.order),
@@ -157,6 +125,14 @@ const entry = parseEntry(
 if (existingEntries.some(({ metadata }) => metadata.id === entry.metadata.id)) {
   throw new Error(`Catalog entry already exists: ${entry.metadata.id}`);
 }
+const acceptedEntries = [...existingEntries, entry].sort(
+  (left, right) => left.metadata.order - right.metadata.order,
+);
+const feed = renderMachineCatalog(acceptedEntries);
+const generated = renderGeneratedCatalog(
+  [...existingEntries, entry].sort((left, right) => left.metadata.order - right.metadata.order),
+);
+const acceptedFiles = await entryFiles(entry);
 const branch = `catalog/issue-${issue.iid}`;
 const branchResponse = await fetch(`${apiBase}/repository/branches/${encodeURIComponent(branch)}`, {
   headers,
@@ -173,21 +149,20 @@ await api("/repository/branches", {
   body: JSON.stringify({ branch, ref: targetBranch }),
 });
 
-const generated = renderGeneratedCatalog(
-  [...existingEntries, entry].sort((left, right) => left.metadata.order - right.metadata.order),
-);
 await api("/repository/commits", {
   method: "POST",
   body: JSON.stringify({
     branch,
     commit_message: `content: add catalog entry from issue #${issue.iid}`,
     actions: [
-      ...(await entryFiles(entry)).map((file) => ({
+      ...acceptedFiles.map((file) => ({
         action: "create",
         file_path: file.path,
         content: file.content,
       })),
       { action: "update", file_path: "src/generated/catalog.ts", content: generated },
+      { action: "update", file_path: "public/catalog/v1/index.json", content: feed.index },
+      { action: "update", file_path: "public/catalog/v1/tools.json", content: feed.tools },
     ],
   }),
 });

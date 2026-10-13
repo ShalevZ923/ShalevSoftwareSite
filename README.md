@@ -87,7 +87,7 @@ Conflicting filters are cleared so a linked tool is visible; compatible filters 
 
 ## Website version
 
-Set `VITE_APP_VERSION=1.7.1-beta.1` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.7.1-beta.1`.
+Set `VITE_APP_VERSION=1.7.1-beta.1` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to the package version.
 
 After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
 

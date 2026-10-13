@@ -7,10 +7,15 @@
     "checkJs": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "strict": false
+    "strict": false,
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "scripts/submission-fields.mjs",
-    "scripts/api-errors.mjs"
+    "scripts/api-errors.mjs",
+    "scripts/mutation-coordinator.mjs",
+    "scripts/catalog-persistence.mjs"
   ]
 }

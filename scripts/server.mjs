@@ -19,6 +19,7 @@ import {
   catalogEntryDirectory,
   loadCatalogEntries,
   loadTaxonomy,
+  validateCatalogEntry,
 } from "./catalog-content.mjs";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -62,21 +63,25 @@ const safeDownloadRegex =
 const safeGuideRegex =
   /^\/guides\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx))$/;
 
+function validationError(message, field = "resources") {
+  return Object.assign(new Error(message), { statusCode: 400, code: "VALIDATION_ERROR", field });
+}
+
 async function verifyGuideLibraryResources(toolId, resources = []) {
   for (const resource of resources) {
     if (!resource.file) continue;
     const [resourceToolId, filename] = resource.file.split("/");
     if (resourceToolId !== toolId || !filename)
-      throw new Error("guide resource file must belong to its tool");
+      throw validationError("guide resource file must belong to its tool");
     const expected = join(guideLibraryDir, resourceToolId, filename);
     if (!existsSync(expected) || !(await stat(expected)).isFile()) {
-      throw new Error(
+      throw validationError(
         `guide resource file is not present in the approved library: ${resource.file}`,
       );
     }
     const [realRoot, realFile] = await Promise.all([realpath(guideLibraryDir), realpath(expected)]);
     if (!isPathInside(realRoot, realFile))
-      throw new Error("guide resource file escapes the approved library");
+      throw validationError("guide resource file escapes the approved library");
   }
 }
 
@@ -85,7 +90,7 @@ async function verifyGuideLinks(resources = []) {
     if (!resource.url) continue;
     const target = new URL(resource.url);
     if (!guideLinkHosts.has(target.hostname.toLowerCase())) {
-      throw new Error(
+      throw validationError(
         `guide link host is not allowlisted: ${target.hostname}. Configure TOOL_ATLAS_GUIDE_HOSTS`,
       );
     }
@@ -100,10 +105,10 @@ async function verifyGuideLinks(resources = []) {
       // 401/403 commonly means the endpoint is reachable but relies on the
       // reader's own SharePoint or intranet SSO session.
       if (response.status >= 400 && response.status !== 401 && response.status !== 403) {
-        throw new Error(`guide link check returned HTTP ${response.status}`);
+        throw validationError(`guide link check returned HTTP ${response.status}`);
       }
     } catch (error) {
-      throw new Error(
+      throw validationError(
         `guide link check failed for ${target.hostname}: ${error instanceof Error ? error.message : String(error)}`,
       );
     } finally {
@@ -183,9 +188,17 @@ async function readJsonBody(req) {
       settled = true;
       if (!body.trim()) return resolveBody({});
       try {
-        resolveBody(JSON.parse(body));
+        const parsed = JSON.parse(body);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+          throw new Error("JSON body must be an object");
+        resolveBody(parsed);
       } catch (err) {
-        rejectBody(new Error(`Invalid JSON: ${err.message}`));
+        rejectBody(
+          Object.assign(new Error(`Invalid JSON: ${err.message}`), {
+            statusCode: 400,
+            code: "INVALID_JSON",
+          }),
+        );
       }
     });
     req.on("error", (error) => {
@@ -223,7 +236,7 @@ function isLoopbackHost(host) {
 
 async function categoryIdForLabel(label) {
   const category = (await loadTaxonomy()).find((item) => item.label === label);
-  if (!category) throw new Error(`Unknown catalog category: ${label}`);
+  if (!category) throw validationError(`Unknown catalog category: ${label}`, "category");
   return category.id;
 }
 
@@ -252,6 +265,7 @@ export function createToolAtlasServer({
     catalogDirectory,
     dirname(catalogOutputs.generatedPath ?? join(rootDir, "src/generated/catalog.ts")),
     dirname(catalogOutputs.indexPath ?? join(rootDir, "public/catalog/v1/index.json")),
+    dirname(catalogOutputs.toolsPath ?? join(rootDir, "public/catalog/v1/tools.json")),
     documentationDirectory,
   ]);
   const readCatalog = () => consistentRead(() => loadCatalogEntries(catalogDirectory));
@@ -375,10 +389,21 @@ export function createToolAtlasServer({
         // Create a new tool
         if (pathname === "/api/developer/tools" && req.method === "POST") {
           const { metadata, guide, revision } = await readJsonBody(req);
-          if (!metadata || !guide) {
+          if (
+            !metadata ||
+            typeof metadata !== "object" ||
+            Array.isArray(metadata) ||
+            typeof guide !== "string" ||
+            !guide.trim()
+          ) {
             return sendJson(res, 400, { error: "metadata and guide are required" });
           }
 
+          validateCatalogEntry(
+            "Studio submission",
+            { ...metadata, order: metadata.order ?? 1 },
+            guide,
+          );
           const categoryId = await categoryIdForLabel(metadata.category);
           const targetDirectory = catalogEntryDirectory(
             categoryId,
@@ -430,7 +455,13 @@ export function createToolAtlasServer({
 
           if (req.method === "PUT") {
             const { metadata, guide, revision } = await readJsonBody(req);
-            if (!metadata || !guide) {
+            if (
+              !metadata ||
+              typeof metadata !== "object" ||
+              Array.isArray(metadata) ||
+              typeof guide !== "string" ||
+              !guide.trim()
+            ) {
               return sendJson(res, 400, { error: "metadata and guide are required" });
             }
             if (metadata.id !== toolId) {
@@ -450,6 +481,7 @@ export function createToolAtlasServer({
               });
             }
             try {
+              validateCatalogEntry("Studio submission", metadata, guide);
               await verifyGuideLibraryResources(toolId, metadata.resources);
               await verifyGuideLinks(metadata.resources);
               const accepted = await saveCatalogEntry(metadata, guide, {
@@ -491,15 +523,17 @@ export function createToolAtlasServer({
 
         // List documentation files: /api/developer/docs
         if (pathname === "/api/developer/docs" && req.method === "GET") {
-          const files = (await readdir(documentationDirectory))
-            .filter((name) => name.endsWith(".md"))
-            .sort();
-          const list = await Promise.all(
-            files.map(async (name) => {
-              const fileStats = await stat(join(documentationDirectory, name));
-              return { name, sizeBytes: fileStats.size, modified: fileStats.mtime.toISOString() };
-            }),
-          );
+          const list = await consistentRead(async () => {
+            const files = (await readdir(documentationDirectory))
+              .filter((name) => name.endsWith(".md"))
+              .sort();
+            return Promise.all(
+              files.map(async (name) => {
+                const fileStats = await stat(join(documentationDirectory, name));
+                return { name, sizeBytes: fileStats.size, modified: fileStats.mtime.toISOString() };
+              }),
+            );
+          });
           return sendJson(res, 200, list);
         }
 
@@ -513,7 +547,7 @@ export function createToolAtlasServer({
             if (!existsSync(targetFile)) {
               return sendJson(res, 404, { error: `Document ${docName} not found` });
             }
-            const content = await readFile(targetFile, "utf8");
+            const content = await consistentRead(() => readFile(targetFile, "utf8"));
             return sendJson(res, 200, {
               name: docName,
               content,
@@ -532,6 +566,8 @@ export function createToolAtlasServer({
               await publishTransaction([{ path: targetFile, content }], {
                 stateDirectory,
                 roots: [documentationDirectory],
+                precondition: async () =>
+                  assertRevision(revision, { content: await readFile(targetFile, "utf8") }),
               });
             });
             return sendJson(res, 200, {

@@ -1,3 +1,4 @@
+import { sourceSnapshot, assertSourceSnapshot } from "./mutation-coordinator.mjs";
 import { assertRevision, coordinateMutation, publishTransaction } from "./mutation-coordinator.mjs";
 import { stableMachineCatalog } from "./catalog-content.mjs";
 import {
@@ -32,13 +33,20 @@ function inside(root, path) {
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 async function assertSourcePath(root, target) {
-  if (!inside(root, target)) throw new Error("Catalog path escapes source root");
+  if (!inside(root, target))
+    throw Object.assign(new Error("Catalog path escapes source root"), {
+      statusCode: 400,
+      code: "VALIDATION_ERROR",
+    });
   let current = root;
   for (const segment of relative(root, target).split(sep).filter(Boolean)) {
     current = join(current, segment);
     try {
       if ((await lstat(current)).isSymbolicLink())
-        throw new Error("Catalog mutation cannot follow symlinks");
+        throw Object.assign(new Error("Catalog mutation cannot follow symlinks"), {
+          statusCode: 400,
+          code: "VALIDATION_ERROR",
+        });
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
@@ -54,27 +62,43 @@ export function saveCatalogEntry(
     indexPath = machineCatalogIndexPath,
     toolsPath = machineCatalogToolsPath,
     create = false,
-    revision,
+    revision = undefined,
     stateDirectory = join(dirname(directory), ".tool-atlas-state"),
   } = {},
 ) {
   return coordinateMutation(async () => {
     const categories = await loadTaxonomy();
     const category = categories.find((item) => item.label === metadata.category);
-    if (!category) throw new Error(`Unknown catalog category: ${metadata.category}`);
+    if (!category)
+      throw Object.assign(new Error(`Unknown catalog category: ${metadata.category}`), {
+        statusCode: 400,
+        code: "VALIDATION_ERROR",
+      });
     const root = await realpath(directory);
+    const snapshot = await sourceSnapshot(root);
     const entries = await loadCatalogEntries(root);
     const existing = entries.find((entry) => entry.metadata.id === metadata.id);
     if (existing && !create) assertRevision(revision, existing);
-    if (create && existing) throw new Error(`Tool ${metadata.id} already exists`);
-    if (!create && !existing) throw new Error(`Tool ${metadata.id} not found`);
+    if (create && existing)
+      throw Object.assign(new Error(`Tool ${metadata.id} already exists`), {
+        statusCode: 400,
+        code: "VALIDATION_ERROR",
+      });
+    if (!create && !existing)
+      throw Object.assign(new Error(`Tool ${metadata.id} not found`), {
+        statusCode: 400,
+        code: "VALIDATION_ERROR",
+      });
     if (
       existing &&
       (existing.metadata.company !== metadata.company ||
         existing.metadata.category !== metadata.category)
     ) {
-      throw new Error(
-        "metadata.company and metadata.category cannot be changed through Developer Studio",
+      throw Object.assign(
+        new Error(
+          "metadata.company and metadata.category cannot be changed through Developer Studio",
+        ),
+        { statusCode: 400, code: "VALIDATION_ERROR" },
       );
     }
     if (!metadata.order)
@@ -90,7 +114,10 @@ export function saveCatalogEntry(
     try {
       const vendor = JSON.parse(await readFile(files[0].path, "utf8"));
       if (vendor.name !== metadata.company)
-        throw new Error("Vendor directory belongs to another company");
+        throw Object.assign(new Error("Vendor directory belongs to another company"), {
+          statusCode: 400,
+          code: "VALIDATION_ERROR",
+        });
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
@@ -101,7 +128,11 @@ export function saveCatalogEntry(
         const path = join(releasesDirectory, entry.name);
         if (entry.name.endsWith(".json") && !files.some((file) => file.path === path)) {
           await assertSourcePath(root, path);
-          if (!entry.isFile()) throw new Error("Release metadata must be a regular file");
+          if (!entry.isFile())
+            throw Object.assign(new Error("Release metadata must be a regular file"), {
+              statusCode: 400,
+              code: "VALIDATION_ERROR",
+            });
           obsolete.push({ path, content: null });
         }
       }
@@ -130,6 +161,7 @@ export function saveCatalogEntry(
         ],
         {
           stateDirectory,
+          precondition: () => assertSourceSnapshot(root, snapshot),
           roots: [root, dirname(generatedPath), dirname(indexPath), dirname(toolsPath)],
         },
       );

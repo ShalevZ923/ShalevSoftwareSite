@@ -10,11 +10,30 @@ import {
   renderMachineCatalog,
 } from "./catalog-content.mjs";
 
-const faults = vi.hoisted(() => ({ target: null }));
+const faults = vi.hoisted(() => ({ target: null, external: null, docEdit: null }));
 vi.mock("node:fs/promises", async (original) => {
   const fs = await original();
   return {
     ...fs,
+    open: async (...args) => {
+      const handle = await fs.open(...args);
+      if (faults.docEdit && String(args[0]).endsWith(".pending")) {
+        const path = faults.docEdit;
+        faults.docEdit = null;
+        await fs.writeFile(path, "External document edit");
+      }
+      return handle;
+    },
+    cp: async (from, to, options) => {
+      await fs.cp(from, to, options);
+      if (faults.external) {
+        const path = faults.external;
+        faults.external = null;
+        const value = JSON.parse(await fs.readFile(path, "utf8"));
+        value.description = "External edit during staging";
+        await fs.writeFile(path, JSON.stringify(value));
+      }
+    },
     rename: async (from, to) => {
       if (faults.target === to && from.endsWith(".pending")) {
         faults.target = null;
@@ -76,7 +95,10 @@ describe("isolated software release HTTP round trips", () => {
     await writeFile(outputs.generatedPath, renderGeneratedCatalog(entries));
     await writeFile(outputs.indexPath, feed.index);
     await writeFile(outputs.toolsPath, feed.tools);
+    await mkdir(join(root, "docs"));
+    await writeFile(join(root, "docs", "TEST.md"), "Original document");
     server = createToolAtlasServer({
+      documentationDirectory: join(root, "docs"),
       catalogDirectory: directory,
       catalogOutputs: outputs,
       packagesDirectory: join(root, "packages"),
@@ -92,6 +114,42 @@ describe("isolated software release HTTP round trips", () => {
     if (root) await rm(root, { recursive: true, force: true });
   });
 
+  it("preserves docs on stale and external staging edits", async () => {
+    const endpoint = baseUrl + "/api/developer/docs/TEST.md";
+    const original = await (await fetch(endpoint, { headers })).json();
+    const put = (body) => fetch(endpoint, { method: "PUT", headers, body: JSON.stringify(body) });
+    const success = await put({ ...original, content: "Saved document" });
+    expect(success.status).toBe(200);
+    const stale = await put({ ...original, content: "Stale overwrite" });
+    expect(stale.status).toBe(409);
+    expect(await readFile(join(root, "docs", "TEST.md"), "utf8")).toBe("Saved document");
+    const fresh = await (await fetch(endpoint, { headers })).json();
+    faults.docEdit = join(root, "docs", "TEST.md");
+    const external = await put({ ...fresh, content: "Overwrite external" });
+    expect(external.status).toBe(409);
+    expect(await readFile(join(root, "docs", "TEST.md"), "utf8")).toBe("External document edit");
+  });
+  it("returns validation errors for malformed bodies and nested policy failures", async () => {
+    const current = await get();
+    const bodies = [
+      null,
+      {
+        metadata: { ...current.metadata, id: "invalid-category", category: "Unknown" },
+        guide: current.guide,
+      },
+      { metadata: { ...current.metadata, resources: [null] }, guide: current.guide },
+      { metadata: { ...current.metadata, releases: {} }, guide: current.guide },
+    ];
+    for (const body of bodies) {
+      const response = await fetch(baseUrl + "/api/developer/tools", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+      expect(response.status).toBe(400);
+    }
+  });
+
   it("rejects duplicate orders without damaging source or the public feed", async () => {
     const entry = await get();
     const before = structuredClone(entry);
@@ -99,6 +157,14 @@ describe("isolated software release HTTP round trips", () => {
     expect((await save(entry)).status).toBe(400);
     expect(await get()).toEqual(before);
     expect((await fetch(`${baseUrl}/api/catalog`)).status).toBe(200);
+  });
+  it("retains external source edits made during staging", async () => {
+    const entry = await get();
+    entry.metadata.description = "Studio draft";
+    faults.external = join(directory, "development/ides-and-editors/jetbrains/intellij/tool.json");
+    const response = await save(entry);
+    expect(response.status).toBe(409);
+    expect((await get()).metadata.description).toBe("External edit during staging");
   });
   it("rejects stale revisions and retains the accepted edit", async () => {
     const first = await get();
@@ -173,7 +239,7 @@ describe("isolated software release HTTP round trips", () => {
       );
       await rm(outputs[key]);
       await mkdir(outputs[key]);
-      expect((await save(changed)).status).toBe(400);
+      expect((await save(changed)).status).toBe(500);
       expect(await get()).toEqual(before);
       for (const [index, [name, path]] of Object.entries(outputs).entries()) {
         if (name !== key) expect(await readFile(path, "utf8")).toBe(originals[index]);
@@ -197,7 +263,7 @@ describe("isolated software release HTTP round trips", () => {
         filename.endsWith(".ts") || ["index.json", "tools.json"].includes(filename)
           ? join(root, filename)
           : join(entryRoot, filename === "new.json" ? "releases/new.json" : filename);
-      expect((await save(changed)).status).toBe(400);
+      expect((await save(changed)).status).toBe(500);
       expect(await loadCatalogEntries(directory)).toEqual(originalEntries);
       expect(
         await Promise.all(Object.values(outputs).map((path) => readFile(path, "utf8"))),
@@ -237,7 +303,7 @@ describe("isolated software release HTTP round trips", () => {
         body: JSON.stringify(entry),
       });
     faults.target = outputs.toolsPath;
-    expect((await create()).status).toBe(400);
+    expect((await create()).status).toBe(500);
     expect(await loadCatalogEntries(directory)).toEqual(originalEntries);
     expect(await Promise.all(Object.values(outputs).map((path) => readFile(path, "utf8")))).toEqual(
       originalOutputs,

@@ -21,3 +21,7 @@ it("uses structured fields independently of translated message wording", () => {
     "support-email",
   );
 });
+
+it("routes structured guide fields to the markdown editor", () => {
+  expect(getToolValidationRecovery("Unrelated wording", "guide").field).toBe("guide-markdown");
+});

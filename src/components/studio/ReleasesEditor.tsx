@@ -81,7 +81,16 @@ export function ReleasesEditor({ section, editingTool, setEditingTool, validatio
                       prev
                         ? {
                             ...prev,
-                            metadata: { ...prev.metadata, releases },
+                            metadata: {
+                              ...prev.metadata,
+                              releases,
+                              resources: prev.metadata.resources?.map((resource) => ({
+                                ...resource,
+                                appliesTo: resource.appliesTo.map((version) =>
+                                  version === rel.version ? e.target.value : version,
+                                ),
+                              })),
+                            },
                           }
                         : null,
                     );

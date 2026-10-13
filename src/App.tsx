@@ -1,3 +1,4 @@
+import { decodeCatalog } from "./contracts";
 import { Sidebar } from "./app/Sidebar";
 import { pageFromSearch, type Page } from "./app/routes";
 import { SoftwareCatalog as Catalog } from "./features/software/SoftwareCatalog";
@@ -141,7 +142,7 @@ function App() {
       if (required && !res.ok)
         throw new Error("Saved, but catalog refresh failed. Reload the page to retry.");
       if (res.ok) {
-        const data = await res.json();
+        const data = decodeCatalog(await res.json());
         if (Array.isArray(data.tools) && data.tools.length > 0) {
           setCatalogTools(data.tools);
         }
@@ -149,7 +150,8 @@ function App() {
           setCatalogDocs(data.docs);
         }
       }
-    } catch {
+    } catch (error) {
+      if (required) throw error;
       // Offline or static fallback
     }
   };

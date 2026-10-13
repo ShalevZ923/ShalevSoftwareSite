@@ -12,7 +12,7 @@ The version tag is a convenience tag, not an immutable deployment identity. Afte
 
 The tag workflow verifies that the Git tag and `package.json` version match, runs `pnpm verify`, and pushes the image only after that succeeds. On a public repository it also creates an OCI provenance attestation; GitHub does not persist attestations for user-owned private repositories.
 
-CI runs on Node 24. The production image builds with Node 26 (Corepack installed explicitly) and serves through nginx 1.31. Treat that skew as intentional: verify on both the CI toolchain and the image before promotion.
+The maintenance candidate uses Node 24 for development, CI and image builds, and serves through pinned NGINX. Verify the native developer workflows and actual image before promotion.
 
 ## Test the image
 

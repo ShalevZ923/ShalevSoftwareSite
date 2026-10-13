@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import {
+  cpSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 
@@ -92,6 +100,24 @@ try {
     cpSync(resolve(dir), join(fixture, dir), { recursive: true });
   }
   for (const dir of ["guide-library", "packages"]) mkdirSync(join(fixture, dir));
+  writeFileSync(join(fixture, "docs", "CONTAINER_SMOKE.md"), "# Original container doc\n");
+  mkdirSync(join(fixture, "packages", "jq", "1.0"), { recursive: true });
+  writeFileSync(join(fixture, "packages", "jq", "1.0", "fixture.exe"), "fixture installer");
+  let agentPublication;
+  if (existsSync(resolve("scripts/publish-agent-packages.mjs"))) {
+    const { loadAgentEntries } = await import("./agents-content.mjs");
+    const { publishAgentPackages } = await import("./publish-agent-packages.mjs");
+    const entries = await loadAgentEntries();
+    const approved = await publishAgentPackages({
+      entries,
+      sourceDirectory: resolve("packages"),
+      destinationDirectory: join(fixture, "agent-publication"),
+    });
+    const id = entries[0].metadata.id;
+    mkdirSync(join(fixture, "packages", id, "99"), { recursive: true });
+    writeFileSync(join(fixture, "packages", id, "99", "withheld.zip"), "must not serve this agent");
+    agentPublication = { ...approved, withheld: id + "/99/withheld.zip" };
+  }
   docker("network", "create", network);
   const app = launch(
     `${prefix}-app`,
@@ -100,6 +126,11 @@ try {
       network,
       "--network-alias",
       "app",
+      "--volume",
+      `${join(fixture, "packages")}:/srv/tool-atlas-packages:ro`,
+      ...(agentPublication
+        ? ["--volume", `${agentPublication.generationDirectory}:/srv/tool-atlas-agent-packages:ro`]
+        : []),
       "--read-only",
       "--tmpfs",
       "/tmp:rw,noexec,nosuid,size=16m",
@@ -152,6 +183,15 @@ try {
   );
   const publicUrl = urlFor(proxy, 80);
   await waitReady(publicUrl);
+  assert.equal((await fetch(publicUrl + "/downloads/jq/1.0/fixture.exe")).status, 200);
+  if (agentPublication) {
+    assert.equal((await fetch(publicUrl + "/downloads/" + agentPublication.withheld)).status, 404);
+    for (const artifact of agentPublication.published)
+      assert.equal((await fetch(publicUrl + "/downloads/" + artifact)).status, 200);
+    console.log(
+      "PASS: Nginx serves reviewed immutable agent artifacts and denies withheld ZIPs in the software mount",
+    );
+  }
   const appResponse = await fetch(publicUrl);
   assert.equal(appResponse.status, 200);
   assert.match(await appResponse.text(), /id="root"/);
@@ -208,7 +248,13 @@ try {
   const token = currentToken(studio);
   assert.equal((await verifyToken(studioUrl, token)).status, 200);
   const docUrl = `${studioUrl}/api/developer/docs/CONTAINER_SMOKE.md`;
-  const body = JSON.stringify({ content: "# Persistent container edit\n" });
+  const originalDoc = await (
+    await fetch(docUrl, { headers: { Authorization: `Bearer ${token}` } })
+  ).json();
+  const body = JSON.stringify({
+    content: "# Persistent container edit\n",
+    revision: originalDoc.revision,
+  });
   assert.equal(
     (await fetch(docUrl, { method: "PUT", headers: { "Content-Type": "application/json" }, body }))
       .status,
@@ -228,6 +274,21 @@ try {
     readFileSync(join(fixture, "docs/CONTAINER_SMOKE.md"), "utf8"),
     "# Persistent container edit\n",
   );
+  const softwareUrl = studioUrl + "/api/developer/tools/jq";
+  const software = await (
+    await fetch(softwareUrl, { headers: { Authorization: `Bearer ${token}` } })
+  ).json();
+  software.metadata.description = "Persistent container software edit";
+  assert.equal(
+    (
+      await fetch(softwareUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(software),
+      })
+    ).status,
+    200,
+  );
   docker("restart", studio);
   studioUrl = urlFor(studio, 8080);
   await waitReady(studioUrl);
@@ -240,6 +301,11 @@ try {
       })
     ).status,
     200,
+  );
+  const afterRestart = await (await fetch(studioUrl + "/api/catalog")).json();
+  assert.equal(
+    afterRestart.tools.find((tool) => tool.id === "jq").description,
+    "Persistent container software edit",
   );
   console.log(
     "PASS: Studio token is retrievable from logs, protects persistent saves, and rotates on restart",

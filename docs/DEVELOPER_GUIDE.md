@@ -30,3 +30,5 @@ Recovery journals live in `content/.tool-atlas-state`, ignored by Git and Docker
 ## Contract decisions
 
 Public catalog feeds retain schema version 1 and their public-field allowlist. Private errors retain `error` text and add stable `code` and optional `field`. Changed catalog payloads get a new feed timestamp; no-op generation retains bytes. Contribution providers share pure field parsing but retain separate approval and authentication adapters.
+
+GitLab also runs formatting and browser journeys using a pinned Debian Node image. Air-gapped runners must mirror that image, Chromium, and its OS prerequisites before enabling this gate; the existing offline mirrors apply to dependencies.

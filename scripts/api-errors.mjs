@@ -1,7 +1,5 @@
 export function errorDetails(error) {
-  const statusCode =
-    error.statusCode ??
-    (error.code && /^(EACCES|EPERM|EIO|ENOSPC|ENOENT|EISDIR)$/.test(error.code) ? 500 : 400);
+  const statusCode = error.statusCode ?? 500;
   const message = error instanceof Error ? error.message : "Request failed";
   const field =
     error.field ??
