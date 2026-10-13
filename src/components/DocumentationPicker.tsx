@@ -62,7 +62,9 @@ export function DocumentationPicker({
             <ToolGlyph tool={tool} />
             <span>
               <strong>{tool.name}</strong>
-              <small>{tool.company} · {tool.category}</small>
+              <small>
+                {tool.company} · {tool.category}
+              </small>
             </span>
             <Icon name="chevron" size={16} />
           </button>

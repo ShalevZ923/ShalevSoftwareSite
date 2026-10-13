@@ -4,4 +4,5 @@ export type ToolEntryPayload = {
   id: string;
   metadata: Tool & { order: number };
   guide: string;
+  revision?: string;
 };

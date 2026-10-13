@@ -34,14 +34,14 @@ gitignored and is not part of the published source tree.
 ## Before changing visibility
 
 - [ ] Confirm who owns every file and whether customer, employee, licence,
-  contract, internal host, contact, or procurement data exists in current files
-  or untracked directories.
+      contract, internal host, contact, or procurement data exists in current files
+      or untracked directories.
 - [ ] Keep `content/catalog/` public-only. Never add licence keys, activation
-  codes, private contacts, contract terms, personal data, or installer files.
+      codes, private contacts, contract terms, personal data, or installer files.
 - [ ] Inspect the final staged tree with a secret scanner and a manual review.
 - [ ] Rotate any credential that was ever placed in the repository, a commit,
-  an issue, an Actions log, or an artifact. Removing a current file does not
-  remove a copied or historical secret.
+      an issue, an Actions log, or an artifact. Removing a current file does not
+      remove a copied or historical secret.
 
 ## GitHub configuration
 
@@ -49,26 +49,26 @@ These settings are not stored as ordinary source files. Complete them in the
 GitHub UI (or with `gh`) **before** switching the repository public.
 
 - [ ] Make `main` a ruleset-protected branch: pull requests only, required CI
-  (`Verify source and production artifact` and `Build and smoke-test production image`),
-  no force pushes, and no branch deletion. Add a second required approving
-  review and Code Owner review only after there is an independent reviewer;
-  a solo owner cannot approve their own pull request. Restrict tag creation
-  (`v*`) to the release maintainer.
+      (`Verify source and production artifact` and `Build and smoke-test production image`),
+      no force pushes, and no branch deletion. Add a second required approving
+      review and Code Owner review only after there is an independent reviewer;
+      a solo owner cannot approve their own pull request. Restrict tag creation
+      (`v*`) to the release maintainer.
 - [ ] Restrict who can apply `catalog-approved`. GitHub has no per-label ACL;
-  the catalog workflow already ignores and strips that label unless the actor
-  is the repository owner. Do not grant Triage or Write to people who should
-  not approve catalog submissions.
+      the catalog workflow already ignores and strips that label unless the actor
+      is the repository owner. Do not grant Triage or Write to people who should
+      not approve catalog submissions.
 - [ ] Require review of workflow, Docker, deployment, and catalog-validator
-  changes by designated owners. A `CODEOWNERS` file only becomes enforcement
-  when the ruleset requires code-owner review.
+      changes by designated owners. A `CODEOWNERS` file only becomes enforcement
+      when the ruleset requires code-owner review.
 - [ ] Enable dependency graph, Dependabot alerts/security updates, secret
-  scanning and push protection, and dependency review for pull requests.
+      scanning and push protection, and dependency review for pull requests.
 - [ ] Set Actions' default `GITHUB_TOKEN` to read-only. Keep exceptional write
-  permissions scoped to the catalog-issue and package-publishing workflows.
+      permissions scoped to the catalog-issue and package-publishing workflows.
 - [ ] Allow Actions only from GitHub or explicitly allowlisted publishers, pin
-  third-party actions to full commit SHAs, and review pin updates.
+      third-party actions to full commit SHAs, and review pin updates.
 - [ ] Keep package visibility deliberate. Publish immutable image digests and
-  verify the provenance attestation before deployment.
+      verify the provenance attestation before deployment.
 
 CI workflows already pin third-party Actions to commit SHAs and set
 `permissions: contents: read` on the verify workflow. Catalog-issue and image
@@ -76,14 +76,14 @@ publish workflows keep the extra write scopes they need.
 
 ## Environment variables and secrets
 
-| Location | Values | Publication rule |
-| --- | --- | --- |
-| `.env.example` | `SITE_DOMAIN`, `ACME_EMAIL`, HTTP/S ports, optional image reference | Public configuration examples only; no credentials. |
-| Host `.env` | Deployment hostname/contact and optional image digest | Git-ignored; restrict file permissions; do not paste into tickets or logs. |
-| `VITE_*` | None are currently required | Never use for secrets: Vite embeds them in browser JavaScript at build time. |
-| Developer Studio | Process-random bearer token | Local-only by default; never deploy with the static site, log the startup URL, or share terminal output. Restart immediately to rotate after exposure. |
-| GitHub Actions | Platform-managed `GITHUB_TOKEN` | Never copy to repository variables or browser code; retain minimum per-workflow permissions. |
-| GitLab CI | `GITLAB_CATALOG_MR_TOKEN` | Protected, masked, hidden, short-lived, least-privilege CI variable only; never provide it as a manual pipeline input. |
+| Location         | Values                                                              | Publication rule                                                                                                                                       |
+| ---------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.env.example`   | `SITE_DOMAIN`, `ACME_EMAIL`, HTTP/S ports, optional image reference | Public configuration examples only; no credentials.                                                                                                    |
+| Host `.env`      | Deployment hostname/contact and optional image digest               | Git-ignored; restrict file permissions; do not paste into tickets or logs.                                                                             |
+| `VITE_*`         | None are currently required                                         | Never use for secrets: Vite embeds them in browser JavaScript at build time.                                                                           |
+| Developer Studio | Process-random bearer token                                         | Local-only by default; never deploy with the static site, log the startup URL, or share terminal output. Restart immediately to rotate after exposure. |
+| GitHub Actions   | Platform-managed `GITHUB_TOKEN`                                     | Never copy to repository variables or browser code; retain minimum per-workflow permissions.                                                           |
+| GitLab CI        | `GITLAB_CATALOG_MR_TOKEN`                                           | Protected, masked, hidden, short-lived, least-privilege CI variable only; never provide it as a manual pipeline input.                                 |
 
 ## Publication sequence
 

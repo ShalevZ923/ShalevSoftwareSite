@@ -36,5 +36,9 @@
       "label": "Review cycle",
       "value": "Annual"
     }
+  ],
+  "releaseOrder": [
+    "2025.1",
+    "2026.01-Mac"
   ]
 }

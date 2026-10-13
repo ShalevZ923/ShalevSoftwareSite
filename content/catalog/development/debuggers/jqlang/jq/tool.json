@@ -2,11 +2,26 @@
   "id": "jq",
   "order": 9,
   "name": "jq",
-  "platforms": ["Windows"],
+  "platforms": [
+    "Windows"
+  ],
   "lifecycle": "New",
   "icon": "JQ",
   "updated": "Today",
   "description": "A lightweight command-line JSON processor with an approved same-server download.",
-  "support": {"name": "Noam Levi", "team": "Platform Engineering", "initials": "NL", "email": "platform@atlas.local"},
-  "tags": ["JSON", "CLI", "Windows", "Hosted download"]
+  "support": {
+    "name": "Noam Levi",
+    "team": "Platform Engineering",
+    "initials": "NL",
+    "email": "platform@atlas.local"
+  },
+  "tags": [
+    "JSON",
+    "CLI",
+    "Windows",
+    "Hosted download"
+  ],
+  "releaseOrder": [
+    "1.8.2"
+  ]
 }

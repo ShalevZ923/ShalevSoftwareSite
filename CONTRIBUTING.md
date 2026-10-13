@@ -10,7 +10,7 @@ issue.
 - Never commit `.env` files, credentials, licence/activation data, private
   contacts, contract information, or installer binaries.
 - Treat `content/catalog/` as public data. Follow
-  [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md) for the canonical
+  [CATALOG_CONTENT_GUIDE.md](docs/catalog/CATALOG_CONTENT_GUIDE.md) for the canonical
   hierarchy and validation rules.
 - Run `pnpm verify` and `pnpm audit --prod` before requesting review.
 

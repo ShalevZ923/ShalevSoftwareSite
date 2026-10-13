@@ -1,16 +1,18 @@
 # Tool Atlas
 
+Internal guides are indexed in the [documentation master README](./docs/README.md).
+
 Tool Atlas is licensed under the [Apache License 2.0](./LICENSE). The license
 applies to this repository's first-party software and documentation only; it
 does not grant rights to third-party vendor names, logos, installers, or other
 catalog material. See [CONTRIBUTING.md](./CONTRIBUTING.md),
 [SECURITY.md](./SECURITY.md), and the
-[open-source readiness checklist](./docs/OPEN_SOURCE_READINESS.md)
+[open-source readiness checklist](docs/security/OPEN_SOURCE_READINESS.md)
 before changing repository visibility.
 
 Tool Atlas is a static software catalog for developers. It provides searchable software records, support ownership, approved external or same-server downloads, and browser-rendered Markdown guides. The production Docker and IIS deployments remain backend-free and contain no application secrets.
 
-An optional local Node.js server provides Developer Studio, an authenticated local authoring interface. It has filesystem-write APIs and an ephemeral startup token, so it is not part of the public static deployment. See [the Developer Studio guide](./docs/DEVELOPER_STUDIO.md) before using it.
+An optional local Node.js server provides Developer Studio, an authenticated local authoring interface. It has filesystem-write APIs and an ephemeral startup token, so it is not part of the public static deployment. See [the Developer Studio guide](docs/development/DEVELOPER_STUDIO.md) before using it.
 
 The catalog supports shareable filter URLs and a saved-tools list. Saved tools are stored only in the visitor's browser; they are never sent to a server or included in shared links.
 
@@ -27,13 +29,13 @@ docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   ghcr.io/shalevz923/shalevsoftwaresite:1.7.1-beta.1
 ```
 
-Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing. For a production deployment, pin the reviewed image digest and use the [production deployment guide](./docs/PRODUCTION_DEPLOYMENT.md).
+Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing. For a production deployment, pin the reviewed image digest and use the [production deployment guide](docs/deployment/PRODUCTION_DEPLOYMENT.md).
 
 ## Docker health, optional HTTPS, and local Studio
 
 The default Docker image serves the static catalog; it has no Developer Studio token. Check it with `docker compose ps` or `curl --fail http://localhost/api/health` (include your `HTTP_PORT` if different). The health response is `{"status":"ok"}`. Use `docker compose logs --tail=100 app proxy` for serving/proxy logs.
 
-`SITE_DOMAIN` and `ACME_EMAIL` can be omitted or empty. With no domain, Caddy serves HTTP on port 80. Set `SITE_DOMAIN=atlas.example.com` to enable automatic HTTPS; `ACME_EMAIL` is an optional certificate contact. See [the Docker operator guide](./docs/DOCKER_OPERATIONS.md) for startup and health commands.
+`SITE_DOMAIN` and `ACME_EMAIL` can be omitted or empty. With no domain, Caddy serves HTTP on port 80. Set `SITE_DOMAIN=atlas.example.com` to enable automatic HTTPS; `ACME_EMAIL` is an optional certificate contact. See [the Docker operator guide](docs/deployment/DOCKER_OPERATIONS.md) for startup and health commands.
 
 For local Developer Studio in Docker, use the separate configuration:
 
@@ -43,6 +45,8 @@ docker compose -f compose.studio.yaml logs --tail=50 studio
 ```
 
 Open `http://127.0.0.1:8081/?page=developer` and paste the **Developer Studio Token** from the current startup log. This container writes catalog/document changes to the mounted checkout and publishes only on localhost. Restarting it rotates the token. The public Caddy proxy has no route to Studio. Studio edits still need a reviewed rebuild/deployment before they appear in the static Docker site.
+
+See [the 1.7.2 developer guide](docs/development/DEVELOPER_GUIDE.md) for maintenance commands, combined Studio development, revisions and recovery.
 
 ## Local development
 
@@ -85,21 +89,21 @@ Conflicting filters are cleared so a linked tool is visible; compatible filters 
 
 ## Website version
 
-Set `VITE_APP_VERSION=1.7.1-beta.1` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to `1.7.1-beta.1`.
+Set `VITE_APP_VERSION=1.7.1-beta.1` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to the package version.
 
 After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
 
 ## Content model
 
-Catalog source is organized for long-term ownership: [`content/catalog/<category>/<vendor>/<tool>`](./content/catalog), with a `tool.json`, `guide.md`, and one `releases/<version>.json` record per approved version. Categories are controlled by [`content/taxonomy/categories.json`](./content/taxonomy/categories.json), so a new category is an explicit, reviewed taxonomy change—not a spelling variation. Add a tool interactively with `pnpm catalog:add`, or edit its source directory and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` and the machine feed in `public/catalog/v1/` are checked into Git and must not be edited by hand. Machine clients read `/catalog/v1/index.json` and `/catalog/v1/tools.json`; see [the machine catalog contract](./docs/CATALOG_MACHINE_FEED.md).
+Catalog source is organized for long-term ownership: [`content/catalog/<category>/<vendor>/<tool>`](./content/catalog), with a `tool.json`, `guide.md`, and one `releases/<version>.json` record per approved version. Categories are controlled by [`content/taxonomy/categories.json`](./content/taxonomy/categories.json), so a new category is an explicit, reviewed taxonomy change—not a spelling variation. Add a tool interactively with `pnpm catalog:add`, or edit its source directory and run `pnpm catalog:build`. The generated app data in `src/generated/catalog.ts` and the machine feed in `public/catalog/v1/` are checked into Git and must not be edited by hand. Machine clients read `/catalog/v1/index.json` and `/catalog/v1/tools.json`; see [the machine catalog contract](docs/catalog/CATALOG_MACHINE_FEED.md).
 
 Every entry has a stable ID, ownership details, platform/lifecycle metadata, one approved target per release, tags, and a guide containing `## Install` and `## Support`. A target can be a trusted HTTPS URL or a same-server artifact pointer such as `intellij/2025.1/ideaIU-2025.1.exe`. The validator rejects duplicate IDs/orders, unsafe URLs or artifact paths, remote guide images, invalid support details, and credential-like fact labels.
 
-For browser-based contribution, open the **Add software to the catalog** GitHub Issue Form. A maintainer reviews the submission and applies the `catalog-approved` label; only then does the workflow create a validated pull request for normal review and merge. GitLab projects receive the matching Issue Template and an approval-gated manual CI job that creates a merge request. See [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md) for both paths and the [GitLab catalog contribution guide](./docs/GITLAB_CATALOG_CONTRIBUTION.md) for the one-time setup and operating steps.
+For browser-based contribution, open the **Add software to the catalog** GitHub Issue Form. A maintainer reviews the submission and applies the `catalog-approved` label; only then does the workflow create a validated pull request for normal review and merge. GitLab projects receive the matching Issue Template and an approval-gated manual CI job that creates a merge request. See [CATALOG_CONTENT_GUIDE.md](docs/catalog/CATALOG_CONTENT_GUIDE.md) for both paths and the [GitLab catalog contribution guide](docs/contributing/GITLAB_CATALOG_CONTRIBUTION.md) for the one-time setup and operating steps.
 
-For copy-paste examples, images, optional catalog facts such as license references, and the safety boundary for sensitive values, see [CATALOG_CONTENT_GUIDE.md](./CATALOG_CONTENT_GUIDE.md).
+For copy-paste examples, images, optional catalog facts such as license references, and the safety boundary for sensitive values, see [CATALOG_CONTENT_GUIDE.md](docs/catalog/CATALOG_CONTENT_GUIDE.md).
 
-The production-oriented source boundaries, catalog hierarchy, taxonomy expansion policy, and operating rules are documented in [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md).
+The production-oriented source boundaries, catalog hierarchy, taxonomy expansion policy, and operating rules are documented in [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md).
 
 ## Release gate
 
@@ -146,12 +150,12 @@ chmod 600 .env
 
 `.env` controls the deployment without changing tracked files:
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
+| Variable      | Required  | Purpose                                                                             |
+| ------------- | --------- | ----------------------------------------------------------------------------------- |
 | `SITE_DOMAIN` | For HTTPS | Public hostname, without `https://`, a path, or a port. Empty uses HTTP on port 80. |
-| `ACME_EMAIL` | No | Optional contact address supplied to the ACME CA. |
-| `HTTP_PORT` | No | Host HTTP port; use `80` in production. |
-| `HTTPS_PORT` | No | Host HTTPS port; use `443` in production. |
+| `ACME_EMAIL`  | No        | Optional contact address supplied to the ACME CA.                                   |
+| `HTTP_PORT`   | No        | Host HTTP port; use `80` in production.                                             |
+| `HTTPS_PORT`  | No        | Host HTTPS port; use `443` in production.                                           |
 
 The static production app has no application secrets and does not consume browser-visible runtime variables. Keep credentials out of Vite variables (`VITE_*` values are compiled into public JavaScript). The optional Developer Studio token belongs only to its local Node.js process and must not be added to a static deployment.
 
@@ -191,14 +195,14 @@ The HTTP check should redirect to HTTPS. The HTTPS response should include `Stri
 
 The app container runs as the unprivileged `nginx` user with a read-only filesystem, a small writable temporary filesystem, no Linux capabilities, and no host port. The proxy is the only public container; it has only the capability needed to bind HTTP(S) ports and persists certificate state in named volumes.
 
-See [the deployment security report](docs/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
+See [the deployment security report](docs/security/SECURITY_REPORT.md) for the scope, verified controls, and remaining operational risks.
 
-For the `v1.7.1-beta.1` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
+For the `v1.7.1-beta.1` GHCR image, digest-pinning, rollback, CI evidence, and the Windows Server decision, follow the [production deployment guide](docs/deployment/PRODUCTION_DEPLOYMENT.md).
 
-The catalog website remains backend-free. A separate Tool Atlas MCP image can search `/catalog/v1` for IDEs. It is not packed into the NGINX image. See [the machine catalog contract](docs/CATALOG_MACHINE_FEED.md).
+The catalog website remains backend-free. A separate Tool Atlas MCP image can search `/catalog/v1` for IDEs. It is not packed into the NGINX image. See [the machine catalog contract](docs/catalog/CATALOG_MACHINE_FEED.md).
 
-To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download guide](docs/HOSTED_DOWNLOADS.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
+To see the same-server download path working locally with a real, checksum-verified Windows executable, follow the [hosted-download guide](docs/deployment/HOSTED_DOWNLOADS.md). It uses a pinned PowerShell publisher container and exposes the production application only on `127.0.0.1:8080`.
 
 ## Windows Server or workstation deployment
 
-The Windows deployment uses IIS as the operating-system-managed web service. The site and installer directory remain static: IIS provides service recovery, W3C access logs, Windows Event Log diagnostics, and forced attachment downloads without adding an application backend. Follow the complete [Windows deployment and operations guide](docs/WINDOWS_DEPLOYMENT.md).
+The Windows deployment uses IIS as the operating-system-managed web service. The site and installer directory remain static: IIS provides service recovery, W3C access logs, Windows Event Log diagnostics, and forced attachment downloads without adding an application backend. Follow the complete [Windows deployment and operations guide](docs/deployment/WINDOWS_DEPLOYMENT.md).

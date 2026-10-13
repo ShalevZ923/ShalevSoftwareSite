@@ -1,28 +1,17 @@
 import type { Tool } from "./data";
-import {
-  catalogFiltersFromSearch,
-  defaultFilters,
-  getCatalogTools,
-} from "./catalog";
+import { catalogFiltersFromSearch, defaultFilters, getCatalogTools } from "./catalog";
 
 export type CatalogTarget = { toolId: string; version?: string };
 
 /** Links identify catalog records and releases, never arbitrary download URLs. */
-export function toolPageHref(
-  page: "catalog" | "documentation",
-  toolId: string,
-  version?: string,
-) {
+export function toolPageHref(page: "catalog" | "documentation", toolId: string, version?: string) {
   const params = new URLSearchParams({ page, tool: toolId });
   if (version) params.set("version", version);
   return `?${params}`;
 }
 
 export function resolveToolRelease(tool: Tool, version?: string | null) {
-  return (
-    tool.releases.find((release) => release.version === version) ??
-    tool.releases[0]
-  );
+  return tool.releases.find((release) => release.version === version) ?? tool.releases[0];
 }
 
 export function catalogTargetFromSearch(search: string, tools: Tool[]) {
@@ -37,8 +26,7 @@ export function catalogTargetFromSearch(search: string, tools: Tool[]) {
   );
   return {
     filters:
-      tool &&
-      !getCatalogTools(tools, filters).some((item) => item.id === tool.id)
+      tool && !getCatalogTools(tools, filters).some((item) => item.id === tool.id)
         ? defaultFilters
         : filters,
     target: tool
@@ -48,8 +36,7 @@ export function catalogTargetFromSearch(search: string, tools: Tool[]) {
         }
       : null,
     missingTool: !!requestedTool && !tool,
-    unavailableVersion:
-      !!tool && !!requestedVersion && requestedVersion !== release?.version,
+    unavailableVersion: !!tool && !!requestedVersion && requestedVersion !== release?.version,
     defaultVersion: tool?.releases[0].version,
   };
 }

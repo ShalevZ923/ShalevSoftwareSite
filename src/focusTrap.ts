@@ -7,12 +7,7 @@ export function focusableElements(container: ParentNode) {
   );
 }
 
-export function wrapTabTarget<T>(
-  key: string,
-  shiftKey: boolean,
-  active: T | null,
-  focusable: T[],
-) {
+export function wrapTabTarget<T>(key: string, shiftKey: boolean, active: T | null, focusable: T[]) {
   if (key !== "Tab" || focusable.length === 0) return null;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];

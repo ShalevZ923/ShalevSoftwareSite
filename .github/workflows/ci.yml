@@ -34,6 +34,14 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify
         run: pnpm verify
+      - name: Check formatting
+        run: npm run format:check
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: Browser journeys
+        env:
+          PLAYWRIGHT_CHROMIUM_CHANNEL: chromium
+        run: npm run test:e2e
 
   verify-required:
     name: Verify source and production artifact

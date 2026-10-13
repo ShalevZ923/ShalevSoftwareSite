@@ -21,3 +21,9 @@ Caddyfile
 **/*.test.*
 npm-debug.log*
 pnpm-debug.log*
+
+**/.tool-atlas-state
+.tool-atlas-state
+e2e
+test-results
+playwright-report

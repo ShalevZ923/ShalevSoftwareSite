@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { loadCatalogEntries, machineCatalogIsCurrent, parseReleaseList, renderMachineCatalog, validateCatalogEntry } from "./catalog-content.mjs";
+import {
+  loadCatalogEntries,
+  machineCatalogIsCurrent,
+  parseReleaseList,
+  renderMachineCatalog,
+  validateCatalogEntry,
+} from "./catalog-content.mjs";
 
 describe("release list parsing", () => {
   it("keeps each approved version paired with its HTTPS download URL", () => {
@@ -16,13 +22,8 @@ describe("release list parsing", () => {
 
   it("parses a same-server artifact pointer without turning it into an arbitrary URL", () => {
     expect(
-      parseReleaseList(
-        "26.1 | artifact:test-tool/26.1/test-tool-26.1-x64.msi",
-        "test entry",
-      ),
-    ).toEqual([
-      { version: "26.1", artifact: "test-tool/26.1/test-tool-26.1-x64.msi" },
-    ]);
+      parseReleaseList("26.1 | artifact:test-tool/26.1/test-tool-26.1-x64.msi", "test entry"),
+    ).toEqual([{ version: "26.1", artifact: "test-tool/26.1/test-tool-26.1-x64.msi" }]);
   });
 
   it("rejects duplicate versions and non-HTTPS download URLs", () => {
@@ -60,33 +61,79 @@ describe("optional tool notices", () => {
   const guide = "## Install\n\nInstall it.\n\n## Support\n\nContact the owner.";
 
   it("accepts a notice only when its tone and message are valid", () => {
-    expect(() => validateCatalogEntry("test-tool.md", {
-      ...metadata,
-      notice: { tone: "warning", title: "Retirement planned", message: "Move to the replacement before December." },
-    }, guide)).not.toThrow();
-    expect(() => validateCatalogEntry("test-tool.md", {
-      ...metadata,
-      notice: { tone: "urgent", title: "Invalid", message: "Invalid tone." },
-    }, guide)).toThrow("notice.tone must be info or warning");
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        {
+          ...metadata,
+          notice: {
+            tone: "warning",
+            title: "Retirement planned",
+            message: "Move to the replacement before December.",
+          },
+        },
+        guide,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        {
+          ...metadata,
+          notice: { tone: "urgent", title: "Invalid", message: "Invalid tone." },
+        },
+        guide,
+      ),
+    ).toThrow("notice.tone must be info or warning");
   });
 
   it("accepts a matching artifact pointer and rejects cross-tool or mismatched-version pointers", () => {
-    expect(() => validateCatalogEntry("test-tool.md", {
-      ...metadata,
-      releases: [{ version: "1.0", artifact: "test-tool/1.0/test-tool.msi" }],
-    }, guide)).not.toThrow();
-    expect(() => validateCatalogEntry("test-tool.md", {
-      ...metadata,
-      releases: [{ version: "1.0", artifact: "other-tool/1.0/test-tool.msi" }],
-    }, guide)).toThrow("tool-id must match");
-    expect(() => validateCatalogEntry("test-tool.md", {
-      ...metadata,
-      releases: [{ version: "1.0", artifact: "test-tool/2.0/test-tool.msi" }],
-    }, guide)).toThrow("version must match");
-    expect(() => validateCatalogEntry("test-tool.md", {
-      ...metadata,
-      releases: [{ version: "1.0", download: "https://example.com", artifact: "test-tool/1.0/test-tool.msi" }],
-    }, guide)).toThrow("exactly one download or artifact");
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        {
+          ...metadata,
+          releases: [{ version: "1.0", artifact: "test-tool/1.0/test-tool.msi" }],
+        },
+        guide,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        {
+          ...metadata,
+          releases: [{ version: "1.0", artifact: "other-tool/1.0/test-tool.msi" }],
+        },
+        guide,
+      ),
+    ).toThrow("tool-id must match");
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        {
+          ...metadata,
+          releases: [{ version: "1.0", artifact: "test-tool/2.0/test-tool.msi" }],
+        },
+        guide,
+      ),
+    ).toThrow("version must match");
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        {
+          ...metadata,
+          releases: [
+            {
+              version: "1.0",
+              download: "https://example.com",
+              artifact: "test-tool/1.0/test-tool.msi",
+            },
+          ],
+        },
+        guide,
+      ),
+    ).toThrow("exactly one download or artifact");
   });
 
   it("accepts reviewed guide resources and rejects unsafe or ambiguous delivery targets", () => {
@@ -100,10 +147,30 @@ describe("optional tool notices", () => {
       owner: "Platform Engineering",
       reviewedOn: "2026-09-05",
     };
-    expect(() => validateCatalogEntry("test-tool.md", { ...metadata, resources: [resource] }, guide)).not.toThrow();
-    expect(() => validateCatalogEntry("test-tool.md", { ...metadata, resources: [{ ...resource, url: "file:///server/guide.pdf" }] }, guide)).toThrow("credential-free HTTPS URL");
-    expect(() => validateCatalogEntry("test-tool.md", { ...metadata, resources: [{ ...resource, file: "test-tool/guide.pdf" }] }, guide)).toThrow("exactly one url or file");
-    expect(() => validateCatalogEntry("test-tool.md", { ...metadata, resources: [{ ...resource, url: undefined, file: "other-tool/guide.pdf" }] }, guide)).not.toThrow();
+    expect(() =>
+      validateCatalogEntry("test-tool.md", { ...metadata, resources: [resource] }, guide),
+    ).not.toThrow();
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        { ...metadata, resources: [{ ...resource, url: "file:///server/guide.pdf" }] },
+        guide,
+      ),
+    ).toThrow("credential-free HTTPS URL");
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        { ...metadata, resources: [{ ...resource, file: "test-tool/guide.pdf" }] },
+        guide,
+      ),
+    ).toThrow("exactly one url or file");
+    expect(() =>
+      validateCatalogEntry(
+        "test-tool.md",
+        { ...metadata, resources: [{ ...resource, url: undefined, file: "other-tool/guide.pdf" }] },
+        guide,
+      ),
+    ).not.toThrow();
   });
 });
 
@@ -115,7 +182,9 @@ describe("hierarchical catalog source", () => {
     expect(intellij?.metadata).toMatchObject({
       company: "JetBrains",
       category: "IDEs & Code Editors",
-      releases: expect.arrayContaining([{ version: "2025.1", download: "https://www.jetbrains.com/idea/download/" }]),
+      releases: expect.arrayContaining([
+        { version: "2025.1", download: "https://www.jetbrains.com/idea/download/" },
+      ]),
     });
     expect(intellij?.guide).toContain("## Install");
   });
@@ -145,14 +214,17 @@ describe("machine catalog feed", () => {
       platforms: ["Windows", "Linux", "macOS"],
       lifecycle: "Current",
       tags: ["Java", "Kotlin", "IDE", "JetBrains"],
-      summary: "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
+      summary:
+        "An intelligent IDE for JVM and web development, with code analysis, refactoring, Git tooling, and a mature plugin ecosystem.",
       defaultVersion: "2025.1",
     });
     expect(intellij).toMatchObject({
       id: "intellij",
       name: "IntelliJ IDEA",
       description: intellijIndex.summary,
-      releases: expect.arrayContaining([{ version: "2025.1", download: "https://www.jetbrains.com/idea/download/" }]),
+      releases: expect.arrayContaining([
+        { version: "2025.1", download: "https://www.jetbrains.com/idea/download/" },
+      ]),
     });
     expect(jq.releases).toEqual([{ version: "1.8.2", artifact: "jq/1.8.2/jq-windows-amd64.exe" }]);
     expect(JSON.stringify(index)).not.toMatch(/@atlas\.local|## Install|devex@/);
