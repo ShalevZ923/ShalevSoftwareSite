@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { createToolAtlasServer, developerToken } from "./server.mjs";
+import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
 import {
-  contentDirectory,
   loadCatalogEntries,
   renderGeneratedCatalog,
   renderMachineCatalog,
@@ -80,29 +79,20 @@ async function assertConsistent(id, expected) {
 
 describe("isolated software release HTTP round trips", () => {
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "tool-atlas-release-"));
-    directory = join(root, "catalog");
-    await cp(contentDirectory, directory, { recursive: true });
+    const fixture = await createServerFixture({ seedDocumentation: false });
+    root = fixture.root;
+    directory = fixture.options.catalogDirectory;
     // Match the server's canonical source root, including Windows short-name expansion.
     directory = await realpath(directory);
-    outputs = {
-      generatedPath: join(root, "catalog.ts"),
-      indexPath: join(root, "index.json"),
-      toolsPath: join(root, "tools.json"),
-    };
+    outputs = fixture.options.catalogOutputs;
     const entries = await loadCatalogEntries(directory);
     const feed = renderMachineCatalog(entries);
     await writeFile(outputs.generatedPath, renderGeneratedCatalog(entries));
     await writeFile(outputs.indexPath, feed.index);
     await writeFile(outputs.toolsPath, feed.tools);
-    await mkdir(join(root, "docs"));
+
     await writeFile(join(root, "docs", "TEST.md"), "Original document");
-    server = createToolAtlasServer({
-      documentationDirectory: join(root, "docs"),
-      catalogDirectory: directory,
-      catalogOutputs: outputs,
-      packagesDirectory: join(root, "packages"),
-    });
+    server = createToolAtlasServer(fixture.options);
     await new Promise((resolve, reject) => {
       server.once("error", reject);
       server.listen(0, "127.0.0.1", resolve);
@@ -261,7 +251,7 @@ describe("isolated software release HTTP round trips", () => {
       const entryRoot = join(directory, "development", "ides-and-editors", "jetbrains", "intellij");
       faults.target =
         filename.endsWith(".ts") || ["index.json", "tools.json"].includes(filename)
-          ? join(root, filename)
+          ? Object.values(outputs).find((path) => basename(path) === filename)
           : join(entryRoot, filename === "new.json" ? "releases/new.json" : filename);
       expect((await save(changed)).status).toBe(500);
       expect(await loadCatalogEntries(directory)).toEqual(originalEntries);

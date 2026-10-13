@@ -1,25 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { rm } from "node:fs/promises";
 import { createToolAtlasServer, developerToken } from "../scripts/server.mjs";
+import { createServerFixture } from "../scripts/test-fixtures/server-fixture.mjs";
 let server: ReturnType<typeof createToolAtlasServer>, root: string, url: string;
 test.beforeAll(async () => {
-  root = await mkdtemp(join(tmpdir(), "atlas-browser-"));
-  await cp(resolve("content/catalog"), join(root, "catalog"), { recursive: true });
-  await cp(resolve("docs"), join(root, "docs"), { recursive: true });
-  await mkdir(join(root, "generated"));
-  await mkdir(join(root, "feed"));
-  server = createToolAtlasServer({
-    catalogDirectory: join(root, "catalog"),
-    documentationDirectory: join(root, "docs"),
-    catalogOutputs: {
-      generatedPath: join(root, "generated/catalog.ts"),
-      indexPath: join(root, "feed/index.json"),
-      toolsPath: join(root, "feed/tools.json"),
-    },
-    stateDirectory: join(root, "state"),
-  });
+  const fixture = await createServerFixture({ productionBuild: true });
+  root = fixture.root;
+  server = createToolAtlasServer(fixture.options);
   await new Promise<void>((done, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", done);

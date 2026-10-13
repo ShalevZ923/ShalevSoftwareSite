@@ -72,19 +72,26 @@ function validationError(message, field = "resources") {
   return Object.assign(new Error(message), { statusCode: 400, code: "VALIDATION_ERROR", field });
 }
 
-async function verifyGuideLibraryResources(toolId, resources = []) {
+async function verifyGuideLibraryResources(
+  toolId,
+  resources = [],
+  libraryDirectory = guideLibraryDir,
+) {
   for (const resource of resources) {
     if (!resource.file) continue;
     const [resourceToolId, filename] = resource.file.split("/");
     if (resourceToolId !== toolId || !filename)
       throw validationError("guide resource file must belong to its tool");
-    const expected = join(guideLibraryDir, resourceToolId, filename);
+    const expected = join(libraryDirectory, resourceToolId, filename);
     if (!existsSync(expected) || !(await stat(expected)).isFile()) {
       throw validationError(
         `guide resource file is not present in the approved library: ${resource.file}`,
       );
     }
-    const [realRoot, realFile] = await Promise.all([realpath(guideLibraryDir), realpath(expected)]);
+    const [realRoot, realFile] = await Promise.all([
+      realpath(libraryDirectory),
+      realpath(expected),
+    ]);
     if (!isPathInside(realRoot, realFile))
       throw validationError("guide resource file escapes the approved library");
   }
@@ -272,7 +279,13 @@ export function createToolAtlasServer({
     dirname(catalogOutputs.indexPath ?? join(rootDir, "public/catalog/v1/index.json")),
     dirname(catalogOutputs.toolsPath ?? join(rootDir, "public/catalog/v1/tools.json")),
     documentationDirectory,
-  ]);
+  ]).catch((error) => {
+    // Attach immediately: startup can fail before the first request arrives.
+    process.stderr.write(
+      `Authoring startup: ${error.message}\nRecovery state: ${stateDirectory}\n`,
+    );
+    return error;
+  });
   const readCatalog = () => consistentRead(() => loadCatalogEntries(catalogDirectory));
   const server = createServer(async (req, res) => {
     let pathname;
@@ -287,7 +300,8 @@ export function createToolAtlasServer({
     }
 
     try {
-      await recovery;
+      const recoveryError = await recovery;
+      if (recoveryError) throw recoveryError;
       // Authenticate protected namespaces before disclosing routes or methods.
       if (
         pathname.startsWith("/api/developer/") &&
@@ -423,7 +437,11 @@ export function createToolAtlasServer({
           }
 
           try {
-            await verifyGuideLibraryResources(metadata.id, metadata.resources);
+            await verifyGuideLibraryResources(
+              metadata.id,
+              metadata.resources,
+              guideLibraryDirectory,
+            );
             await verifyGuideLinks(metadata.resources);
             const accepted = await saveCatalogEntry(metadata, guide, {
               directory: catalogDirectory,
@@ -487,7 +505,7 @@ export function createToolAtlasServer({
             }
             try {
               validateCatalogEntry("Studio submission", metadata, guide);
-              await verifyGuideLibraryResources(toolId, metadata.resources);
+              await verifyGuideLibraryResources(toolId, metadata.resources, guideLibraryDirectory);
               await verifyGuideLinks(metadata.resources);
               const accepted = await saveCatalogEntry(metadata, guide, {
                 directory: catalogDirectory,
@@ -517,7 +535,7 @@ export function createToolAtlasServer({
           /^\/api\/developer\/guide-library\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
         if (guideLibraryMatch && req.method === "GET") {
           const toolId = guideLibraryMatch[1];
-          const directory = join(guideLibraryDir, toolId);
+          const directory = join(guideLibraryDirectory, toolId);
           if (!existsSync(directory)) return sendJson(res, 200, []);
           const files = (await readdir(directory, { withFileTypes: true }))
             .filter((entry) => entry.isFile() && /\.(?:pdf|pptx)$/iu.test(entry.name))

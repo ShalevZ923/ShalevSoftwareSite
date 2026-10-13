@@ -26,8 +26,8 @@ describe("durable transaction recovery", () => {
           id,
           status: "prepared",
           changes: [
-            { path: a, previous: "original" },
-            { path: b, previous: null },
+            { path: a, previous: "original", next: "partially committed" },
+            { path: b, previous: null, next: "new file" },
           ],
         }),
       );
@@ -80,7 +80,7 @@ describe("durable transaction recovery", () => {
           version: 1,
           id,
           status: "prepared",
-          changes: [{ path: join(root, "..", "outside.txt"), previous: null }],
+          changes: [{ path: join(root, "..", "outside.txt"), previous: null, next: "new" }],
         }),
       );
       await expect(recoverTransactions(state, [root])).rejects.toThrow(/allowed roots/);

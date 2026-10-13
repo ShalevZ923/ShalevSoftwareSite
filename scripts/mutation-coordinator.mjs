@@ -128,7 +128,7 @@ async function restore(journal, roots) {
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
-    if (Object.hasOwn(item, "next") && current !== item.previous && current !== item.next)
+    if (current !== item.previous && current !== item.next)
       throw new Error("Recovery found an external edit; inspect the journal before restoring");
     if (current === item.previous) {
       await rm(temporary, { force: true });
@@ -143,30 +143,87 @@ async function restore(journal, roots) {
     await rm(temporary, { force: true });
   }
 }
+async function validateJournal(journal, name, stateDirectory, roots) {
+  if (
+    !journal ||
+    typeof journal !== "object" ||
+    Array.isArray(journal) ||
+    journal.version !== 1 ||
+    typeof journal.id !== "string" ||
+    !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(journal.id) ||
+    journal.id + ".json" !== name ||
+    !Array.isArray(journal.changes) ||
+    !["prepared", "committed", "rolled-back"].includes(journal.status)
+  )
+    throw new Error("Invalid transaction recovery journal");
+  const targets = new Set();
+  for (const item of journal.changes) {
+    if (
+      !item ||
+      typeof item !== "object" ||
+      Array.isArray(item) ||
+      typeof item.path !== "string" ||
+      !isAbsolute(item.path) ||
+      !Object.hasOwn(item, "previous") ||
+      !Object.hasOwn(item, "next") ||
+      (item.previous !== null && typeof item.previous !== "string") ||
+      (item.next !== null && typeof item.next !== "string")
+    )
+      throw new Error("Invalid transaction recovery entry: path, previous and next are required");
+    const target = resolve(item.path);
+    const key = process.platform === "win32" ? target.toLowerCase() : target;
+    if (targets.has(key)) throw new Error("Duplicate transaction recovery target");
+    targets.add(key);
+    if (inside(stateDirectory, target))
+      throw new Error("Transaction target cannot modify recovery state");
+    if (journal.status !== "prepared") continue;
+    await assertTarget(target, roots);
+    try {
+      if (!(await lstat(target)).isFile())
+        throw new Error("Transaction target must be a regular file");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+}
+async function assertRecoveryBytes(journal) {
+  for (const item of journal.changes) {
+    let current = null;
+    try {
+      current = await readFile(item.path, "utf8");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    if (current !== item.previous && current !== item.next)
+      throw new Error("Recovery found an external edit; inspect the journal before restoring");
+  }
+}
 async function recoverPreparedTransactions(stateDirectory, roots) {
   await mkdir(stateDirectory, { recursive: true, mode: 0o700 });
   if ((await lstat(stateDirectory)).isSymbolicLink())
     throw new Error("Transaction state cannot be a symbolic link");
+  // Validate every retained record and every prepared target before restoring any bytes.
+  const prepared = [];
   for (const name of (await readdir(stateDirectory)).sort()) {
     if (!/^[a-f0-9-]{36}\.json$/.test(name)) continue;
     const path = join(stateDirectory, name);
+    if (!(await lstat(path)).isFile()) throw new Error("Recovery journal must be a regular file");
     const journal = JSON.parse(await readFile(path, "utf8"));
-    if (
-      journal.version !== 1 ||
-      journal.id + ".json" !== name ||
-      !Array.isArray(journal.changes) ||
-      !["prepared", "committed", "rolled-back"].includes(journal.status)
-    )
-      throw new Error("Invalid transaction recovery journal");
-    if (journal.status !== "prepared") continue;
+    await validateJournal(journal, name, stateDirectory, roots);
+    if (journal.status === "prepared") prepared.push({ path, journal });
+  }
+  const preparedTargets = new Set();
+  for (const { journal } of prepared) {
     for (const item of journal.changes) {
-      if (
-        typeof item.path !== "string" ||
-        (item.previous !== null && typeof item.previous !== "string")
-      )
-        throw new Error("Invalid transaction recovery entry");
-      await assertTarget(item.path, roots);
+      const key =
+        process.platform === "win32" ? resolve(item.path).toLowerCase() : resolve(item.path);
+      if (preparedTargets.has(key))
+        throw new Error("Duplicate target across prepared recovery journals");
+      preparedTargets.add(key);
     }
+    await assertRecoveryBytes(journal);
+  }
+  for (const { path, journal } of prepared) {
     await restore(journal, roots);
     journal.status = "rolled-back";
     await saveJournal(path, journal);
@@ -181,7 +238,11 @@ export async function recoverTransactions(stateDirectory, roots) {
   } catch (error) {
     quarantined.set(stateDirectory, error);
     throw Object.assign(
-      new Error("Recovery failed; authoring remains quarantined: " + error.message),
+      new Error(
+        "Recovery failed; authoring remains quarantined. Back up source and recovery state, " +
+          "inspect the journal, and restart after resolving it. Details: " +
+          error.message,
+      ),
       { statusCode: 503, code: "RECOVERY_REQUIRED" },
     );
   }
@@ -207,6 +268,7 @@ export async function publishTransaction(changes, { stateDirectory, roots, preco
     journal.changes.push({ path: resolve(path), previous, next: content });
   }
   const path = join(stateDirectory, journal.id + ".json");
+  await validateJournal(journal, journal.id + ".json", stateDirectory, roots);
   await saveJournal(path, journal);
   try {
     for (const change of changes) {

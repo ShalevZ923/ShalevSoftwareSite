@@ -1,22 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from "node:fs/promises";
+import { mkdir, writeFile, readFile, rm, symlink } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { createToolAtlasServer, developerToken } from "./server.mjs";
+import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
 const headers = { Authorization: `Bearer ${developerToken}`, "Content-Type": "application/json" };
 let root, docs, server, url;
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "atlas-nested-docs-"));
+  const fixture = await createServerFixture({ seedDocumentation: false });
+  root = fixture.root;
   docs = join(root, "docs");
   await mkdir(join(docs, "development"), { recursive: true });
   await mkdir(join(docs, "deployment", "windows"), { recursive: true });
   await writeFile(join(docs, "README.md"), "# Master index");
   await writeFile(join(docs, "development", "README.md"), "# Developer notes");
   await writeFile(join(docs, "deployment", "windows", "README.md"), "# Windows notes");
-  server = createToolAtlasServer({
-    documentationDirectory: docs,
-    stateDirectory: join(root, "state"),
-  });
+  server = createToolAtlasServer(fixture.options);
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   url = `http://127.0.0.1:${server.address().port}`;
 });
