@@ -27,7 +27,7 @@ The previous direct-container pattern published plaintext HTTP on port 8080. It 
 | GitLab catalog contribution | A GitLab template is untrusted input; a manually triggered default-branch job rechecks `catalog-approved` before a protected project token can create a branch and merge request.                                                                           | `.gitlab/issue_templates/Add catalog software.md`, `.gitlab-ci.yml`                             |
 | Local Developer Studio      | Loopback is the default; non-loopback startup requires an explicit TLS-proxy assertion; bootstrap credentials use a URL fragment and protected APIs accept headers rather than query tokens.                                                                | `scripts/server.mjs`, `src/App.tsx`, `windows/Start-ToolAtlas.ps1`                              |
 | Edge logs                   | Caddy JSON access logs are the visitor-IP record at the public edge. NGINX JSON access/error to stdout/stderr includes `/downloads/…`; `remote` is the visitor after `X-Forwarded-For` from Caddy. NGINX trusts that header only from private Docker peers. | `Caddyfile`, `nginx.conf`                                                                       |
-| Companion MCP               | Separate image. It reads `/catalog/v1` and never runs inside the catalog NGINX container.                                                                                                                                                                   | `docs/CATALOG_MACHINE_FEED.md`                                                                  |
+| Companion MCP               | Separate image. It reads `/catalog/v1` and never runs inside the catalog NGINX container.                                                                                                                                                                   | `docs/catalog/CATALOG_MACHINE_FEED.md`                                                          |
 
 ## Findings
 
@@ -87,7 +87,7 @@ The Windows installer defaults its initial HTTP binding to loopback, avoids gran
 5. Back up and test restoration of `tool-atlas_caddy_data` and `tool-atlas_caddy_config`; loss can force new issuance and hit ACME rate limits.
 6. Keep `.env` mode 0600, never commit it, and use a server-side secret manager if future backend credentials are introduced.
 7. For Windows, configure and externally verify an approved HTTPS binding, patch level, firewall scope, read-only application-pool ACL, service recovery, W3C logging, package checksum, and rollback before acceptance.
-8. Keep Developer Studio on loopback. If a reviewed network exception is required, terminate TLS at a trusted proxy, keep the origin private, restrict the firewall, and follow `docs/DEVELOPER_STUDIO.md`.
+8. Keep Developer Studio on loopback. If a reviewed network exception is required, terminate TLS at a trusted proxy, keep the origin private, restrict the firewall, and follow `docs/development/DEVELOPER_STUDIO.md`.
 
 ## Validation performed
 

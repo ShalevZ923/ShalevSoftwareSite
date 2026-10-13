@@ -141,6 +141,7 @@ describe("guide delivery and credential HTTP contracts", () => {
     ["/api/developer/tools/docker", "GET, PUT"],
     ["/api/developer/docs", "GET"],
     ["/api/developer/docs/README.md", "GET, PUT"],
+    ["/api/developer/docs/deployment/WINDOWS_DEPLOYMENT.md", "GET, PUT"],
     ["/api/developer/guide-library/docker", "GET"],
   ])("rejects unsupported methods with accurate Allow for %s", async (path, allow) => {
     for (const method of ["HEAD", "OPTIONS", "DELETE"]) {

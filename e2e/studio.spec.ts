@@ -87,7 +87,7 @@ test("catalog renders and navigates at desktop and mobile widths", async ({ page
   await expect(page.getByRole("button", { name: "Open navigation" })).toBeFocused();
 });
 
-test("documentation conflicts retain drafts and navigation guards prevent accidental loss", async ({
+test("nested documentation conflicts retain drafts and navigation guards prevent accidental loss", async ({
   page,
   browser,
 }) => {
@@ -95,11 +95,16 @@ test("documentation conflicts retain drafts and navigation guards prevent accide
   await page.getByRole("button", { name: /System docs/ }).click();
   const editor = page.getByLabel("Document Markdown");
   await expect(editor).toBeVisible();
+  await expect(editor).toHaveValue(/^# Tool Atlas internal documentation/);
+  await page.getByRole("button", { name: /development\/DEVELOPER_GUIDE\.md/ }).click();
+  await expect(editor).toHaveValue(/^# Developer guide/);
   const context = await browser.newContext();
   const other = await context.newPage();
   await other.goto(url + "?page=developer#token=" + developerToken);
   await other.getByRole("button", { name: /System docs/ }).click();
   await expect(other.getByLabel("Document Markdown")).toBeVisible();
+  await other.getByRole("button", { name: /development\/DEVELOPER_GUIDE\.md/ }).click();
+  await expect(other.getByLabel("Document Markdown")).toHaveValue(/^# Developer guide/);
   await editor.fill("# Maintained documentation\n\nSaved browser evidence.");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByText(/Successfully saved docs/)).toBeVisible();

@@ -4,7 +4,7 @@ This guide enables the GitLab issue-to-merge-request path. It keeps catalog publ
 
 ## Prerequisites
 
-1. Merge this repository's GitLab contribution files into the GitLab project's protected default branch: [`.gitlab-ci.yml`](../.gitlab-ci.yml), [issue template](../.gitlab/issue_templates/Add%20catalog%20software.md), and the catalog scripts.
+1. Merge this repository's GitLab contribution files into the GitLab project's protected default branch: [`.gitlab-ci.yml`](../../.gitlab-ci.yml), [issue template](../../.gitlab/issue_templates/Add%20catalog%20software.md), and the catalog scripts.
 2. Confirm a GitLab Runner can pull the digest-pinned `node:24-alpine` image and execute the regular `verify` job.
 3. Protect the default branch. Limit its merge permission and the `catalog-approved` label to maintainers you trust to publish catalog content.
 4. Under **Settings > CI/CD > Pipeline variables**, set **Minimum role to use pipeline variables** to **Maintainer**. The job needs two non-secret pipeline variables, but they must not be available to lower-privileged users.
@@ -19,7 +19,7 @@ In GitLab, open **Settings > Access tokens > Add new token**. Create a named pro
 - Scope: **api**
 - Expiration: the shortest period your operational policy allows (for example, 90 days)
 
-Copy the token immediately: GitLab only displays a newly created token once. On GitLab.com, project access tokens require Premium or Ultimate; on self-managed GitLab they are available with any license. If project access tokens are not available, use the local contributor path in [the catalog guide](../CATALOG_CONTENT_GUIDE.md).
+Copy the token immediately: GitLab only displays a newly created token once. On GitLab.com, project access tokens require Premium or Ultimate; on self-managed GitLab they are available with any license. If project access tokens are not available, use the local contributor path in [the catalog guide](../catalog/CATALOG_CONTENT_GUIDE.md).
 
 ### Store the token as a protected secret
 

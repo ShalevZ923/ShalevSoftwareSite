@@ -32,15 +32,15 @@ docker compose --env-file .env up --no-build --detach
 docker compose --env-file .env ps
 ```
 
-For public HTTPS, configure `SITE_DOMAIN`; `ACME_EMAIL` is optional. With no domain, Caddy uses HTTP on port 80 for local/trusted network access. See [Docker operation](./DOCKER_OPERATIONS.md) for health checks and the separate local Studio container.
+For public HTTPS, configure `SITE_DOMAIN`; `ACME_EMAIL` is optional. With no domain, Caddy uses HTTP on port 80 for local/trusted network access. See [Docker operation](DOCKER_OPERATIONS.md) for health checks and the separate local Studio container.
 
 Keep the deployed application behind Caddy, publish only 80/443, retain the certificate volumes, and verify HTTPS and security headers from a separate network. Roll back by changing `TOOL_ATLAS_IMAGE` to the previously recorded digest and repeating the final two Compose commands.
 
-Caddy JSON access logs (including `/downloads/…`) are the visitor-IP record at the public edge (`docker compose logs proxy`). NGINX JSON access and error logs are on the `app` container stdout/stderr; `remote` is the visitor after Caddy's `X-Forwarded-For`, trusted only from private Docker peers. The companion MCP image, if used, has its own Caddy and tool-call logs; see [the machine catalog contract](./CATALOG_MACHINE_FEED.md).
+Caddy JSON access logs (including `/downloads/…`) are the visitor-IP record at the public edge (`docker compose logs proxy`). NGINX JSON access and error logs are on the `app` container stdout/stderr; `remote` is the visitor after Caddy's `X-Forwarded-For`, trusted only from private Docker peers. The companion MCP image, if used, has its own Caddy and tool-call logs; see [the machine catalog contract](../catalog/CATALOG_MACHINE_FEED.md).
 
 ## Windows Server decision
 
-Use the existing IIS deployment as the production path on Windows Server; it is documented in [WINDOWS_DEPLOYMENT.md](./WINDOWS_DEPLOYMENT.md). Docker Desktop is not supported on Windows Server, and this release image is Linux-based, so it cannot run directly as a Windows container. If the image is wanted for a Windows-operated environment, run it on a separately managed, supported Linux VM/host behind the same TLS and firewall controls rather than weakening the IIS deployment.
+Use the existing IIS deployment as the production path on Windows Server; it is documented in [WINDOWS_DEPLOYMENT.md](WINDOWS_DEPLOYMENT.md). Docker Desktop is not supported on Windows Server, and this release image is Linux-based, so it cannot run directly as a Windows container. If the image is wanted for a Windows-operated environment, run it on a separately managed, supported Linux VM/host behind the same TLS and firewall controls rather than weakening the IIS deployment.
 
 Microsoft documents that Linux containers require virtualization on Windows, and Docker documents the Docker Desktop support boundary for server versions. See [Microsoft's Linux-container guidance](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/set-up-linux-containers) and [Docker's Windows support policy](https://docs.docker.com/desktop/setup/install/windows-install/).
 

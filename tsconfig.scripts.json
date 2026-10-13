@@ -16,6 +16,7 @@
     "scripts/submission-fields.mjs",
     "scripts/api-errors.mjs",
     "scripts/mutation-coordinator.mjs",
-    "scripts/catalog-persistence.mjs"
+    "scripts/catalog-persistence.mjs",
+    "scripts/documentation-files.mjs"
   ]
 }

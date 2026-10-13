@@ -168,16 +168,16 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(listRes.status).toBe(200);
     const docsList = await listRes.json();
     expect(Array.isArray(docsList)).toBe(true);
-    expect(docsList.some((d) => d.name === "WINDOWS_DEPLOYMENT.md")).toBe(true);
+    expect(docsList.some((d) => d.name === "deployment/WINDOWS_DEPLOYMENT.md")).toBe(true);
 
-    const docRes = await fetch(`${baseUrl}/api/developer/docs/WINDOWS_DEPLOYMENT.md`, {
+    const docRes = await fetch(`${baseUrl}/api/developer/docs/deployment/WINDOWS_DEPLOYMENT.md`, {
       headers: {
         Authorization: `Bearer ${developerToken}`,
       },
     });
     expect(docRes.status).toBe(200);
     const docData = await docRes.json();
-    expect(docData.name).toBe("WINDOWS_DEPLOYMENT.md");
+    expect(docData.name).toBe("deployment/WINDOWS_DEPLOYMENT.md");
     expect(docData.content).toContain("# Windows deployment");
   });
 

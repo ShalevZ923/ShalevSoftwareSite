@@ -1,6 +1,6 @@
 # Maintaining the catalog
 
-Every software record is a small source directory in [`content/catalog`](./content/catalog), organized as `<category-id>/<vendor-id>/<tool-id>`. Each tool has a `tool.json` catalog record, `guide.md` documentation, and one `releases/<version>.json` file per approved version. The category ID must come from [`content/taxonomy/categories.json`](./content/taxonomy/categories.json); the vendor directory is derived from `vendor.json.name`. The UI reads the generated `src/generated/catalog.ts`; do not edit that generated file directly.
+Every software record is a small source directory in [`content/catalog`](../../content/catalog), organized as `<category-id>/<vendor-id>/<tool-id>`. Each tool has a `tool.json` catalog record, `guide.md` documentation, and one `releases/<version>.json` file per approved version. The category ID must come from [`content/taxonomy/categories.json`](../../content/taxonomy/categories.json); the vendor directory is derived from `vendor.json.name`. The UI reads the generated `src/generated/catalog.ts`; do not edit that generated file directly.
 
 ## Local contributor path
 
@@ -23,7 +23,7 @@ pnpm catalog:build
 pnpm verify
 ```
 
-`pnpm catalog:build` validates all entries and regenerates `src/generated/catalog.ts` plus the public machine feed at `public/catalog/v1/`. `pnpm catalog:check`, which runs before unit tests, fails if generated output is stale. The feed is documented in [the machine catalog contract](./docs/CATALOG_MACHINE_FEED.md).
+`pnpm catalog:build` validates all entries and regenerates `src/generated/catalog.ts` plus the public machine feed at `public/catalog/v1/`. `pnpm catalog:check`, which runs before unit tests, fails if generated output is stale. The feed is documented in [the machine catalog contract](CATALOG_MACHINE_FEED.md).
 
 ## Content rules
 
@@ -36,7 +36,7 @@ pnpm verify
 - Each release has a unique version and exactly one approved target:
   - A credential-free HTTPS URL in `download` for an external vendor download.
   - An `artifact` pointer in the exact form `tool-id/version/filename` for an installer published on the same server. The tool and version path segments must match the catalog entry and release. Example: `example-tool/26.1/example-tool-26.1-x64.msi`.
-- Hosted artifact pointers are public catalog metadata, not secret or authorization controls. The web server maps them below `/downloads/`, forces attachment download, and disables directory browsing. See [Windows deployment](./docs/WINDOWS_DEPLOYMENT.md) for publishing, checksums, permissions, logging, and recovery.
+- Hosted artifact pointers are public catalog metadata, not secret or authorization controls. The web server maps them below `/downloads/`, forces attachment download, and disables directory browsing. See [Windows deployment](../deployment/WINDOWS_DEPLOYMENT.md) for publishing, checksums, permissions, logging, and recovery.
 - Guides must include `## Install` and `## Support`.
 - Product images must be local files below `public/tool-images/`, referenced as `/tool-images/...`. Remote guide images are deliberately ignored.
 - Facts are small, non-sensitive `label`/`value` pairs. Never add license keys, activation codes, passwords, tokens, personal data, or contract documents.
@@ -65,8 +65,8 @@ The approval label is the trust boundary: only people with repository label-mana
 
 ## GitLab path
 
-GitLab users can select the **Add catalog software** description template from [`.gitlab/issue_templates`](./.gitlab/issue_templates). A maintainer reviews the issue, then applies the `catalog-approved` label.
+GitLab users can select the **Add catalog software** description template from [`.gitlab/issue_templates`](../../.gitlab/issue_templates). A maintainer reviews the issue, then applies the `catalog-approved` label.
 
 GitLab CI does not have a pipeline event for an issue label, so the maintainer then starts a pipeline on the default branch with the non-secret variables `CATALOG_ISSUE_IID` and `CATALOG_APPROVED_DESCRIPTION_SHA256` set to the issue IID and the exact reviewed description digest. The manual `create_catalog_merge_request` job verifies the label and digest again, creates an isolated branch through GitLab’s API, adds the content file and generated catalog, then opens a merge request.
 
-Before enabling this path, create a short-lived, **Developer** project access token with the `api` scope and save it as the `GITLAB_CATALOG_MR_TOKEN` CI/CD variable. Mark the variable **masked**, **hidden**, and **protected**, restrict pipeline variables and the manual job to maintainers, and run the job only from the protected default branch. Never put this token in the issue, repository, or pipeline variables. GitLab.com project access tokens require Premium or Ultimate; use the local contributor path if that feature is unavailable. For the exact setup, digest command, approval, recovery, and rotation steps, see the [GitLab catalog contribution guide](./docs/GITLAB_CATALOG_CONTRIBUTION.md).
+Before enabling this path, create a short-lived, **Developer** project access token with the `api` scope and save it as the `GITLAB_CATALOG_MR_TOKEN` CI/CD variable. Mark the variable **masked**, **hidden**, and **protected**, restrict pipeline variables and the manual job to maintainers, and run the job only from the protected default branch. Never put this token in the issue, repository, or pipeline variables. GitLab.com project access tokens require Premium or Ultimate; use the local contributor path if that feature is unavailable. For the exact setup, digest command, approval, recovery, and rotation steps, see the [GitLab catalog contribution guide](../contributing/GITLAB_CATALOG_CONTRIBUTION.md).

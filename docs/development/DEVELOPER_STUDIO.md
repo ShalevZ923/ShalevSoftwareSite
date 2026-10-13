@@ -47,7 +47,7 @@ The launcher uses `npm.cmd` to build before startup and stops on a failed build.
 
 ## Local Docker container
 
-The static production image has no Node process or Studio token. Use `docker compose -f compose.studio.yaml up --build --detach` for the opt-in local Studio container. Retrieve its current token with `docker compose -f compose.studio.yaml logs --tail=50 studio`, then open `http://127.0.0.1:8081/?page=developer` and paste it. Its localhost-only port mapping is independent of public Caddy routing. See [Docker operation](./DOCKER_OPERATIONS.md) for writable mounts, health checks, and token rotation.
+The static production image has no Node process or Studio token. Use `docker compose -f compose.studio.yaml up --build --detach` for the opt-in local Studio container. Retrieve its current token with `docker compose -f compose.studio.yaml logs --tail=50 studio`, then open `http://127.0.0.1:8081/?page=developer` and paste it. Its localhost-only port mapping is independent of public Caddy routing. See [Docker operation](../deployment/DOCKER_OPERATIONS.md) for writable mounts, health checks, and token rotation.
 
 ## Network access
 
@@ -69,3 +69,7 @@ If network access is required, place the server behind a trusted TLS reverse pro
 - **Applies to versions** accepts comma-separated versions without removing separators while typing. Saved metadata trims whitespace and removes duplicate/empty items.
 
 Validation: `npm run verify` passed (78 tests, TypeScript, production build, artifact checks). Browser checks confirmed empty-library guidance, disabled unavailable source, and typing a comma/space followed by a second version with the value retained after Refresh. These focused checks do not replace deployment acceptance.
+
+## Internal documentation folders
+
+The **System docs** workspace lists all Markdown files below `docs/`, including nested folders. It opens [the master index](../README.md) first. Search by folder or filename, select the complete relative path, and save through the same revision-protected workflow. Product usage guides stay with their catalog entries.

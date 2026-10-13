@@ -1,4 +1,9 @@
 import {
+  documentationRoute,
+  documentationFile,
+  listDocumentationFiles,
+} from "./documentation-files.mjs";
+import {
   assertRevision,
   recordRevision,
   coordinateMutation,
@@ -299,7 +304,7 @@ export function createToolAtlasServer({
         [/^\/api\/developer\/tools\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["GET", "PUT"]],
         [/^\/api\/developer\/guide-library\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["GET"]],
         [/^\/api\/developer\/docs$/, ["GET"]],
-        [/^\/api\/developer\/docs\/[A-Za-z0-9_.-]+\.md$/, ["GET", "PUT"]],
+        [documentationRoute, ["GET", "PUT"]],
       ];
       if (pathname === "/api" || pathname.startsWith("/api/")) {
         const route = apiRoutes.find(([pattern]) => pattern.test(pathname));
@@ -523,31 +528,19 @@ export function createToolAtlasServer({
 
         // List documentation files: /api/developer/docs
         if (pathname === "/api/developer/docs" && req.method === "GET") {
-          const list = await consistentRead(async () => {
-            const files = (await readdir(documentationDirectory))
-              .filter((name) => name.endsWith(".md"))
-              .sort();
-            return Promise.all(
-              files.map(async (name) => {
-                const fileStats = await stat(join(documentationDirectory, name));
-                return { name, sizeBytes: fileStats.size, modified: fileStats.mtime.toISOString() };
-              }),
-            );
-          });
+          const list = await consistentRead(() => listDocumentationFiles(documentationDirectory));
           return sendJson(res, 200, list);
         }
 
         // Single doc operations: /api/developer/docs/:name
-        const docMatch = /^\/api\/developer\/docs\/([A-Za-z0-9_.-]+\.md)$/.exec(pathname);
+        const docMatch = documentationRoute.exec(pathname);
         if (docMatch) {
           const docName = docMatch[1];
-          const targetFile = join(documentationDirectory, docName);
 
           if (req.method === "GET") {
-            if (!existsSync(targetFile)) {
-              return sendJson(res, 404, { error: `Document ${docName} not found` });
-            }
-            const content = await consistentRead(() => readFile(targetFile, "utf8"));
+            const content = await consistentRead(async () =>
+              readFile(await documentationFile(documentationDirectory, docName), "utf8"),
+            );
             return sendJson(res, 200, {
               name: docName,
               content,
@@ -561,6 +554,7 @@ export function createToolAtlasServer({
               return sendJson(res, 400, { error: "content string is required" });
             }
             await coordinateMutation(async () => {
+              const targetFile = await documentationFile(documentationDirectory, docName);
               const previous = await readFile(targetFile, "utf8");
               assertRevision(revision, { content: previous });
               await publishTransaction([{ path: targetFile, content }], {

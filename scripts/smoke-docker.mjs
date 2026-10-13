@@ -100,7 +100,10 @@ try {
     cpSync(resolve(dir), join(fixture, dir), { recursive: true });
   }
   for (const dir of ["guide-library", "packages"]) mkdirSync(join(fixture, dir));
-  writeFileSync(join(fixture, "docs", "CONTAINER_SMOKE.md"), "# Original container doc\n");
+  writeFileSync(
+    join(fixture, "docs", "development", "CONTAINER_SMOKE.md"),
+    "# Original container doc\n",
+  );
   mkdirSync(join(fixture, "packages", "jq", "1.0"), { recursive: true });
   writeFileSync(join(fixture, "packages", "jq", "1.0", "fixture.exe"), "fixture installer");
   let agentPublication;
@@ -247,7 +250,7 @@ try {
   await waitReady(studioUrl);
   const token = currentToken(studio);
   assert.equal((await verifyToken(studioUrl, token)).status, 200);
-  const docUrl = `${studioUrl}/api/developer/docs/CONTAINER_SMOKE.md`;
+  const docUrl = `${studioUrl}/api/developer/docs/development/CONTAINER_SMOKE.md`;
   const originalDoc = await (
     await fetch(docUrl, { headers: { Authorization: `Bearer ${token}` } })
   ).json();
@@ -271,7 +274,7 @@ try {
     200,
   );
   assert.equal(
-    readFileSync(join(fixture, "docs/CONTAINER_SMOKE.md"), "utf8"),
+    readFileSync(join(fixture, "docs/development/CONTAINER_SMOKE.md"), "utf8"),
     "# Persistent container edit\n",
   );
   const softwareUrl = studioUrl + "/api/developer/tools/jq";
@@ -296,7 +299,7 @@ try {
   assert.equal((await verifyToken(studioUrl, currentToken(studio))).status, 200);
   assert.equal(
     (
-      await fetch(`${studioUrl}/api/developer/docs/CONTAINER_SMOKE.md`, {
+      await fetch(`${studioUrl}/api/developer/docs/development/CONTAINER_SMOKE.md`, {
         headers: { Authorization: `Bearer ${currentToken(studio)}` },
       })
     ).status,
