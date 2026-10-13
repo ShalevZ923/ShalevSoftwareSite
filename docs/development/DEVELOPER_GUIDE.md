@@ -23,6 +23,16 @@ Software `releaseOrder` contains every version exactly once; the first is the de
 
 Recovery journals live in `content/.tool-atlas-state`, ignored by Git and Docker builds. Each transaction retains original text and records prepared/committed/rolled-back status. The server recovers prepared transactions before answering APIs; source and generated files are restored together. Keep the journal private and backed up with source while authoring. Completed journals are retained until explicit operator cleanup; do not remove a prepared journal. Studio Compose persists this state through its existing content mount. One authoring process owns a checkout.
 
+### A quarantined startup
+
+If a journal is malformed, has duplicate/unsafe targets, or a prepared target contains an external edit, the server handles startup failure immediately and returns `503` with code `RECOVERY_REQUIRED`. The terminal identifies the private state directory and explains the next steps. It does not delete the journal or overwrite external bytes. Validation of all retained records and prepared target bytes precedes any restore.
+
+Stop the authoring process. Back up the catalog, generated outputs, internal documentation and complete recovery state to a private location. Inspect the affected journal's version, identity, status, target paths and `previous`/`next` values against that backup. Preserve external edits. Do not invent a missing `next` value from the current file or remove a prepared journal to bypass the check. Resolve the state against a trusted backup or an explicitly reviewed recovery decision, then restart and confirm `/api/health` succeeds before editing. Recovery inspection/archival tooling remains tracked in M22.
+
+### Test data ownership
+
+Server suites and browser journeys use `scripts/test-fixtures/server-fixture.mjs`. Pass its complete `options` object to the server; it supplies disposable source, documentation, output, recovery, download, library and static paths. The repository catalog/docs/build are copied only as read-only inputs. Close the server before cleaning its fixture. New server tests must use this factory so they cannot recover or write a developer's active authoring state.
+
 ## Release boundaries
 
 1.7.2 is the software-catalog maintenance candidate. Agent Catalog changes remain on experimental 1.8.0. The public image is static NGINX; authoring APIs and credentials remain in the optional local Studio. Tool Atlas MCP remains a separate project. Native Windows and container verification are release gates, not claims inferred from Linux tests.

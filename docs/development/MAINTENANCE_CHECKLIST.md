@@ -14,13 +14,23 @@ Two independent reviews were repeated after documentation organization. The curr
 - Separate disposable reproductions confirmed inert index links, frontend-port drift, missing-next recovery behavior and malformed startup rejection.
 - Native Windows/IIS acceptance remains pending. Remote CI and branch-protection settings were not inspected or triggered. Fresh npm/pnpm installations passed earlier in this cycle; this review used the existing installed dependencies. Docker acceptance for these reviewed commits was recorded in the documentation-organization evidence, rather than rerun here.
 
+## Stable follow-up: recovery and fixture isolation
+
+13 October 2026. Focused fixes verified at `23e8f7cfc4963a24a4c817baba71207eaee24297` on the stable 1.7.2 PR branch. The broader 78/100 score above remains the earlier full-review snapshot; these focused fixes do not constitute a new whole-app assessment.
+
+- **M01/M18 fixed locally on stable:** complete journal/entry validation requires `previous` and `next` text-or-null values, rejects duplicate targets and unsafe prepared paths, and preflights every retained journal and prepared target before any restore. External edits and malformed journal bytes remain intact. Settled undo history from other authoring roots remains usable without reopening it.
+- **M25 fixed locally on stable:** all server unit/contract/persistence/documentation fixtures and browser journeys use one disposable fixture factory with explicit catalog, documentation, output, state, package, guide-library and static-build paths. Guide validation/listing now honor the injected library. A prepared external canary and its private bytes remain untouched by fixture recovery and saves.
+- **Startup rejection fixed locally:** recovery rejection is handled immediately. A child-process regression waits before sending its first request and proves the server stays alive, returns `503 RECOVERY_REQUIRED`, leaves malformed state intact and prints backup/inspection/restart instructions.
+- **Verification:** `npm run verify` passed 182 tests/30 files (21 additional regressions), lint, documentation references, application/script types, build and static artifact checks. `npm run format:check` and all four browser journeys passed. Catalog, taxonomy, documentation, generated feeds and real authoring-state hashes remained unchanged by verification; the original dirty checkout's 252 protected files and status were preserved.
+- **Scope:** experimental 1.8.0 has not received these follow-up fixes. M01/M18/M25 therefore remain open for that track. The new PR-head remote platform/container checks must pass before treating their evidence as current. Previous PR-head Linux/Windows npm/pnpm/browser and container checks passed; native launcher/IIS acceptance and the other checklist items remain separate.
+
 ## How to use this checklist
 
 A checked item means its stated local scope is verified. Partial or reopened items retain completed sub-work, but require the acceptance below before full closure. P1 is an outstanding release acceptance gate; P2 is a concrete correctness/workflow/maintenance follow-up; P3 is a longer-term improvement. Effort S/M is a relative planning estimate, not a delivery promise. Owner labels name responsibilities, not assigned people. New review findings are tracked proposals; their code has not been changed in this review.
 
 ## Recommended next sequence
 
-1. **Protect developer state and recovery first:** M25 full fixture isolation, then M18 complete journal validation and controlled startup failure. Earlier tests covered valid generated journals; the new malformed cases reopen part of M01.
+1. **Protect developer state and recovery first:** stable M25 fixture isolation and M18 journal/startup handling are verified in the follow-up above. Carry the same fixes and acceptance checks to experimental; keep their regressions in future changes.
 2. **Make release evidence enforceable:** M19 shared exact-commit gates, M20 runtime floor/setup, M21 dual-lockfile policy, then M04 native Windows/IIS acceptance. Resolve these before treating the update cycle as complete or publishing it.
 3. **Remove daily workflow friction:** M16 index navigation and M17 reliable configurable startup ports.
 4. **Make local operation maintainable:** M22 inspection/retention/recovery tooling, M23 writer ownership, M24 documentation freshness/index checks, M26 onboarding and review responsibilities.
@@ -28,9 +38,9 @@ A checked item means its stated local scope is verified. Partial or reopened ite
 
 ## Original review items, updated
 
-- [ ] **M01 — Rejected saves can leave the catalog invalid** (Reopened; P2; Both).
+- [ ] **M01 — Rejected saves can leave the catalog invalid** (Stable fixed locally; experimental reopened; P2; Both).
 
-  Valid saves and recovery remain covered; malformed prepared entries missing next can overwrite an external edit. Complete schema validation and controlled startup recovery are tracked in M18.
+  Stable now rejects malformed journals and preserves external bytes; see the focused follow-up above. Experimental still permits the previously reproduced missing-next case. Complete startup/recovery acceptance is tracked in M18.
 
   **Acceptance:** Require next:string|null, reject duplicate targets and malformed records before any restore; tests preserve external bytes and handle startup failure deterministically.
 
@@ -136,9 +146,9 @@ A checked item means its stated local scope is verified. Partial or reopened ite
 
   **Source:** [scripts/dev-studio-server.mjs:1](../../scripts/dev-studio-server.mjs), [vite.config.ts:6](../../vite.config.ts).
 
-- [ ] **M18 — Validate complete recovery journals and handle startup rejection** (P2; New; effort M; proposed owner: Recovery service).
+- [ ] **M18 — Validate complete recovery journals and handle startup rejection** (P2; Stable fixed locally / experimental open; effort M; proposed owner: Recovery service).
 
-  **Evidence:** A no-next prepared journal overwrote an external edit in a disposable fixture. Generated journals always include next. Malformed JSON caused Node24.13 to exit1 before requests through an unhandled recovery promise.
+  **Evidence:** The earlier disposable reproduction confirmed missing-next overwrite and malformed-startup rejection. Stable now passes regressions for both, malformed entries/JSON, duplicates, external edits, symlinks and whole-recovery preflight; experimental still needs the fixes. Generated journals include next.
 
   **Acceptance:** Validate full schema, uniqueness and allowed roots before restore; no malformed record changes files. Attach rejection handling immediately and expose a controlled startup/quarantine outcome with a clear recovery instruction.
 
@@ -192,9 +202,9 @@ A checked item means its stated local scope is verified. Partial or reopened ite
 
   **Source:** [scripts/check-documentation-links.mjs:32](../../scripts/check-documentation-links.mjs), [docs/development/DEVELOPER_STUDIO.md:71](../../docs/development/DEVELOPER_STUDIO.md).
 
-- [ ] **M25 — Fully isolate server test source and recovery roots** (P2; New; effort M; proposed owner: Test infrastructure).
+- [ ] **M25 — Fully isolate server test source and recovery roots** (P2; Stable fixed locally / experimental open; effort M; proposed owner: Test infrastructure).
 
-  **Evidence:** Some server fixtures override dist/packages/library but retain real catalog/state defaults. An experimental fixture-agent save also retains real state. Constructor eagerly runs recovery, so developer journals can be read/recovered or receive fixture journals. Source-confirmed; no destructive developer-state reproduction was run.
+  **Evidence:** Stable fixtures now override every mutable root through the shared factory. Protected external canaries and checkout-state hashes survive recovery, catalog/document saves and the full suites. The experimental fixture-agent and server suites still need conversion. No destructive reproduction against real developer state was run.
 
   **Acceptance:** Create one shared fixture factory overriding every source/output/docs/state root. Seed protected canary state outside the fixture and verify all bytes/status remain unchanged after suites; no journal entry targets a fixture outside its state root.
 
