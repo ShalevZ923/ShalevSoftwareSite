@@ -34,3 +34,5 @@ Public catalog feeds retain schema version 1 and their public-field allowlist. P
 GitLab also runs formatting and browser journeys using a pinned Debian Node image. Air-gapped runners must mirror that image, Chromium, and its OS prerequisites before enabling this gate; the existing offline mirrors apply to dependencies.
 
 Internal documentation is indexed in [the master README](../README.md). `npm run docs:check` validates local Markdown links and runs as part of `npm run verify`. System docs supports nested paths while preserving revision checks.
+
+Use the [current maintainer/developer checklist](MAINTENANCE_CHECKLIST.md) for reviewed remaining work and closure criteria. Review findings are proposals until their acceptance evidence is recorded.

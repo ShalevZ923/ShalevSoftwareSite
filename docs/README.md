@@ -4,6 +4,7 @@ This is the master index for developer, catalog-maintainer and operator document
 
 ## Start with your task
 
+- **Review remaining maintenance work:** [Current maintainer/developer checklist](development/MAINTENANCE_CHECKLIST.md).
 - **Develop or maintain the app:** [Developer guide](development/DEVELOPER_GUIDE.md), then [project structure](development/PROJECT_STRUCTURE.md).
 - **Edit software or system docs locally:** [Developer Studio](development/DEVELOPER_STUDIO.md).
 - **Maintain catalog records:** [Software catalog guide](catalog/CATALOG_CONTENT_GUIDE.md).
@@ -17,6 +18,7 @@ This is the master index for developer, catalog-maintainer and operator document
 
 ### `development/`
 
+- [Maintainer and developer checklist](development/MAINTENANCE_CHECKLIST.md) — Latest independent review, verified fixes, remaining priorities and acceptance criteria.
 - [Developer setup and maintenance](development/DEVELOPER_GUIDE.md) — Supported runtimes, npm/pnpm commands, HMR, checks, draft revisions and save recovery.
 - [Architecture and source ownership](development/PROJECT_STRUCTURE.md) — Repository boundaries, catalog hierarchy, taxonomy changes and operating rules.
 - [Local Developer Studio](development/DEVELOPER_STUDIO.md) — Protected authoring setup, token handling, editing workflow and local trust boundary.
