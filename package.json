@@ -13,7 +13,7 @@
     "dev:client": "npm run catalog:build && vite",
     "test": "npm run catalog:check && vitest run",
     "build": "npm run catalog:build && tsc -b && vite build",
-    "verify": "npm run lint && npm run docs:check && npm run typecheck && npm run test && npm run build && node scripts/verify-dist.mjs",
+    "verify": "npm run locks:check && npm run lint && npm run docs:check && npm run typecheck && npm run test && npm run build && node scripts/verify-dist.mjs",
     "preview": "vite preview",
     "serve": "npm run start",
     "start": "npm run build && node scripts/server.mjs",
@@ -25,7 +25,9 @@
     "test:e2e": "npm run build && playwright test",
     "doctor": "node scripts/doctor.mjs",
     "dev:studio": "npm run build && concurrently --kill-others \"node scripts/dev-studio-server.mjs\" \"vite --host 127.0.0.1\"",
-    "docs:check": "node scripts/check-documentation-links.mjs"
+    "docs:check": "node scripts/check-documentation-links.mjs",
+    "locks:check": "node scripts/lockfile-policy.mjs",
+    "provenance": "node scripts/verification-provenance.mjs"
   },
   "dependencies": {
     "react": "19.3.0",

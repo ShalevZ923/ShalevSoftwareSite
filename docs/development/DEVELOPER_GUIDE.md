@@ -37,6 +37,8 @@ Server suites and browser journeys use `scripts/test-fixtures/server-fixture.mjs
 
 See [release acceptance](RELEASE_ACCEPTANCE.md) for shared gates, runtime requirements, Windows evidence and outstanding limitations.
 
+See [dependency policy](DEPENDENCY_POLICY.md) for the canonical release graph, explicit npm/pnpm differences and fresh-install parity evidence.
+
 1.7.2 is the software-catalog maintenance candidate. Agent Catalog changes remain on experimental 1.8.0. The public image is static NGINX; authoring APIs and credentials remain in the optional local Studio. Tool Atlas MCP remains a separate project. Native Windows and container verification are release gates, not claims inferred from Linux tests.
 
 ## Contract decisions

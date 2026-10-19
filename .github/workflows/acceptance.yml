@@ -53,6 +53,38 @@ jobs:
         shell: pwsh
         run: ./windows/Test-ToolAtlasLauncher.ps1
 
+      - name: Record dependency and generated-output provenance
+        env:
+          VERIFY_OS: ${{ matrix.os }}
+          VERIFY_MANAGER: ${{ matrix.manager }}
+          VERIFY_NODE: ${{ matrix.node }}
+        run: ${{ matrix.manager }} run provenance
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: evidence-${{ matrix.os }}-${{ matrix.manager }}-${{ matrix.node }}
+          path: .internal-generated/provenance.json
+          include-hidden-files: true
+          if-no-files-found: error
+
+  graph-parity:
+    name: Fresh npm/pnpm generated catalog parity
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          check-latest: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: evidence-*
+          path: .internal-generated/evidence
+      - name: Require all source-qualified graphs and equal generated data
+        run: node scripts/verification-provenance.mjs --compare .internal-generated/evidence
+
   container-smoke:
     name: Build and smoke-test production image
     needs: verify
@@ -87,12 +119,13 @@ jobs:
 
   acceptance-required:
     name: Complete acceptance required
-    needs: [verify, container-smoke]
+    needs: [verify, graph-parity, container-smoke]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Require every gate
         env:
           VERIFY_RESULT: ${{ needs.verify.result }}
+          PARITY_RESULT: ${{ needs.graph-parity.result }}
           CONTAINER_RESULT: ${{ needs.container-smoke.result }}
-        run: test "$VERIFY_RESULT" = success && test "$CONTAINER_RESULT" = success
+        run: test "$VERIFY_RESULT" = success && test "$PARITY_RESULT" = success && test "$CONTAINER_RESULT" = success
