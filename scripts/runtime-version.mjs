@@ -7,7 +7,5 @@ export function supportsNode(version) {
 
 export function assertSupportedNode(version = process.versions.node) {
   if (!supportsNode(version))
-    throw new Error(
-      `Tool Atlas requires Node >=${minimumNodeVersion} <25; detected ${version}`,
-    );
+    throw new Error(`Tool Atlas requires Node >=${minimumNodeVersion} <25; detected ${version}`);
 }
