@@ -11,6 +11,10 @@ try {
     Copy-Item -LiteralPath (Join-Path $sourceRoot $name) -Destination $fixture -Recurse
   }
   Copy-Item -LiteralPath (Join-Path $sourceRoot "package.json") -Destination $fixture
+  # ESM imports resolve from the disposable server's root. Reuse the fresh,
+  # read-only dependency installation without copying operator authoring state.
+  $dependencyLink = Join-Path $fixture "node_modules"
+  New-Item -ItemType Junction -Path $dependencyLink -Target (Join-Path $sourceRoot "node_modules") | Out-Null
   # The copy cannot inherit an operator's recovery journals or authoring packages.
   Get-ChildItem -LiteralPath $fixture -Filter ".tool-atlas-state" -Directory -Recurse -Force |
     Remove-Item -Recurse -Force
@@ -44,6 +48,10 @@ try {
   if (-not $catalog.tools -or -not ($catalog.tools | Where-Object { $_.id -eq "intellij" })) {
     throw "Native catalog hierarchy did not load the expected entry"
   }
+  $agents = Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/agents" -TimeoutSec 5
+  if (-not ($agents | Where-Object { $_.id -eq "anthropic-pdf" })) {
+    throw "Native agent hierarchy did not load the expected entry"
+  }
   $page = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -TimeoutSec 5
   if ($page.StatusCode -ne 200 -or $page.Content -notmatch 'id="root"') { throw "Native static build was not served" }
   Write-Host "Native Windows launcher, path-with-spaces, filesystem and HTTP acceptance passed."
@@ -51,6 +59,10 @@ try {
   if ($process -and -not $process.HasExited) {
     $process.Kill($true)
     $process.WaitForExit()
+  }
+  # Remove the junction itself before recursively deleting the disposable tree.
+  if ($dependencyLink -and (Test-Path -LiteralPath $dependencyLink)) {
+    Remove-Item -LiteralPath $dependencyLink -Force
   }
   if (Test-Path -LiteralPath $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force }
 }
