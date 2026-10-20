@@ -8,8 +8,7 @@ function addVersion(graph, name, version) {
 export function lockfileDifferences(npmLock, pnpmText) {
   const npm = {};
   for (const [path, record] of Object.entries(npmLock.packages)) {
-    if (path && record.version)
-      addVersion(npm, path.split("node_modules/").at(-1), record.version);
+    if (path && record.version) addVersion(npm, path.split("node_modules/").at(-1), record.version);
   }
   // Deliberately support the checked-in pnpm v9 layout only; fail on format migration.
   if (!/^lockfileVersion: ['"]9\.0['"]$/m.test(pnpmText))

@@ -61,13 +61,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     for (const path of ["package-lock.json", "pnpm-lock.yaml"])
       locks[path] = hash(await readFile(path));
     for (const path of targets) generated[path] = hash(await readFile(path));
-    const [{ createElement }, { renderToStaticMarkup }, { default: ReactMarkdown }, { default: gfm }] =
-      await Promise.all([
-        import("react"),
-        import("react-dom/server"),
-        import("react-markdown"),
-        import("remark-gfm"),
-      ]);
+    const [
+      { createElement },
+      { renderToStaticMarkup },
+      { default: ReactMarkdown },
+      { default: gfm },
+    ] = await Promise.all([
+      import("react"),
+      import("react-dom/server"),
+      import("react-markdown"),
+      import("remark-gfm"),
+    ]);
     const corpus = [
       "# Guide\n\nA paragraph with **bold**, _emphasis_ and ~~removed~~ text.",
       "| Tool | Status |\n| --- | --- |\n| Atlas | Ready |",

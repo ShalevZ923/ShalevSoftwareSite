@@ -42,10 +42,6 @@ jobs:
         run: ${{ matrix.manager }} run verify
       - name: Check formatting
         run: ${{ matrix.manager }} run format:check
-      - name: Formatting diagnostics
-        if: failure()
-        run: >-
-          node --input-type=module -e "import { readFile } from 'node:fs/promises'; import { format } from 'prettier'; for (const p of ['scripts/lockfile-policy.mjs','scripts/verification-provenance.mjs']) console.log('FORMATTED_SOURCE:' + JSON.stringify({path:p,content:await format(await readFile(p,'utf8'), {parser:'babel',semi:true,singleQuote:false,trailingComma:'all',printWidth:100})}))"
       - name: Install browser
         run: npm exec -- playwright install --with-deps chromium
       - name: Browser journeys
