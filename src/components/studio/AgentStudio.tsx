@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentContent, AgentPackage, AgentRelease, AgentCompatibility, AgentMcp } from "../../agentTypes";
 import { agentFacets, agentPackageTypes, supportLabels } from "../../agentCatalog";
 import { MarkdownDocument } from "../../markdown";
@@ -25,7 +25,7 @@ const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 function ListField({ label, values, onChange }: { label: string; values: string[]; onChange: (values: string[]) => void }) {
   const [text, setText] = useState(values.join("\n"));
   useEffect(() => setText(values.join("\n")), [values]);
-  return <Field label={label}><textarea rows={3} value={text} onChange={(event) => setText(event.target.value)}
+  return <Field label={label}><textarea rows={3} value={text} onChange={(event) => { setText(event.target.value); onChange(event.target.value.split("\n")); }}
     onBlur={() => onChange(text.split("\n").map((item) => item.trim()).filter(Boolean))} /></Field>;
 }
 
@@ -44,6 +44,7 @@ export function AgentStudio({ token, onCatalogUpdated, onDraftStateChange }: {
   const [section, setSection] = useState<"Overview" | "Review" | "Delivery" | "Guide">("Overview");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [message, setMessage] = useState<{ tone: "error" | "success"; text: string } | null>(null);
   const dirty = !!draft && (creating || JSON.stringify(draft) !== saved);
   useEffect(() => onDraftStateChange(dirty, saving), [dirty, saving, onDraftStateChange]);
@@ -65,22 +66,34 @@ export function AgentStudio({ token, onCatalogUpdated, onDraftStateChange }: {
   };
   useEffect(() => { void load(); }, [headers]);
   const select = (entry: Entry) => {
+    if (savingRef.current) return;
     if (dirty && !window.confirm("Discard unsaved agent changes?")) return;
     const next = copy({ metadata: entry.metadata, guide: entry.guide });
     setDraft(next); setSaved(JSON.stringify(next)); setActiveId(entry.id); setRevision(entry.revision); setCreating(false); setMessage(null); setSection("Overview");
   };
   const add = () => {
+    if (savingRef.current) return;
     if (dirty && !window.confirm("Discard unsaved agent changes?")) return;
     const next = starter();
     setDraft(next); setSaved(JSON.stringify(next)); setActiveId(""); setCreating(true); setMessage(null); setSection("Overview");
   };
   const patch = (change: Partial<AgentRecord>) => setDraft((current) => current ? { ...current, metadata: { ...current.metadata, ...change } } : null);
   const save = async () => {
-    if (!draft || saving) return;
+    if (!draft || savingRef.current) return;
+    savingRef.current = true;
+    const payload = copy(draft);
+    for (const key of ["highlights", "tags", "requirements", "permissions", "risks"] as const) {
+      const values = payload.metadata[key];
+      if (values) payload.metadata[key] = values.map((value) => value.trim()).filter(Boolean);
+    }
+    if (payload.metadata.mcp) {
+      payload.metadata.mcp.resources = payload.metadata.mcp.resources.map((value) => value.trim()).filter(Boolean);
+      payload.metadata.mcp.prompts = payload.metadata.mcp.prompts.map((value) => value.trim()).filter(Boolean);
+    }
     setSaving(true); setMessage(null);
     try {
       const response = await fetch(creating ? "/api/developer/agents" : `/api/developer/agents/${activeId}`, {
-        method: creating ? "POST" : "PUT", headers, body: JSON.stringify({ ...draft, revision }),
+        method: creating ? "POST" : "PUT", headers, body: JSON.stringify({ ...payload, revision }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `Save failed (HTTP ${response.status})`);
@@ -90,7 +103,7 @@ export function AgentStudio({ token, onCatalogUpdated, onDraftStateChange }: {
       await load(false);
       onCatalogUpdated();
     } catch (error) { setMessage({ tone: "error", text: error instanceof Error ? error.message : "Save failed" }); }
-    finally { setSaving(false); }
+    finally { savingRef.current = false; setSaving(false); }
   };
   const filtered = entries.filter((entry) => `${entry.metadata.name} ${entry.metadata.id} ${entry.metadata.packageType}`.toLowerCase().includes(search.toLowerCase()));
   const agent = draft?.metadata;
@@ -120,7 +133,7 @@ export function AgentStudio({ token, onCatalogUpdated, onDraftStateChange }: {
       </div>
       <div className="dev-item-list">
         {loading && <p className="dev-list-message">Loading resources…</p>}
-        {filtered.map((entry) => <button key={entry.id} type="button" className={entry.id === activeId && !creating ? "dev-item-card selected" : "dev-item-card"} onClick={() => select(entry)}>
+        {filtered.map((entry) => <button key={entry.id} type="button" disabled={saving} className={entry.id === activeId && !creating ? "dev-item-card selected" : "dev-item-card"} onClick={() => select(entry)}>
           <span className="dev-agent-glyph">{entry.metadata.icon}</span><span className="dev-item-info"><strong className="dev-item-name">{entry.metadata.name}</strong><small className="dev-item-sub">{entry.metadata.packageType} · {supportLabels[entry.metadata.status]}</small></span>
         </button>)}
       </div>

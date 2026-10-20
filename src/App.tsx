@@ -237,6 +237,8 @@ function App() {
   const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
   const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
   const [agentPackages, setAgentPackages] = useState<AgentPackage[]>(staticAgents);
+  const [agentFeedStatus, setAgentFeedStatus] = useState<"loading" | "live" | "static">("loading");
+  const [agentCatalogRevision, setAgentCatalogRevision] = useState(0);
   const [devToken, setDevToken] = useState<string>(() => {
     try {
       return window.sessionStorage.getItem("tool-atlas-dev-token") || "";
@@ -263,10 +265,17 @@ function App() {
         }
       })(),
       (async () => {
-        const res = await fetch("/api/agents");
-        if (!res.ok) return;
-        const data: AgentPackage[] = await res.json();
-        if (Array.isArray(data)) setAgentPackages(data);
+        try {
+          const res = await fetch("/api/agents");
+          if (!res.ok) throw new Error("Live catalog unavailable");
+          const data: AgentPackage[] = await res.json();
+          if (!Array.isArray(data)) throw new Error("Invalid live catalog");
+          setAgentPackages(data);
+          setAgentFeedStatus("live");
+          setAgentCatalogRevision((value) => value + 1);
+        } catch {
+          setAgentFeedStatus((status) => status === "loading" ? "static" : status);
+        }
       })(),
     ]);
   };
@@ -527,6 +536,8 @@ function App() {
               key={`agents:${routeRevision}:${routeSearch}`}
               search={routeSearch}
               agents={agentPackages}
+              feedStatus={agentFeedStatus}
+              catalogRevision={agentCatalogRevision}
               hotkeysEnabled={!drawerOpen}
             />
           </Suspense>
