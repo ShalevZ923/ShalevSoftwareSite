@@ -321,6 +321,7 @@ export function createToolAtlasServer({
         [/^\/api\/health$/, ["GET"]],
         [/^\/api\/catalog$/, ["GET"]],
         [/^\/api\/agents$/, ["GET"]],
+        [/^\/api\/agents\/[a-z0-9]+(?:-[a-z0-9]+)*\/guide$/, ["GET"]],
         [/^\/api\/developer\/verify$/, ["POST"]],
         [/^\/api\/developer\/agents$/, ["GET", "POST"]],
         [/^\/api\/developer\/agents\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["PUT"]],
@@ -353,6 +354,19 @@ export function createToolAtlasServer({
         });
         const docs = Object.fromEntries(entries.map(({ metadata, guide }) => [metadata.id, guide]));
         return sendJson(res, 200, { tools, docs });
+      }
+      const agentGuideMatch = /^\/api\/agents\/([a-z0-9]+(?:-[a-z0-9]+)*)\/guide$/.exec(pathname);
+      if (agentGuideMatch && req.method === "GET") {
+        return await consistentRead(async () => {
+          const entries = await loadAgentEntries(agentContentDirectory);
+          const entry = entries.find((item) => item.metadata.id === agentGuideMatch[1]);
+          if (!entry) return sendJson(res, 404, { error: "Agent guide not found" });
+          const root = await realpath(agentContentDirectory);
+          const guidePath = entry.guidePath.slice("/content/agents/".length);
+          const file = await realpath(join(root, guidePath));
+          if (!isPathInside(root, file)) return sendJson(res, 403, { error: "Forbidden" });
+          return sendJson(res, 200, { guide: entry.guide });
+        });
       }
       if (pathname === "/api/agents" && req.method === "GET") {
         const entries = await readAgents();

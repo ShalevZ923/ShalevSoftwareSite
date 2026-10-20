@@ -15,35 +15,49 @@ import { AgentDelivery } from "./AgentDelivery";
 const riskOptions: Array<"All risks" | RiskLevel> = ["All risks", "Low", "Medium", "High", "Unknown"];
 const guideModules = import.meta.glob<string>("/content/agents/**/guide.md", { query: "?raw", import: "default" });
 
-function Guide({ path }: { path: string }) {
+function Guide({ path, agentId, live, revision }: { path: string; agentId: string; live: boolean; revision: number }) {
   const [guide, setGuide] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
     setGuide(null);
-    const loader = guideModules[path];
+    const loader = live
+      ? async () => {
+          const response = await fetch(`/api/agents/${encodeURIComponent(agentId)}/guide`, { cache: "no-store" });
+          if (!response.ok) throw new Error("Guide unavailable");
+          const data = await response.json();
+          if (typeof data.guide !== "string") throw new Error("Guide unavailable");
+          return data.guide as string;
+        }
+      : guideModules[path];
     if (loader) loader().then((content) => { if (active) setGuide(content); }).catch(() => { if (active) setGuide("Guide unavailable."); });
     else setGuide("Guide unavailable.");
     return () => { active = false; };
-  }, [path]);
+  }, [path, agentId, live, revision]);
   return <div className="agent-guide markdown-body">{guide === null ? "Loading guide…" : <MarkdownDocument content={guide} />}</div>;
 }
 
-export function AgentCatalog({ search, agents, hotkeysEnabled = true }: { search: string; agents: AgentPackage[]; hotkeysEnabled?: boolean }) {
+export function AgentCatalog({ search, agents, hotkeysEnabled = true, feedStatus = "static", catalogRevision = 0 }: { search: string; agents: AgentPackage[]; hotkeysEnabled?: boolean; feedStatus?: "loading" | "live" | "static"; catalogRevision?: number }) {
+  const awaitingFeed = feedStatus === "loading";
+  const userEditedFilters = useRef(false);
   const publishers = useMemo(() => ["All publishers", ...new Set(agents.map((a) => a.publisher))].sort((a, b) => a === "All publishers" ? -1 : b === "All publishers" ? 1 : a.localeCompare(b)), [agents]);
   const knownIds = useMemo(() => new Set(agents.map((a) => a.id)), [agents]);
   const initial = useMemo(() => agentTargetFromSearch(search, agents), [search, agents]);
   const [filters, setFilters] = useState<AgentCatalogFilters>(initial.filters);
   const [expanded, setExpanded] = useState<string | null>(initial.target?.agentId ?? null);
-  const [target, setTarget] = useState<AgentCatalogTarget | null>(initial.target);
+  const [target, setTarget] = useState<AgentCatalogTarget | null>(() => {
+    const params = new URLSearchParams(search);
+    const id = params.get("agent");
+    return awaitingFeed && id ? { agentId: id, version: params.get("version") || undefined } : initial.target;
+  });
   const [page, setPage] = useState(() => agentPageFromSearch(search));
   const [savedIds, setSavedIds] = useState<string[]>(() => readSavedAgentIds(knownIds));
   const [savedOnly, setSavedOnly] = useState(() => new URLSearchParams(search).get("saved") === "1");
   const [filtersOpen, setFiltersOpen] = useState(() => initial.filters.capability !== "all" || initial.filters.status !== "all" || initial.filters.publisher !== "All publishers" || initial.filters.risk !== "All risks");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "unavailable">("idle");
-  const [linkNotice, setLinkNotice] = useState(() => ({ missing: initial.missingAgent, unavailable: initial.unavailableVersion }));
+  const [linkNotice, setLinkNotice] = useState(() => ({ missing: !awaitingFeed && initial.missingAgent, unavailable: !awaitingFeed && initial.unavailableVersion }));
   const copyTimerRef = useRef<number | undefined>(undefined);
   const searchRef = useRef<HTMLInputElement>(null);
-  const dismissLinkNotice = () => setLinkNotice({ missing: false, unavailable: false });
+  const dismissLinkNotice = () => { userEditedFilters.current = true; setLinkNotice({ missing: false, unavailable: false }); };
   const deferredQuery = useDeferredValue(filters.query);
   const filtering = filters.query !== deferredQuery;
   const filtered = useMemo(() => getAgentCatalog(agents, { ...filters, query: deferredQuery }), [agents, filters, deferredQuery]);
@@ -54,11 +68,20 @@ export function AgentCatalog({ search, agents, hotkeysEnabled = true }: { search
   const updateFilter = <K extends keyof AgentCatalogFilters>(key: K, value: AgentCatalogFilters[K]) => {
     dismissLinkNotice(); setFilters((current) => ({ ...current, [key]: value })); setPage(1); setTarget(null); setExpanded(null);
   };
-  useEffect(() => { writeSavedAgentIds(savedIds); }, [savedIds]);
+  useEffect(() => {
+    if (awaitingFeed || userEditedFilters.current) return;
+    setTarget(initial.target);
+    setExpanded(initial.target?.agentId ?? null);
+    setFilters(initial.filters);
+    setPage(agentPageFromSearch(search));
+    setLinkNotice({ missing: initial.missingAgent, unavailable: initial.unavailableVersion });
+  }, [awaitingFeed, initial, search]);
+  useEffect(() => { if (!awaitingFeed) writeSavedAgentIds(savedIds); }, [savedIds, awaitingFeed]);
   useEffect(() => {
     setSavedIds((current) => { const valid = filterSavedToolIds(current, knownIds); return valid.length === current.length ? current : valid; });
   }, [knownIds]);
   useEffect(() => {
+    if (awaitingFeed) return;
     const url = new URL(window.location.href);
     const params = new URLSearchParams(agentFiltersToSearch(filters));
     params.set("page", "agents");
@@ -67,7 +90,7 @@ export function AgentCatalog({ search, agents, hotkeysEnabled = true }: { search
     if (target) { params.set("agent", target.agentId); if (target.version) params.set("version", target.version); }
     url.search = params.toString();
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [filters, paged.page, target, savedOnly]);
+  }, [filters, paged.page, target, savedOnly, awaitingFeed]);
   useEffect(() => {
     if (!hotkeysEnabled) return;
     const focusSearch = (event: KeyboardEvent) => {
@@ -125,7 +148,7 @@ export function AgentCatalog({ search, agents, hotkeysEnabled = true }: { search
       </div>
     </div>
     <div className="agent-result-list" role="list">
-      {paged.items.map((agent) => <AgentRow key={agent.id} agent={agent} expanded={expanded === agent.id} saved={savedSet.has(agent.id)}
+      {paged.items.map((agent) => <AgentRow key={agent.id} live={feedStatus === "live"} revision={catalogRevision} agent={agent} expanded={expanded === agent.id} saved={savedSet.has(agent.id)}
         pointed={target?.agentId === agent.id} version={target?.agentId === agent.id ? target.version : undefined}
         onVersionChange={(version) => setTarget({ agentId: agent.id, version })}
         onToggle={() => { dismissLinkNotice(); const next = expanded === agent.id ? null : agent.id; setExpanded(next); setTarget(next ? { agentId: agent.id } : null); }} onSaved={() => toggleSaved(agent.id)} />)}
@@ -135,8 +158,8 @@ export function AgentCatalog({ search, agents, hotkeysEnabled = true }: { search
   </section>;
 }
 
-function AgentRow({ agent, expanded, saved, pointed, version, onVersionChange, onToggle, onSaved }: {
-  agent: AgentPackage; expanded: boolean; saved: boolean; pointed: boolean; version?: string; onVersionChange: (version: string) => void; onToggle: () => void; onSaved: () => void;
+function AgentRow({ agent, expanded, saved, pointed, version, onVersionChange, onToggle, onSaved, live, revision }: {
+  live: boolean; revision: number; agent: AgentPackage; expanded: boolean; saved: boolean; pointed: boolean; version?: string; onVersionChange: (version: string) => void; onToggle: () => void; onSaved: () => void;
 }) {
   const row = useRef<HTMLDivElement>(null);
   useEffect(() => { if (pointed && expanded) row.current?.scrollIntoView({ block: "nearest" }); }, [pointed, expanded]);
@@ -176,7 +199,7 @@ function AgentRow({ agent, expanded, saved, pointed, version, onVersionChange, o
           {agent.mcp && <dl className="agent-facts"><div><dt>Transport</dt><dd>{agent.mcp.transport}</dd></div><div><dt>Hosting</dt><dd>{agent.mcp.hosting}</dd></div><div><dt>Authentication</dt><dd>{agent.mcp.authentication}</dd></div></dl>}
           {agent.source && <a href={agent.source.url} target="_blank" rel="noopener noreferrer">View source <Icon name="external" size={14} /></a>}
         </details>
-        <details className="agent-guide-toggle"><summary>Read usage guide</summary><Guide path={agent.guidePath} /></details>
+        <details className="agent-guide-toggle"><summary>Read usage guide</summary><Guide path={agent.guidePath} agentId={agent.id} live={live} revision={revision} /></details>
       </div>
     </div>}
   </div>;

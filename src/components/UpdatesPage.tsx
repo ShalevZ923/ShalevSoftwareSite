@@ -72,9 +72,11 @@ export function UpdatesPage({
   const agentUpdates = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     return [...agents]
+      .filter(() => kind === "all" || kind === "update")
       .filter((agent) => !needle || [agent.name, agent.publisher, agent.packageType, agent.description, ...agent.tags].join(" ").toLocaleLowerCase().includes(needle))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.name.localeCompare(b.name));
-  }, [agents, query]);
+  }, [agents, query, kind]);
+  const total = visible.length + agentUpdates.length;
 
   return (
     <section className="page updates-page">
@@ -83,9 +85,7 @@ export function UpdatesPage({
         copy="Approved releases and catalog changes, newest first."
       />
       <div className="updates-toolbar">
-        <p className="updates-count">
-          {visible.length} {visible.length === 1 ? "change" : "changes"}
-        </p>
+        <p className="updates-count">{total} {total === 1 ? "change" : "changes"}{agentUpdates.length ? ` · ${agentUpdates.length} experimental` : ""}</p>
         <div className="updates-kinds" role="group" aria-label="Update type">
           {kindFilters.map((filter) => (
             <button
@@ -100,6 +100,7 @@ export function UpdatesPage({
           ))}
         </div>
       </div>
+      <p>Other includes experimental Agent Catalog listings. Releases, New and Notices describe approved software.</p>
       <label className="search-box updates-search">
         <Icon name="search" />
         <input
@@ -109,7 +110,7 @@ export function UpdatesPage({
           placeholder="Search by tool, vendor, or owner…"
         />
       </label>
-      {visible.length === 0 ? (
+      {total === 0 ? (
         <div className="empty-state">
           <Icon name="updates" size={28} />
           <h2>No matching updates</h2>

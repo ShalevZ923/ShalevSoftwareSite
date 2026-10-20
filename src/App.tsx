@@ -131,6 +131,8 @@ function App() {
   const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
   const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
   const [agentPackages, setAgentPackages] = useState<AgentPackage[]>(staticAgents);
+  const [agentFeedStatus, setAgentFeedStatus] = useState<"loading" | "live" | "static">("loading");
+  const [agentCatalogRevision, setAgentCatalogRevision] = useState(0);
   const [devToken, setDevToken] = useState<string>(() => {
     try {
       return window.sessionStorage.getItem("tool-atlas-dev-token") || "";
@@ -147,7 +149,7 @@ function App() {
   });
   const initialPageRender = useRef(true);
 
-  const refreshCatalog = async (required = false) => {
+  const refreshSoftware = async (required = false) => {
     try {
       const res = await fetch("/api/catalog");
       if (required && !res.ok)
@@ -165,6 +167,24 @@ function App() {
       if (required) throw error;
       // Offline or static fallback
     }
+  };
+  const refreshCatalog = async (required = false) => {
+    await Promise.all([
+      refreshSoftware(required),
+      (async () => {
+        try {
+          const res = await fetch("/api/agents");
+          if (!res.ok) throw new Error("Live catalog unavailable");
+          const data: AgentPackage[] = await res.json();
+          if (!Array.isArray(data)) throw new Error("Invalid live catalog");
+          setAgentPackages(data);
+          setAgentFeedStatus("live");
+          setAgentCatalogRevision((value) => value + 1);
+        } catch {
+          setAgentFeedStatus((status) => status === "loading" ? "static" : status);
+        }
+      })(),
+    ]);
   };
 
   const verifyDeveloperToken = async (candidateToken: string) => {
@@ -441,6 +461,8 @@ function App() {
               key={`agents:${routeRevision}:${routeSearch}`}
               search={routeSearch}
               agents={agentPackages}
+              feedStatus={agentFeedStatus}
+              catalogRevision={agentCatalogRevision}
               hotkeysEnabled={!drawerOpen}
             />
           </Suspense>
