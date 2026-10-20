@@ -1,3 +1,4 @@
+import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,7 +12,8 @@ describe("guide delivery and credential HTTP contracts", () => {
   const payload = Buffer.from("approved guide fixture\n");
 
   beforeAll(async () => {
-    root = await mkdtemp(join(tmpdir(), "tool-atlas-contract-"));
+    const fixture = await createServerFixture();
+    root = fixture.root;
     const library = join(root, "guide-library");
     await mkdir(join(library, "test-tool"), { recursive: true });
     for (const extension of ["pdf", "pptx"]) {
@@ -22,9 +24,8 @@ describe("guide delivery and credential HTTP contracts", () => {
       await symlink(join(root, "secret.pdf"), join(library, "test-tool", "escape.pdf"));
     }
     const dist = join(root, "dist");
-    await mkdir(dist);
     await writeFile(join(dist, "index.html"), "<div>SPA fixture</div>");
-    server = createToolAtlasServer({ guideLibraryDirectory: library, distDirectory: dist });
+    server = createToolAtlasServer(fixture.options);
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     baseUrl = `http://127.0.0.1:${server.address().port}`;
   });
