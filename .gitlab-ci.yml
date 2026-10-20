@@ -7,6 +7,7 @@ stages:
   - catalog
 
 before_script:
+  - if command -v apk >/dev/null; then apk add --no-cache python3; fi
   - node --input-type=module -e "import { assertSupportedNode } from './scripts/runtime-version.mjs'; assertSupportedNode()"
   - corepack enable
   - pnpm install --frozen-lockfile
@@ -15,6 +16,7 @@ verify:
   stage: validate
   script:
     - pnpm verify
+    - pnpm agents:packages
     - pnpm format:check
 
 browser_journeys:

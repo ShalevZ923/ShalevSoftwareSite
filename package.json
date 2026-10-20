@@ -31,7 +31,8 @@
     "agents:build": "node scripts/build-agents.mjs",
     "agents:check": "node scripts/build-agents.mjs --check",
     "agents:artifacts": "node scripts/check-agent-artifacts.mjs",
-    "agents:packages": "python3 scripts/build-agent-packages.py && npm run agents:artifacts"
+    "agents:packages": "python3 scripts/build-agent-packages.py && node scripts/check-agent-artifacts.mjs --tracked",
+    "test:e2e": "npm run build && playwright test"
   },
   "dependencies": {
     "react": "19.3.0",
