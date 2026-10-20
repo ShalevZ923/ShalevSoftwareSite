@@ -27,8 +27,8 @@ export function Sidebar({
   compact: boolean;
 }) {
   const links: Array<[Page, string, IconName]> = [
-    ["catalog", "Catalog", "catalog"],
-    ["agents", "Agent Catalog", "agents"],
+    ["agents", "Agent catalog", "agents"],
+    ["catalog", "Software catalog", "catalog"],
     ["documentation", "Documentation", "book"],
     ["updates", "Updates", "updates"],
     ["about", "About", "info"],
@@ -50,7 +50,7 @@ export function Sidebar({
         className="brand"
         aria-label="Tool Atlas home"
         onClick={() => {
-          navigate("catalog");
+          navigate("agents");
           close();
         }}
       >

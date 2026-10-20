@@ -15,6 +15,7 @@ export type IconName =
   | "document"
   | "download"
   | "external"
+  | "filter"
   | "info"
   | "link"
   | "mail"
@@ -82,12 +83,8 @@ const iconPaths: Record<IconName, ReactNode> = {
       <path d="M32 23v10a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3h10" />
     </>
   ),
-  search: (
-    <>
-      <circle cx="10.5" cy="10.5" r="6.5" />
-      <path d="m16 16 4 4" />
-    </>
-  ),
+  search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></>,
+  filter: <><path d="M3 6h18M3 12h18M3 18h18" /><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none" /><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" /><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none" /></>,
   chevron: <path d="m7 10 5 5 5-5" />,
   arrow: (
     <>

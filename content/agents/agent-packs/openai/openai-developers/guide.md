@@ -1,19 +1,14 @@
-# OpenAI Developers Pack
+This is an illustrative catalog entry. Its contents and capabilities have not been verified against a published version.
 
-The OpenAI Developers plugin is the reviewed Codex pack for platform and agent-building workflows. Tool Atlas serves a hashed ZIP from `/downloads`; it does not execute plugin scripts or collect API keys.
+## Overview
 
-## Install
-
-Download the ZIP from this catalog. Extract it so the pack root is `.agents/plugins/openai-developers` for the current project, or `~/.agents/plugins/openai-developers` for every project. Confirm the SHA-256 shown in the listing. Do not use npm or npx.
-
-Restart Codex after unpacking so it discovers the pack. Do not paste API keys into this catalog. The API-key skill, when you choose to use it, writes only to a destination you confirm locally.
+Example agent package listing for building agent applications, working with APIs, and troubleshooting integrations.
 
 ## When to use it
 
-- Build or evaluate an Agents SDK app
-- Scaffold or submit a ChatGPT App
-- Troubleshoot OpenAI API failures with the bundled skill
+- Build agent applications
+- Troubleshoot API integrations
 
 ## Support
 
-Developer Experience reviews the listing and the published ZIP. Plugin behavior belongs with the internal package owner.
+A support owner has not been assigned. Before this entry can become supported, record an actual source and version, review evidence, and verified compatibility.

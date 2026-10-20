@@ -2,7 +2,7 @@
   "name": "tool-atlas",
   "private": true,
   "license": "Apache-2.0",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "packageManager": "pnpm@10.30.2",
   "type": "module",
   "scripts": {
@@ -29,7 +29,9 @@
     "locks:check": "node scripts/lockfile-policy.mjs",
     "provenance": "node scripts/verification-provenance.mjs",
     "agents:build": "node scripts/build-agents.mjs",
-    "agents:check": "node scripts/build-agents.mjs --check"
+    "agents:check": "node scripts/build-agents.mjs --check",
+    "agents:artifacts": "node scripts/check-agent-artifacts.mjs",
+    "agents:packages": "python3 scripts/build-agent-packages.py && npm run agents:artifacts"
   },
   "dependencies": {
     "react": "19.3.0",
@@ -55,7 +57,8 @@
     "prettier": "3.9.10",
     "typescript": "7.0.2",
     "vite": "8.3.3",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "ajv": "8.20.0"
   },
   "engines": {
     "node": ">=24.11.0 <25"

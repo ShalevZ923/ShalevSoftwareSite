@@ -37,6 +37,8 @@ import {
   type CatalogTarget,
 } from "./toolLinks";
 
+import { agentPageHref } from "./agentLinks";
+
 const AgentCatalog = lazy(async () => {
   const module = await import("./components/AgentCatalog");
   return { default: module.AgentCatalog };
@@ -111,6 +113,9 @@ function App() {
     applyTheme(theme);
   }, [theme]);
   useEffect(() => {
+    document.title = page === "agents" ? "Tool Atlas — Agent catalog" : page === "catalog" ? "Tool Atlas — Software catalog" : "Tool Atlas";
+  }, [page]);
+  useEffect(() => {
     if (!themeFollowsSystem) return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const update = () => setTheme(media.matches ? "dark" : "light");
@@ -125,7 +130,7 @@ function App() {
     !studioSaving.current && (!studioDirty.current || window.confirm("Discard unsaved changes?"));
   const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
   const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
-  const [agentPackages] = useState<AgentPackage[]>(staticAgents);
+  const [agentPackages, setAgentPackages] = useState<AgentPackage[]>(staticAgents);
   const [devToken, setDevToken] = useState<string>(() => {
     try {
       return window.sessionStorage.getItem("tool-atlas-dev-token") || "";
@@ -218,8 +223,13 @@ function App() {
     if (nextPage !== "developer" && !canLeaveStudio()) return;
     studioDirty.current = false;
     const url = new URL(window.location.href);
-    if (nextPage === "catalog") url.searchParams.delete("page");
+    if (nextPage === "agents") url.searchParams.delete("page");
     else url.searchParams.set("page", nextPage);
+    if (page === "agents" && nextPage !== "agents") {
+      for (const key of ["agent", "saved", "type", "p", "capability", "publisher", "risk", "status", "query", "sort"]) {
+        url.searchParams.delete(key);
+      }
+    }
 
     if (nextPage === "documentation") url.searchParams.set("tool", nextTool);
     else url.searchParams.delete("tool");
@@ -242,6 +252,16 @@ function App() {
     setRouteSearch(href);
     setRouteRevision((revision) => revision + 1);
     setPage("catalog");
+  };
+
+  const openAgent = (agentId: string) => {
+    if (!canLeaveStudio()) return;
+    const href = agentPageHref(agentId);
+    window.history.pushState(null, "", href);
+    studioDirty.current = false;
+    setRouteSearch(href);
+    setRouteRevision((revision) => revision + 1);
+    setPage("agents");
   };
 
   const exitDeveloperStudio = () => {
@@ -421,6 +441,7 @@ function App() {
               key={`agents:${routeRevision}:${routeSearch}`}
               search={routeSearch}
               agents={agentPackages}
+              hotkeysEnabled={!drawerOpen}
             />
           </Suspense>
         )}
@@ -440,7 +461,9 @@ function App() {
           <Suspense fallback={<PageFallback />}>
             <UpdatesPage
               tools={catalogTools}
+              agents={agentPackages}
               onCatalog={openCatalogTool}
+              onAgent={openAgent}
               onDocs={(tool) => navigate("documentation", tool.id)}
             />
           </Suspense>

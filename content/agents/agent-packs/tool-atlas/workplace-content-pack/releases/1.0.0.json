@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../schemas/agent-release.schema.json",
+  "version": "1.0.0",
+  "releasedAt": "2026-09-24",
+  "notes": "Tool Atlas curated bundle of two pinned Anthropic skills; not an upstream Anthropic pack.",
+  "artifact": "workplace-content-pack/1.0.0/workplace-content-pack-1.0.0.zip",
+  "sha256": "3c4823e346af2c6332c4f413579c87d3cf1e22af9d0e4030ee9eaf391c49376b",
+  "archiveRoot": "workplace-content-pack",
+  "contents": [
+    {
+      "path": "README.md",
+      "kind": "doc"
+    },
+    {
+      "path": "skills/internal-comms/SKILL.md",
+      "kind": "skill"
+    },
+    {
+      "path": "skills/internal-comms/LICENSE.txt",
+      "kind": "doc"
+    },
+    {
+      "path": "skills/internal-comms/examples",
+      "kind": "doc"
+    },
+    {
+      "path": "skills/theme-factory/SKILL.md",
+      "kind": "skill"
+    },
+    {
+      "path": "skills/theme-factory/LICENSE.txt",
+      "kind": "doc"
+    },
+    {
+      "path": "skills/theme-factory/themes",
+      "kind": "doc"
+    },
+    {
+      "path": "skills/theme-factory/theme-showcase.pdf",
+      "kind": "asset"
+    }
+  ],
+  "review": {
+    "date": "2026-09-24",
+    "evidence": "docs/AGENT_SOURCE_REVIEW.md; pnpm agents:artifacts"
+  }
+}

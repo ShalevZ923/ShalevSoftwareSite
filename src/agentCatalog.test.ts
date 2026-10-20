@@ -1,97 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { agents } from "./agents";
+import { agents, type AgentPackage } from "./agents";
 import {
-  agentFiltersFromSearch,
-  agentFiltersToSearch,
-  defaultAgentFilters,
-  getAgentCatalog,
-  getRecentAgentUpdates,
+  agentFiltersFromSearch, agentFiltersToSearch, defaultAgentFilters, getAgentCatalog,
+  getRecentAgentUpdates, paginateAgents,
 } from "./agentCatalog";
 
-describe("agent catalog filters", () => {
-  it("matches names, publishers, tags, and permissions without case sensitivity", () => {
-    expect(getAgentCatalog(agents, { ...defaultAgentFilters, query: "anthropic" }).map((agent) => agent.id)).toEqual([
-      "anthropic-pdf",
-    ]);
-    expect(getAgentCatalog(agents, { ...defaultAgentFilters, query: "gitlab" }).map((agent) => agent.id)).toEqual([
-      "atlas-repo-mcp",
-    ]);
-    expect(getAgentCatalog(agents, { ...defaultAgentFilters, publisher: "OpenAI" }).map((agent) => agent.id)).toEqual([
-      "openai-developers",
-    ]);
+const pdf = agents.find((item) => item.id === "anthropic-pdf")!;
+
+describe("agent discovery", () => {
+  it("finds descriptions, capabilities, MCP tools, and all query terms", () => {
+    expect(getAgentCatalog(agents, { ...defaultAgentFilters, query: "scanned documents" }).map((a) => a.id)).toEqual(["anthropic-pdf"]);
+    expect(getAgentCatalog(agents, { ...defaultAgentFilters, query: "repository search" }).map((a) => a.id)).toEqual(["atlas-repo-mcp"]);
+    expect(getAgentCatalog([{ ...pdf, highlights: ["Zebra workflows"] }], { ...defaultAgentFilters, query: "zebra" }).map((a) => a.id)).toEqual(["anthropic-pdf"]);
+    expect(getAgentCatalog(agents, { ...defaultAgentFilters, query: "PDF GitLab" })).toEqual([]);
   });
 
-  it("keeps agent catalog content complete and safe to publish as static data", () => {
-    expect(new Set(agents.map((agent) => agent.id)).size).toBe(agents.length);
-    expect(agents.length).toBeGreaterThan(0);
-
-    for (const agent of agents) {
-      expect(agent.id).toMatch(/^[a-z0-9-]+$/);
-      expect(agent.name).not.toHaveLength(0);
-      expect(agent.maintainer.email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
-      expect(agent.releases).not.toHaveLength(0);
-      expect(agent.contents.length).toBeGreaterThan(0);
-      expect(agent.permissions.length).toBeGreaterThan(0);
-      expect(agent.install.unpack.project).toMatch(/^\.agents\//);
-      expect(agent.install.unpack.global).toMatch(/^~\/\.agents\//);
-      expect(agent.facts?.some((fact) => /key|activation|password|token/i.test(fact.label))).not.toBe(true);
-      for (const release of agent.releases) {
-        expect(release.artifact).toMatch(
-          new RegExp(`^${agent.id}/${release.version.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}/[A-Za-z0-9][A-Za-z0-9._-]*\\.zip$`),
-        );
-        expect(release.sha256).toMatch(/^[a-f0-9]{64}$/);
-      }
-    }
+  it("combines structured filters and sorts by ISO date rather than source order", () => {
+    expect(getAgentCatalog(agents, { ...defaultAgentFilters, packageType: "MCP Server", capability: "repository-access" }).map((a) => a.id)).toEqual(["atlas-repo-mcp"]);
+    expect(getAgentCatalog(agents, { ...defaultAgentFilters, capability: "documents" }).map((a) => a.id)).toEqual(["internal-comms", "anthropic-pdf", "theme-factory", "workplace-content-pack"]);
+    expect(getAgentCatalog(agents, { ...defaultAgentFilters, status: "supported" })).toEqual([]);
+    const older: AgentPackage = { ...pdf, id: "old", name: "Old", updatedAt: "2025-01-01" };
+    const newer: AgentPackage = { ...pdf, id: "new", name: "New", updatedAt: "2026-01-01" };
+    expect(getRecentAgentUpdates([older, newer]).map((a) => a.id)).toEqual(["new", "old"]);
   });
 
-  it("combines filters and preserves a predictable sort order", () => {
-    expect(
-      getAgentCatalog(agents, { ...defaultAgentFilters, packageType: "MCP Server" }).map((agent) => agent.id),
-    ).toEqual(["atlas-repo-mcp"]);
-    expect(getAgentCatalog(agents, { ...defaultAgentFilters, risk: "High" }).map((agent) => agent.id)).toEqual([
-      "openai-developers",
-    ]);
-    expect(getAgentCatalog(agents, { ...defaultAgentFilters, sort: "updated" }).map((agent) => agent.id)).toEqual([
-      "atlas-repo-mcp",
-      "anthropic-pdf",
-      "openai-developers",
-    ]);
-    expect(getAgentCatalog(agents, { ...defaultAgentFilters, sort: "type" }).map((agent) => agent.packageType)).toEqual([
-      "Agent Pack",
-      "MCP Server",
-      "Skill",
-    ]);
+  it("shares validated filters and places a direct-link target on its result page", () => {
+    const search = agentFiltersToSearch({ ...defaultAgentFilters, query: " pdf ", packageType: "Skill", capability: "documents", status: "example" });
+    expect(agentFiltersFromSearch(`?${search}`, ["Skill"], ["Anthropic"])).toMatchObject({ query: "pdf", packageType: "Skill", capability: "documents", status: "example" });
+    expect(agentFiltersFromSearch("?capability=bogus&target=bogus&status=bogus", [], [])).toEqual(defaultAgentFilters);
+    const many = Array.from({ length: 45 }, (_, index) => ({ ...pdf, id: `pdf-${index}`, name: `PDF ${index}` }));
+    expect(paginateAgents(many, 1, "pdf-24")).toMatchObject({ page: 2, pageCount: 3 });
+    expect(paginateAgents(many, 100).page).toBe(3);
   });
 
-  it("creates compact, validated shareable filter URLs", () => {
-    const search = agentFiltersToSearch({
-      ...defaultAgentFilters,
-      query: " pdf ",
-      packageType: "Skill",
-      publisher: "Anthropic",
-      sort: "updated",
-    });
-    expect(search).toBe("query=pdf&type=Skill&publisher=Anthropic&sort=updated");
-    expect(agentFiltersFromSearch(`?${search}`, ["All types", "Skill"], ["All publishers", "Anthropic"])).toEqual({
-      ...defaultAgentFilters,
-      query: "pdf",
-      packageType: "Skill",
-      publisher: "Anthropic",
-      sort: "updated",
-    });
-    expect(
-      agentFiltersFromSearch("?type=Unknown&publisher=Unknown&risk=Critical&sort=random", ["All types", "Skill"], [
-        "All publishers",
-        "Anthropic",
-      ]),
-    ).toEqual(defaultAgentFilters);
-  });
-
-  it("ranks recent updates newest first", () => {
-    expect(getRecentAgentUpdates(agents).map((agent) => agent.id)).toEqual([
-      "atlas-repo-mcp",
-      "anthropic-pdf",
-      "openai-developers",
-    ]);
+  it("keeps the seeded examples visibly unapproved", () => {
+    const exampleIds = ["anthropic-pdf", "atlas-repo-mcp", "openai-developers"];
+    expect(agents.filter((agent) => exampleIds.includes(agent.id)).every((agent) => agent.status === "example" && agent.review.status === "pending" && agent.releases.length === 0)).toBe(true);
+    expect(agents.filter((agent) => agent.status === "evaluation").map((agent) => agent.id).sort()).toEqual(["internal-comms", "mcp-server-time", "theme-factory", "workplace-content-pack"]);
   });
 });

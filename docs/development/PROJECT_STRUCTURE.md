@@ -7,6 +7,8 @@ Tool Atlas remains a static, backend-free public catalog. Its source tree separa
 ├── content/
 │   ├── taxonomy/categories.json       # Canonical category IDs and display labels
 │   ├── taxonomy/agent-types.json      # Canonical agent package types
+│   ├── taxonomy/agent-facets.json     # Capabilities and compatibility targets
+│   ├── schemas/agent*.schema.json     # Versioned agent and release records
 │   ├── catalog/<category>/<vendor>/<tool>/
 │   │   ├── vendor.json                # Shared vendor name for this category
 │   │   ├── tool.json                  # Product metadata and support ownership
@@ -14,9 +16,9 @@ Tool Atlas remains a static, backend-free public catalog. Its source tree separa
 │   │   └── releases/<version>.json    # One reviewed download target per version
 │   ├── agents/<type>/<publisher>/<package>/
 │   │   ├── publisher.json             # Shared publisher name for this type
-│   │   ├── agent.json                 # Package metadata, contents, permissions, install
-│   │   ├── guide.md                   # Catalog-safe install and support guidance
-│   │   └── releases/<version>.json    # One reviewed download or ZIP target per version
+│   │   ├── agent.json                 # Discovery metadata, support state, compatibility
+│   │   ├── guide.md                   # Overview and support guidance
+│   │   └── releases/<version>.json    # Optional version record
 │   └── templates/                     # Copy-only starting points; never catalog input
 ├── src/                               # React application source and unit tests
 │   ├── generated/catalog.ts           # Generated only; checked for staleness in CI

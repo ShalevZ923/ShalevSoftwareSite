@@ -1,19 +1,14 @@
-# PDF Skill
+This is an illustrative catalog entry. Its contents and capabilities have not been verified against a published version.
 
-Anthropic's PDF skill is the reviewed package for document extraction, assembly, form filling, and OCR. Tool Atlas serves a hashed ZIP from `/downloads`; it does not run the bundled scripts.
+## Overview
 
-## Install
-
-Download the ZIP from this catalog. Extract it so `SKILL.md` is in `.agents/skills/pdf` for the current project, or `~/.agents/skills/pdf` for every project. Confirm the SHA-256 shown in the listing before you unpack. Do not use npm or npx.
-
-Restart the agent host after unpacking so it discovers the skill.
+Example skill listing for extracting text and tables, assembling PDFs, filling forms, and processing scanned documents.
 
 ## When to use it
 
-- Extract text or tables from an existing PDF
-- Merge, split, rotate, or watermark pages
-- Fill PDF forms or run OCR on a scanned document
+- Extract text and tables from PDFs
+- Assemble documents or process scanned pages
 
 ## Support
 
-Developer Experience reviews the listing and the published ZIP. Questions about the skill itself belong with the internal package owner.
+A support owner has not been assigned. Before this entry can become supported, record an actual source and version, review evidence, and verified compatibility.
