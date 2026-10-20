@@ -17,6 +17,7 @@ jobs:
   verify:
     name: Verify source and production artifact
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -70,6 +71,7 @@ jobs:
   npm-verify:
     name: Verify npm-only installation and build
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
