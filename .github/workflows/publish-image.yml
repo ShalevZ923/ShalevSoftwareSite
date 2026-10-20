@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: 24
           check-latest: true
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
       - name: Enable Corepack
         run: corepack enable
       - name: Verify tag matches package version
@@ -37,6 +40,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify
         run: pnpm verify
+      - name: Build and audit tracked evaluation archives
+        run: pnpm agents:packages
 
   publish:
     name: Publish GHCR image and provenance

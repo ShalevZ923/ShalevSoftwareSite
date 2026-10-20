@@ -25,7 +25,7 @@ const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 function ListField({ label, values, onChange }: { label: string; values: string[]; onChange: (values: string[]) => void }) {
   const [text, setText] = useState(values.join("\n"));
   useEffect(() => setText(values.join("\n")), [values]);
-  return <Field label={label}><textarea rows={3} value={text} onChange={(event) => { setText(event.target.value); onChange(event.target.value.split("\n")); }}
+  return <Field label={label}><textarea aria-label={label} rows={3} value={text} onChange={(event) => { setText(event.target.value); onChange(event.target.value.split("\n")); }}
     onBlur={() => onChange(text.split("\n").map((item) => item.trim()).filter(Boolean))} /></Field>;
 }
 
