@@ -50,6 +50,8 @@ def build(spec: dict) -> str | None:
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_STORED) as archive:
         for name, path in sorted(files.items()):
             info = zipfile.ZipInfo(f"{archive_root}/{name}", FIXED_DATE)
+            # Preserve the reviewed Unix ZIP metadata on Windows builders too.
+            info.create_system = 3
             info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o100644 << 16
             archive.writestr(info, path.read_bytes())
