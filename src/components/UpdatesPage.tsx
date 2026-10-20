@@ -73,7 +73,14 @@ export function UpdatesPage({
     const needle = query.trim().toLocaleLowerCase();
     return [...agents]
       .filter(() => kind === "all" || kind === "update")
-      .filter((agent) => !needle || [agent.name, agent.publisher, agent.packageType, agent.description, ...agent.tags].join(" ").toLocaleLowerCase().includes(needle))
+      .filter(
+        (agent) =>
+          !needle ||
+          [agent.name, agent.publisher, agent.packageType, agent.description, ...agent.tags]
+            .join(" ")
+            .toLocaleLowerCase()
+            .includes(needle),
+      )
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.name.localeCompare(b.name));
   }, [agents, query, kind]);
   const total = visible.length + agentUpdates.length;
@@ -85,7 +92,10 @@ export function UpdatesPage({
         copy="Approved releases and catalog changes, newest first."
       />
       <div className="updates-toolbar">
-        <p className="updates-count">{total} {total === 1 ? "change" : "changes"}{agentUpdates.length ? ` · ${agentUpdates.length} experimental` : ""}</p>
+        <p className="updates-count">
+          {total} {total === 1 ? "change" : "changes"}
+          {agentUpdates.length ? ` · ${agentUpdates.length} experimental` : ""}
+        </p>
         <div className="updates-kinds" role="group" aria-label="Update type">
           {kindFilters.map((filter) => (
             <button
@@ -100,7 +110,10 @@ export function UpdatesPage({
           ))}
         </div>
       </div>
-      <p>Other includes experimental Agent Catalog listings. Releases, New and Notices describe approved software.</p>
+      <p>
+        Other includes experimental Agent Catalog listings. Releases, New and Notices describe
+        approved software.
+      </p>
       <label className="search-box updates-search">
         <Icon name="search" />
         <input
@@ -191,11 +204,18 @@ export function UpdatesPage({
               <div>
                 <div className="update-card-head">
                   <span className="update-kind">{agent.packageType}</span>
-                  <span className={`agent-support agent-support-${agent.status}`}>{supportLabels[agent.status]}</span>
+                  <span className={`agent-support agent-support-${agent.status}`}>
+                    {supportLabels[agent.status]}
+                  </span>
                 </div>
-                <h3>{agent.name}{agent.currentVersion ? ` ${agent.currentVersion}` : ""}</h3>
+                <h3>
+                  {agent.name}
+                  {agent.currentVersion ? ` ${agent.currentVersion}` : ""}
+                </h3>
                 <p>{agent.description}</p>
-                <p className="update-card-meta">{formatAgentDate(agent.updatedAt)} · {agent.publisher}</p>
+                <p className="update-card-meta">
+                  {formatAgentDate(agent.updatedAt)} · {agent.publisher}
+                </p>
                 <div className="update-card-actions">
                   <button type="button" className="text-action" onClick={() => onAgent(agent.id)}>
                     <Icon name="agents" size={15} /> View in agent catalog

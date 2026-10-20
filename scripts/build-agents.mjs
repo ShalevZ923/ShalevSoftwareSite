@@ -1,5 +1,10 @@
 import { readFile } from "node:fs/promises";
-import { generatedAgentsPath, loadAgentEntries, renderGeneratedAgents, writeGeneratedAgents } from "./agents-content.mjs";
+import {
+  generatedAgentsPath,
+  loadAgentEntries,
+  renderGeneratedAgents,
+  writeGeneratedAgents,
+} from "./agents-content.mjs";
 
 const expected = renderGeneratedAgents(await loadAgentEntries());
 if (process.argv.includes("--check")) {

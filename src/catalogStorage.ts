@@ -61,7 +61,10 @@ export function writeSavedAgentIds(agentIds: readonly string[]) {
   if (typeof window === "undefined") return;
 
   try {
-    window.localStorage.setItem(savedAgentsKey, JSON.stringify(agentIds.slice(0, maximumSavedTools)));
+    window.localStorage.setItem(
+      savedAgentsKey,
+      JSON.stringify(agentIds.slice(0, maximumSavedTools)),
+    );
   } catch {
     // Storage is optional: privacy settings and quota limits must not break the catalog.
   }

@@ -69,9 +69,7 @@ export function DeveloperStudio(props: Parameters<typeof useStudioModel>[0]) {
             <h1 id="page-title" tabIndex={-1}>
               Developer Studio
             </h1>
-            <p className="dev-header-copy">
-              Maintain software, agents, and documentation.
-            </p>
+            <p className="dev-header-copy">Maintain software, agents, and documentation.</p>
             <span className="dev-badge-connected">Local editing</span>
           </div>
         </div>
@@ -160,8 +158,16 @@ export function DeveloperStudio(props: Parameters<typeof useStudioModel>[0]) {
         </details>
       )}
       {/* Main Studio Body */}
-      {activeTab === "agents" ? <AgentStudio token={props.token} onCatalogUpdated={props.onCatalogUpdated}
-        onDraftStateChange={(nextDirty, nextSaving) => { setAgentDirty(nextDirty); setAgentSaving(nextSaving); }} /> : activeTab === "tools" ? (
+      {activeTab === "agents" ? (
+        <AgentStudio
+          token={props.token}
+          onCatalogUpdated={props.onCatalogUpdated}
+          onDraftStateChange={(nextDirty, nextSaving) => {
+            setAgentDirty(nextDirty);
+            setAgentSaving(nextSaving);
+          }}
+        />
+      ) : activeTab === "tools" ? (
         <div className="dev-workspace">
           {/* Left Column: Tool Explorer */}
           <nav aria-label="Catalog Tools" className="dev-sidebar">

@@ -1,4 +1,3 @@
-import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";

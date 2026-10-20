@@ -17,12 +17,17 @@ export function fail(source, message) {
 }
 
 export function requiredString(value, field, source) {
-  if (typeof value !== "string" || !value.trim()) fail(source, `${field} must be a non-empty string`);
+  if (typeof value !== "string" || !value.trim())
+    fail(source, `${field} must be a non-empty string`);
   return value.trim();
 }
 
 export function requireStringList(value, field, source) {
-  if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== "string" || !item.trim())) {
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.some((item) => typeof item !== "string" || !item.trim())
+  ) {
     fail(source, `${field} must be a non-empty list of strings`);
   }
   return value.map((item) => item.trim());
@@ -32,7 +37,8 @@ export function requiredHttpsUrl(value, field, source) {
   const download = requiredString(value, field, source);
   try {
     const url = new URL(download);
-    if (url.protocol !== "https:" || url.username || url.password) fail(source, `${field} must be a credential-free HTTPS URL`);
+    if (url.protocol !== "https:" || url.username || url.password)
+      fail(source, `${field} must be a credential-free HTTPS URL`);
   } catch (error) {
     if (error instanceof Error && error.message.startsWith(`${source}:`)) throw error;
     fail(source, `${field} must be a valid HTTPS URL`);
@@ -68,14 +74,21 @@ export function parseReleaseList(value, source) {
     .map((line) => {
       const separator = line.indexOf("|");
       if (separator < 1) {
-        fail(source, "each approved release must use: version | HTTPS URL or artifact:tool-id/version/filename");
+        fail(
+          source,
+          "each approved release must use: version | HTTPS URL or artifact:tool-id/version/filename",
+        );
       }
       const version = requiredVersion(line.slice(0, separator), source);
       const target = requiredString(line.slice(separator + 1), "releases.target", source);
       if (target.startsWith("artifact:")) {
         return {
           version,
-          artifact: requiredArtifactPointer(target.slice("artifact:".length), "releases.artifact", source),
+          artifact: requiredArtifactPointer(
+            target.slice("artifact:".length),
+            "releases.artifact",
+            source,
+          ),
         };
       }
       return {
@@ -84,29 +97,39 @@ export function parseReleaseList(value, source) {
       };
     });
   if (releases.length === 0) fail(source, "releases must contain at least one approved release");
-  if (new Set(releases.map((release) => release.version)).size !== releases.length) fail(source, "releases must not repeat a version");
+  if (new Set(releases.map((release) => release.version)).size !== releases.length)
+    fail(source, "releases must not repeat a version");
   return releases;
 }
 
 export function slugifyId(value) {
-  return value.toLocaleLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return value
+    .toLocaleLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 export async function readJson(path, source = path) {
   try {
     return JSON.parse(await readFile(path, "utf8"));
   } catch (error) {
-    fail(source, `must contain valid JSON (${error instanceof Error ? error.message : String(error)})`);
+    fail(
+      source,
+      `must contain valid JSON (${error instanceof Error ? error.message : String(error)})`,
+    );
   }
 }
 
 export async function findFiles(directory, filename) {
   const entries = await readdir(directory, { withFileTypes: true });
-  const nested = await Promise.all(entries.map(async (entry) => {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) return findFiles(path, filename);
-    return entry.isFile() && entry.name === filename ? [path] : [];
-  }));
+  const nested = await Promise.all(
+    entries.map(async (entry) => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) return findFiles(path, filename);
+      return entry.isFile() && entry.name === filename ? [path] : [];
+    }),
+  );
   return nested.flat();
 }
 
@@ -114,17 +137,20 @@ export function validateOptionalFacts(facts, source) {
   if (facts === undefined) return undefined;
   if (!Array.isArray(facts)) fail(source, "facts must be a list when supplied");
   return facts.map((fact) => {
-    if (!fact || typeof fact !== "object" || Array.isArray(fact)) fail(source, "each fact must be an object");
+    if (!fact || typeof fact !== "object" || Array.isArray(fact))
+      fail(source, "each fact must be an object");
     const label = requiredString(fact.label, "facts.label", source);
     const value = requiredString(fact.value, "facts.value", source);
-    if (sensitiveFactPattern.test(label)) fail(source, "fact labels cannot describe credentials or activation material");
+    if (sensitiveFactPattern.test(label))
+      fail(source, "fact labels cannot describe credentials or activation material");
     return { label, value };
   });
 }
 
 export function validateOptionalNotice(notice, source) {
   if (notice === undefined) return undefined;
-  if (!notice || typeof notice !== "object" || Array.isArray(notice)) fail(source, "notice must be an object when supplied");
+  if (!notice || typeof notice !== "object" || Array.isArray(notice))
+    fail(source, "notice must be an object when supplied");
   if (!noticeTones.has(notice.tone)) fail(source, "notice.tone must be info or warning");
   return {
     tone: notice.tone,
@@ -135,20 +161,24 @@ export function validateOptionalNotice(notice, source) {
 
 export function validateOptionalImage(image, source) {
   if (image === undefined) return undefined;
-  if (!image || typeof image !== "object" || Array.isArray(image)) fail(source, "image must be an object when supplied");
+  if (!image || typeof image !== "object" || Array.isArray(image))
+    fail(source, "image must be an object when supplied");
   const imagePath = requiredString(image.src, "image.src", source);
   const alt = requiredString(image.alt, "image.alt", source);
-  if (!localImagePattern.test(imagePath) || imagePath.includes("..")) fail(source, "image.src must be a local /tool-images/ path");
+  if (!localImagePattern.test(imagePath) || imagePath.includes(".."))
+    fail(source, "image.src must be a local /tool-images/ path");
   return { src: imagePath, alt };
 }
 
 export function validateOwner(owner, field, source) {
-  if (!owner || typeof owner !== "object" || Array.isArray(owner)) fail(source, `${field} must be an object`);
+  if (!owner || typeof owner !== "object" || Array.isArray(owner))
+    fail(source, `${field} must be an object`);
   const name = requiredString(owner.name, `${field}.name`, source);
   const team = requiredString(owner.team, `${field}.team`, source);
   const initials = requiredString(owner.initials, `${field}.initials`, source);
   const email = requiredString(owner.email, `${field}.email`, source);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) fail(source, `${field}.email must be an email address`);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email))
+    fail(source, `${field}.email must be an email address`);
   return { name, team, initials, email };
 }
 
@@ -158,9 +188,11 @@ export function validateReleaseRecords(releases, source, id) {
   const normalized = [];
   for (const [releaseIndex, release] of releases.entries()) {
     const releaseField = `releases[${releaseIndex}]`;
-    if (!release || typeof release !== "object" || Array.isArray(release)) fail(source, "each release must be an object");
+    if (!release || typeof release !== "object" || Array.isArray(release))
+      fail(source, "each release must be an object");
     const version = requiredVersion(release.version, source, `${releaseField}.version`);
-    if (releaseVersions.has(version)) fail(source, `${releaseField}.version must not repeat a version`);
+    if (releaseVersions.has(version))
+      fail(source, `${releaseField}.version must not repeat a version`);
     releaseVersions.add(version);
     const hasDownload = release.download !== undefined;
     const hasArtifact = release.artifact !== undefined;
@@ -168,16 +200,22 @@ export function validateReleaseRecords(releases, source, id) {
       fail(source, "each release must define exactly one download or artifact target");
     }
     if (hasDownload) {
-      normalized.push({ version, download: requiredHttpsUrl(release.download, `${releaseField}.download`, source) });
+      normalized.push({
+        version,
+        download: requiredHttpsUrl(release.download, `${releaseField}.download`, source),
+      });
       continue;
     }
     const artifact = requiredArtifactPointer(release.artifact, `${releaseField}.artifact`, source);
     const [artifactToolId, artifactVersion] = artifact.split("/");
-    if (artifactToolId !== id) fail(source, `${releaseField}.artifact tool-id must match the catalog id`);
-    if (artifactVersion !== version) fail(source, `${releaseField}.artifact version must match the release version`);
+    if (artifactToolId !== id)
+      fail(source, `${releaseField}.artifact tool-id must match the catalog id`);
+    if (artifactVersion !== version)
+      fail(source, `${releaseField}.artifact version must match the release version`);
     normalized.push({ version, artifact });
   }
-  if (releaseVersions.size === 0) fail(source, "releases must contain at least one approved release");
+  if (releaseVersions.size === 0)
+    fail(source, "releases must contain at least one approved release");
   return normalized;
 }
 

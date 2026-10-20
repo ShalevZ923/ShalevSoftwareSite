@@ -26,7 +26,15 @@ export type IconName =
   | "updates";
 
 const CONCEPT_BOX = "0 0 40 40";
-const conceptIcons = new Set<IconName>(["agents", "book", "bookmark", "catalog", "external", "info", "updates"]);
+const conceptIcons = new Set<IconName>([
+  "agents",
+  "book",
+  "bookmark",
+  "catalog",
+  "external",
+  "info",
+  "updates",
+]);
 
 const iconPaths: Record<IconName, ReactNode> = {
   atlas: (
@@ -83,8 +91,20 @@ const iconPaths: Record<IconName, ReactNode> = {
       <path d="M32 23v10a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3h10" />
     </>
   ),
-  search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></>,
-  filter: <><path d="M3 6h18M3 12h18M3 18h18" /><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none" /><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" /><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none" /></>,
+  search: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m16 16 4 4" />
+    </>
+  ),
+  filter: (
+    <>
+      <path d="M3 6h18M3 12h18M3 18h18" />
+      <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none" />
+    </>
+  ),
   chevron: <path d="m7 10 5 5 5-5" />,
   arrow: (
     <>

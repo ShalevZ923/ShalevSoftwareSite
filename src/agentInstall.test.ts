@@ -25,7 +25,9 @@ describe("agent install helpers", () => {
       command: "atlas-repo-mcp",
       args: [],
     });
-    expect(mcpInstallHref(mcp)).toBe(`vscode:mcp/install?${encodeURIComponent(JSON.stringify(payload))}`);
+    expect(mcpInstallHref(mcp)).toBe(
+      `vscode:mcp/install?${encodeURIComponent(JSON.stringify(payload))}`,
+    );
     expect(mcpInstallHref(mcp, "vscode-insiders")).toBe(
       `vscode-insiders:mcp/install?${encodeURIComponent(JSON.stringify(payload))}`,
     );
@@ -57,9 +59,9 @@ describe("agent install helpers", () => {
   });
 
   it("accepts SHA-256 digests and detects same-origin ZIP downloads", () => {
-    expect(agentReleaseSha256("2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824")).toBe(
-      "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-    );
+    expect(
+      agentReleaseSha256("2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824"),
+    ).toBe("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
     expect(agentReleaseSha256("not-a-hash")).toBeUndefined();
     expect(
       isZipDownloadTarget({

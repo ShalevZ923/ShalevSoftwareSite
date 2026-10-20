@@ -66,21 +66,43 @@ describe("agent artifact audit", () => {
       const packageRoot = join(root, "packages");
       const releaseDir = join(packageRoot, "test-skill", "1.0");
       await mkdir(releaseDir, { recursive: true });
-      const bytes = storedZip({ "test-skill/SKILL.md": "# Test", "test-skill/scripts/run.py": "print('ok')" }, 8);
+      const bytes = storedZip(
+        { "test-skill/SKILL.md": "# Test", "test-skill/scripts/run.py": "print('ok')" },
+        8,
+      );
       const digest = createHash("sha256").update(bytes).digest("hex");
       const pointer = "test-skill/1.0/test-skill-1.0.zip";
       const path = join(releaseDir, "test-skill-1.0.zip");
       await writeFile(path, bytes);
-      const entries = [{ metadata: { id: "test-skill", releases: [{ version: "1.0", artifact: pointer, sha256: digest, archiveRoot: "test-skill", contents: [{ path: "SKILL.md" }, { path: "scripts" }] }] } }];
+      const entries = [
+        {
+          metadata: {
+            id: "test-skill",
+            releases: [
+              {
+                version: "1.0",
+                artifact: pointer,
+                sha256: digest,
+                archiveRoot: "test-skill",
+                contents: [{ path: "SKILL.md" }, { path: "scripts" }],
+              },
+            ],
+          },
+        },
+      ];
       expect(await auditAgentArtifacts(entries, packageRoot)).toEqual({ declared: 1, errors: [] });
       await writeFile(path, "changed");
-      expect((await auditAgentArtifacts(entries, packageRoot)).errors[0]).toContain("does not match");
+      expect((await auditAgentArtifacts(entries, packageRoot)).errors[0]).toContain(
+        "does not match",
+      );
       await rm(path);
       const outside = join(root, "outside.zip");
       await writeFile(outside, bytes);
       await symlink(outside, path);
       expect((await auditAgentArtifacts(entries, packageRoot)).errors[0]).toContain("escapes");
-    } finally { await rm(root, { recursive: true, force: true }); }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("rejects non-ZIP bytes, traversal paths, and files absent from the contents list", async () => {
@@ -90,17 +112,41 @@ describe("agent artifact audit", () => {
       const releaseDir = join(packageRoot, "test-skill", "1.0");
       await mkdir(releaseDir, { recursive: true });
       const path = join(releaseDir, "test-skill-1.0.zip");
-      const entries = [{ metadata: { id: "test-skill", releases: [{ version: "1.0", artifact: "test-skill/1.0/test-skill-1.0.zip", archiveRoot: "test-skill", sha256: "", contents: [{ path: "SKILL.md" }] }] } }];
+      const entries = [
+        {
+          metadata: {
+            id: "test-skill",
+            releases: [
+              {
+                version: "1.0",
+                artifact: "test-skill/1.0/test-skill-1.0.zip",
+                archiveRoot: "test-skill",
+                sha256: "",
+                contents: [{ path: "SKILL.md" }],
+              },
+            ],
+          },
+        },
+      ];
       const corrupt = storedZip({ "test-skill/SKILL.md": "good" });
       corrupt[corrupt.indexOf(Buffer.from("good"))] ^= 1;
       const symlink = storedZip({ "test-skill/SKILL.md": "good" });
-      symlink.writeUInt32LE((0xa1ff << 16) >>> 0, symlink.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02])) + 38);
+      symlink.writeUInt32LE(
+        (0xa1ff << 16) >>> 0,
+        symlink.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02])) + 38,
+      );
       for (const [bytes, expected] of [
         [Buffer.from("not a ZIP"), "ZIP size"],
         [storedZip({ "test-skill/../SKILL.md": "bad" }), "unsafe ZIP entry path"],
         [storedZip({ "other/SKILL.md": "bad" }), "outside test-skill/"],
-        [storedZip({ "test-skill/SKILL.md": "a", "test-skill/skill.md": "b" }), "duplicate ZIP entry"],
-        [storedZip({ "test-skill/SKILL.md": "good", "test-skill/extra.sh": "bad" }), "unlisted ZIP file"],
+        [
+          storedZip({ "test-skill/SKILL.md": "a", "test-skill/skill.md": "b" }),
+          "duplicate ZIP entry",
+        ],
+        [
+          storedZip({ "test-skill/SKILL.md": "good", "test-skill/extra.sh": "bad" }),
+          "unlisted ZIP file",
+        ],
         [storedZip({ "test-skill/README.md": "wrong" }), "listed content is missing"],
         [corrupt, "ZIP entry is corrupt"],
         [symlink, "unsupported ZIP entry"],
@@ -109,6 +155,8 @@ describe("agent artifact audit", () => {
         entries[0].metadata.releases[0].sha256 = createHash("sha256").update(bytes).digest("hex");
         expect((await auditAgentArtifacts(entries, packageRoot)).errors[0]).toContain(expected);
       }
-    } finally { await rm(root, { recursive: true, force: true }); }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

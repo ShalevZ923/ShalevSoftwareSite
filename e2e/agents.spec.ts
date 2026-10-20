@@ -11,39 +11,71 @@ test.beforeEach(async ({ page }) => {
   page.on("pageerror", (error) => errors.push(error.message));
   fixture = await createServerFixture({ productionBuild: true });
   server = createToolAtlasServer(fixture.options);
-  await new Promise<void>((done, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", done); });
+  await new Promise<void>((done, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", done);
+  });
   url = `http://127.0.0.1:${server.address().port}`;
 });
 test.afterEach(async ({ page }) => {
   await page.close({ runBeforeUnload: false });
-  if (server?.listening) await new Promise<void>((done) => {
-    server.close(() => done());
-    server.closeAllConnections();
-  });
+  if (server?.listening)
+    await new Promise<void>((done) => {
+      server.close(() => done());
+      server.closeAllConnections();
+    });
   await fixture?.cleanup();
   expect(errors).toEqual([]);
 });
 
-test("a delayed live-only deep link opens newly saved and edited guides without rebuilding", async ({ page, request }, info) => {
+test("a delayed live-only deep link opens newly saved and edited guides without rebuilding", async ({
+  page,
+  request,
+}, info) => {
   const entries = await (await request.get(url + "/api/developer/agents", { headers })).json();
   const seed = entries.find((entry: { id: string }) => entry.id === "anthropic-pdf");
-  const created = await request.post(url + "/api/developer/agents", { headers, data: { metadata: { ...seed.metadata, id: "browser-role", name: "Browser Role", packageType: "Role Pack" }, guide: seed.guide + "\n\nNew live guide evidence." } });
+  const created = await request.post(url + "/api/developer/agents", {
+    headers,
+    data: {
+      metadata: {
+        ...seed.metadata,
+        id: "browser-role",
+        name: "Browser Role",
+        packageType: "Role Pack",
+      },
+      guide: seed.guide + "\n\nNew live guide evidence.",
+    },
+  });
   expect(created.status()).toBe(201);
   const accepted = await created.json();
   let release!: () => void;
-  const gate = new Promise<void>((done) => { release = done; });
-  await page.route("**/api/agents", async (route) => { await gate; await route.continue(); });
+  const gate = new Promise<void>((done) => {
+    release = done;
+  });
+  await page.route("**/api/agents", async (route) => {
+    await gate;
+    await route.continue();
+  });
   await page.goto(url + "?page=agents&agent=browser-role");
   await expect(page.getByRole("heading", { name: "Agent catalog", exact: true })).toBeVisible();
   await expect(page).toHaveTitle("Tool Atlas — Agent catalog");
   await expect(page).toHaveURL(/agent=browser-role/);
-  await expect(page.getByText("This resource is no longer listed.", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("This resource is no longer listed.", { exact: false })).toHaveCount(
+    0,
+  );
   release();
   const row = page.locator("#agent-browser-role");
   await expect(row.locator(".agent-row-summary")).toHaveAttribute("aria-expanded", "true");
   await row.getByText("Read usage guide", { exact: true }).click();
   await expect(row.locator(".agent-guide")).toContainText("New live guide evidence.");
-  const edited = await request.put(url + "/api/developer/agents/browser-role", { headers, data: { metadata: accepted.agent, revision: accepted.revision, guide: seed.guide + "\n\nEdited live guide evidence." } });
+  const edited = await request.put(url + "/api/developer/agents/browser-role", {
+    headers,
+    data: {
+      metadata: accepted.agent,
+      revision: accepted.revision,
+      guide: seed.guide + "\n\nEdited live guide evidence.",
+    },
+  });
   expect(edited.status()).toBe(200);
   await page.reload();
   await row.getByText("Read usage guide", { exact: true }).click();
@@ -51,10 +83,17 @@ test("a delayed live-only deep link opens newly saved and edited guides without 
   await page.screenshot({ path: info.outputPath("live-guide.png") });
 });
 
-test("filter edits survive delayed metadata and a genuinely missing target gets a notice", async ({ page }) => {
+test("filter edits survive delayed metadata and a genuinely missing target gets a notice", async ({
+  page,
+}) => {
   let release!: () => void;
-  const gate = new Promise<void>((done) => { release = done; });
-  await page.route("**/api/agents", async (route) => { await gate; await route.continue(); });
+  const gate = new Promise<void>((done) => {
+    release = done;
+  });
+  await page.route("**/api/agents", async (route) => {
+    await gate;
+    await route.continue();
+  });
   await page.goto(url + "?page=agents&agent=missing-agent");
   await page.getByLabel("Search agent catalog").fill("PDF");
   release();
@@ -67,14 +106,20 @@ test("filter edits survive delayed metadata and a genuinely missing target gets 
 test("unknown versions are reconciled after loading", async ({ page }) => {
   await page.goto(url + "?page=agents&agent=internal-comms&version=missing-version");
   await expect(page.getByText(/The linked version is unavailable/)).toBeVisible();
-  await expect(page.locator("#agent-internal-comms .agent-row-summary")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#agent-internal-comms .agent-row-summary")).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   await expect(page).not.toHaveURL(/missing-version/);
 });
 
 test("static guides remain backend-free and live guide failures stay visible", async ({ page }) => {
   let liveGuideRequests = 0;
   await page.route("**/api/agents", (route) => route.abort());
-  await page.route("**/api/agents/*/guide", (route) => { liveGuideRequests++; return route.fulfill({ status: 503, json: { error: "Unavailable" } }); });
+  await page.route("**/api/agents/*/guide", (route) => {
+    liveGuideRequests++;
+    return route.fulfill({ status: 503, json: { error: "Unavailable" } });
+  });
   await page.goto(url + "?page=agents&agent=anthropic-pdf");
   const row = page.locator("#agent-anthropic-pdf");
   await row.getByText("Read usage guide", { exact: true }).click();
@@ -88,7 +133,9 @@ test("static guides remain backend-free and live guide failures stay visible", a
 });
 
 for (const reject of [false, true]) {
-  test(`Studio locks selection during ${reject ? "rejected" : "successful"} saves and list edits are dirty before blur`, async ({ page }) => {
+  test(`Studio locks selection during ${reject ? "rejected" : "successful"} saves and list edits are dirty before blur`, async ({
+    page,
+  }) => {
     await page.goto(url + "?page=developer#token=" + developerToken);
     await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
     await expect(page.getByLabel("Resource ID", { exact: true })).toHaveValue("anthropic-pdf");
@@ -96,13 +143,24 @@ for (const reject of [false, true]) {
     await highlights.fill("First edited line\n\nSecond edited line");
     await expect(highlights).toBeFocused();
     await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
-    expect(await page.evaluate(() => { const event = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; })).toBe(true);
+    expect(
+      await page.evaluate(() => {
+        const event = new Event("beforeunload", { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      }),
+    ).toBe(true);
     let release!: () => void;
     let arrived!: () => void;
-    const gate = new Promise<void>((done) => { release = done; });
-    const intercepted = new Promise<void>((done) => { arrived = done; });
+    const gate = new Promise<void>((done) => {
+      release = done;
+    });
+    const intercepted = new Promise<void>((done) => {
+      arrived = done;
+    });
     await page.route("**/api/developer/agents/anthropic-pdf", async (route) => {
-      arrived(); await gate;
+      arrived();
+      await gate;
       if (reject) await route.fulfill({ status: 400, json: { error: "Deferred save rejected" } });
       else await route.continue();
     });
@@ -113,7 +171,11 @@ for (const reject of [false, true]) {
     await other.evaluate((button: HTMLButtonElement) => button.click());
     await expect(page.getByLabel("Resource ID", { exact: true })).toHaveValue("anthropic-pdf");
     release();
-    await expect(page.getByText(reject ? "Deferred save rejected" : /PDF Skill saved to the local Agent Catalog/)).toBeVisible();
+    await expect(
+      page.getByText(
+        reject ? "Deferred save rejected" : /PDF Skill saved to the local Agent Catalog/,
+      ),
+    ).toBeVisible();
     await expect(page.getByLabel("Resource ID", { exact: true })).toHaveValue("anthropic-pdf");
     await expect(other).toBeEnabled();
     if (!reject) {
@@ -124,7 +186,9 @@ for (const reject of [false, true]) {
   });
 }
 
-test("Updates counts agent-only results and enforces every kind filter on mobile", async ({ page }, info) => {
+test("Updates counts agent-only results and enforces every kind filter on mobile", async ({
+  page,
+}, info) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(url + "?page=updates");
   await page.getByLabel("Search updates").fill("Time MCP Server");

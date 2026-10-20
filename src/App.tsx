@@ -2,7 +2,16 @@ import { decodeCatalog } from "./contracts";
 import { Sidebar } from "./app/Sidebar";
 import { pageFromSearch, type Page } from "./app/routes";
 import { SoftwareCatalog as Catalog } from "./features/software/SoftwareCatalog";
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "./data";
 import { agents as staticAgents, type AgentPackage } from "./agents";
 import {
@@ -113,7 +122,12 @@ function App() {
     applyTheme(theme);
   }, [theme]);
   useEffect(() => {
-    document.title = page === "agents" ? "Tool Atlas — Agent catalog" : page === "catalog" ? "Tool Atlas — Software catalog" : "Tool Atlas";
+    document.title =
+      page === "agents"
+        ? "Tool Atlas — Agent catalog"
+        : page === "catalog"
+          ? "Tool Atlas — Software catalog"
+          : "Tool Atlas";
   }, [page]);
   useEffect(() => {
     if (!themeFollowsSystem) return;
@@ -149,7 +163,7 @@ function App() {
   });
   const initialPageRender = useRef(true);
 
-  const refreshSoftware = async (required = false) => {
+  const refreshSoftware = useCallback(async (required = false) => {
     try {
       const res = await fetch("/api/catalog");
       if (required && !res.ok)
@@ -167,25 +181,28 @@ function App() {
       if (required) throw error;
       // Offline or static fallback
     }
-  };
-  const refreshCatalog = async (required = false) => {
-    await Promise.all([
-      refreshSoftware(required),
-      (async () => {
-        try {
-          const res = await fetch("/api/agents");
-          if (!res.ok) throw new Error("Live catalog unavailable");
-          const data: AgentPackage[] = await res.json();
-          if (!Array.isArray(data)) throw new Error("Invalid live catalog");
-          setAgentPackages(data);
-          setAgentFeedStatus("live");
-          setAgentCatalogRevision((value) => value + 1);
-        } catch {
-          setAgentFeedStatus((status) => status === "loading" ? "static" : status);
-        }
-      })(),
-    ]);
-  };
+  }, []);
+  const refreshCatalog = useCallback(
+    async (required = false) => {
+      await Promise.all([
+        refreshSoftware(required),
+        (async () => {
+          try {
+            const res = await fetch("/api/agents");
+            if (!res.ok) throw new Error("Live catalog unavailable");
+            const data: AgentPackage[] = await res.json();
+            if (!Array.isArray(data)) throw new Error("Invalid live catalog");
+            setAgentPackages(data);
+            setAgentFeedStatus("live");
+            setAgentCatalogRevision((value) => value + 1);
+          } catch {
+            setAgentFeedStatus((status) => (status === "loading" ? "static" : status));
+          }
+        })(),
+      ]);
+    },
+    [refreshSoftware],
+  );
 
   const verifyDeveloperToken = async (candidateToken: string) => {
     if (!candidateToken) return false;
@@ -236,7 +253,7 @@ function App() {
     } else if (initialDevToken.current) {
       verifyDeveloperToken(initialDevToken.current);
     }
-  }, []);
+  }, [refreshCatalog]);
 
   const navigate = (nextPage: Page, nextTool = selectedDoc, version?: string) => {
     if (nextPage === "developer" && page === "developer") return;
@@ -246,7 +263,18 @@ function App() {
     if (nextPage === "agents") url.searchParams.delete("page");
     else url.searchParams.set("page", nextPage);
     if (page === "agents" && nextPage !== "agents") {
-      for (const key of ["agent", "saved", "type", "p", "capability", "publisher", "risk", "status", "query", "sort"]) {
+      for (const key of [
+        "agent",
+        "saved",
+        "type",
+        "p",
+        "capability",
+        "publisher",
+        "risk",
+        "status",
+        "query",
+        "sort",
+      ]) {
         url.searchParams.delete(key);
       }
     }
