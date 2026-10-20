@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { realpath, stat } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,18 +33,36 @@ export async function auditAgentArtifacts(entries, packagesDirectory) {
   return { declared: declared.length, errors };
 }
 
+export function trackedAgentEntries(entries, sources) {
+  const requested = new Set(sources.map((source) => `${source.id}@${source.version}`));
+  const selected = entries.map((entry) => ({ ...entry, metadata: { ...entry.metadata,
+    releases: entry.metadata.releases.filter((release) => requested.has(`${entry.metadata.id}@${release.version}`)),
+  } }));
+  const declared = new Set(selected.flatMap((entry) => entry.metadata.releases
+    .filter((release) => release.artifact).map((release) => `${entry.metadata.id}@${release.version}`)));
+  if (requested.size !== sources.length || [...requested].some((identity) => !declared.has(identity)))
+    throw new Error("Tracked package sources must match unique declared artifact releases");
+  return selected;
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const argument = process.argv[2];
-  if (argument && argument !== "--packages-dir") {
-    console.error("Usage: pnpm agents:artifacts --packages-dir /path/to/packages");
-    process.exitCode = 2;
-  } else {
-    const packagesDirectory = argument ? process.argv[3] : join(repositoryRoot, "packages");
-    if (!packagesDirectory) { console.error("Missing --packages-dir value"); process.exitCode = 2; }
-    else {
-      const result = await auditAgentArtifacts(await loadAgentEntries(), packagesDirectory);
-      if (result.errors.length) { result.errors.forEach((error) => console.error(error)); process.exitCode = 1; }
-      else console.log(`Checked ${result.declared} declared agent artifact${result.declared === 1 ? "" : "s"}.`);
+  try {
+    let packagesDirectory = join(repositoryRoot, "packages");
+    let tracked = false;
+    const args = process.argv.slice(2);
+    while (args.length) {
+      const argument = args.shift();
+      if (argument === "--tracked") tracked = true;
+      else if (argument === "--packages-dir" && args[0] && !args[0].startsWith("--")) packagesDirectory = args.shift();
+      else throw new Error("Usage: agents:artifacts [--tracked] [--packages-dir /path/to/packages]");
     }
+    let entries = await loadAgentEntries();
+    if (tracked) entries = trackedAgentEntries(entries, JSON.parse(await readFile(join(repositoryRoot, "scripts/agent-package-sources.json"), "utf8")));
+    const result = await auditAgentArtifacts(entries, packagesDirectory);
+    if (result.errors.length) { result.errors.forEach((error) => console.error(error)); process.exitCode = 1; }
+    else console.log(`Checked ${result.declared} ${tracked ? "tracked" : "declared"} agent artifact${result.declared === 1 ? "" : "s"}.`);
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
   }
 }

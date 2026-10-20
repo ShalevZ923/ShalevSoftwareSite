@@ -1,5 +1,13 @@
 # Air-gapped Agent Catalog
 
+## Tracked archive acceptance (issue #42)
+
+Use a disposable checkout with Python 3.12 and a fresh supported npm or pinned pnpm installation. Run `npm run agents:packages` (or `pnpm agents:packages`) to rebuild the four evaluation ZIPs from tracked vendor source and audit their recorded SHA-256 values, archive roots and declared contents. Source-byte or hash mismatches fail the command; do not update reviewed hashes merely to make it pass. GitHub Linux/Windows npm/pnpm verification and tagged-source verification run this gate with explicit Python setup. GitLab mirrors it with an explicit Python installation from the runner's configured package mirror.
+
+The builder audit uses `--tracked` to select exactly the unique ID/version records in `scripts/agent-package-sources.json`. Missing or duplicate source declarations fail. Environment-specific packages remain separate: source CI does not validate a subsequently mounted deployment volume. On the actual deployment candidate, run `npm run agents:artifacts -- --packages-dir /reviewed/packages` to audit every declared artifact in that volume, then verify host download behavior. These commands do not publish packages.
+
+Focused Playwright journeys run against a fresh disposable server fixture for every test, covering saved guides, delayed links, unknown versions, static fallback, save success/failure races, focused list-field dirty guards and all Updates filters. Browser plugin unavailable; Playwright is the validation path. Desktop/live-guide and mobile/Updates screenshots are retained in CI artifacts. No test writes to the real authoring tree.
+
 This optional artifact workflow is for networks that cannot reach GitHub, npm, or public MCP hosts. The checked-in Agent Catalog examples do not include approved artifacts or checksums. Internal GitLab owns review and metadata. When a ZIP is published, Tool Atlas `/downloads` serves the bytes. A listing can exist without an artifact. Users install by downloading and unpacking. Tool Atlas never runs package scripts, and end users do not need Node, npm, or npx.
 
 Site **build** still uses Node in GitLab CI. That is an operator toolchain. Mirror the digest-pinned job image into your internal Container Registry so runners never pull Docker Hub. See [`.gitlab-ci.yml`](../.gitlab-ci.yml).

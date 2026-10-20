@@ -20,6 +20,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -32,19 +33,39 @@ jobs:
         run: corepack enable
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
       - name: Verify
         run: pnpm verify
+      - name: Build and audit tracked evaluation archives
+        run: pnpm agents:packages
+      - name: Install browser
+        timeout-minutes: 10
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Focused browser regressions
+        env:
+          PLAYWRIGHT_CHROMIUM_CHANNEL: chromium
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: browser-evidence-pnpm-${{ matrix.os }}
+          path: test-results
+          if-no-files-found: ignore
 
   verify-required:
     name: Verify source and production artifact
-    needs: verify
+    needs: [verify, npm-verify, container-smoke]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Require successful verification on every platform
         env:
           VERIFY_RESULT: ${{ needs.verify.result }}
-        run: test "$VERIFY_RESULT" = "success"
+          NPM_RESULT: ${{ needs.npm-verify.result }}
+          CONTAINER_RESULT: ${{ needs.container-smoke.result }}
+        run: test "$VERIFY_RESULT" = success && test "$NPM_RESULT" = success && test "$CONTAINER_RESULT" = success
 
   npm-verify:
     name: Verify npm-only installation and build
@@ -52,6 +73,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -62,8 +84,26 @@ jobs:
           cache: npm
       - name: Install dependencies with npm
         run: npm ci
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
       - name: Verify with npm
         run: npm run verify
+      - name: Build and audit tracked evaluation archives
+        run: npm run agents:packages
+      - name: Install browser
+        timeout-minutes: 10
+        run: npm exec -- playwright install --with-deps chromium
+      - name: Focused browser regressions
+        env:
+          PLAYWRIGHT_CHROMIUM_CHANNEL: chromium
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: browser-evidence-npm-${{ matrix.os }}
+          path: test-results
+          if-no-files-found: ignore
 
   container-smoke:
     name: Build and smoke-test production image
