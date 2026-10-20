@@ -30,7 +30,9 @@ with tempfile.TemporaryDirectory(prefix='atlas zip portability ') as directory:
         sys.platform = original
 print('Portable archive bytes verified')
 `;
-    const result = await promisify(execFile)("python3", ["-c", script]);
+    const result = await promisify(execFile)("python3", ["-c", script], {
+      env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
+    });
     expect(result.stdout).toContain("Portable archive bytes verified");
   });
 });
