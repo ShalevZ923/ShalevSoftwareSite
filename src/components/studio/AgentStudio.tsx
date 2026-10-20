@@ -6,7 +6,7 @@ import { agentDownloadTarget } from "../../agentDelivery";
 import { Field, Icon } from "../ui";
 
 type AgentRecord = Omit<AgentPackage, "guidePath">;
-type Entry = { id: string; metadata: AgentRecord; guide: string };
+type Entry = { revision: string; id: string; metadata: AgentRecord; guide: string };
 type Draft = { metadata: AgentRecord; guide: string };
 const today = () => new Date().toISOString().slice(0, 10);
 const starter = (): Draft => ({
@@ -39,6 +39,7 @@ export function AgentStudio({ token, onCatalogUpdated, onDraftStateChange }: {
   const [saved, setSaved] = useState("");
   const [creating, setCreating] = useState(false);
   const [activeId, setActiveId] = useState("");
+  const [revision, setRevision] = useState("");
   const [search, setSearch] = useState("");
   const [section, setSection] = useState<"Overview" | "Review" | "Delivery" | "Guide">("Overview");
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,7 @@ export function AgentStudio({ token, onCatalogUpdated, onDraftStateChange }: {
       setEntries(data);
       if (select && data.length) {
         const first = copy({ metadata: data[0].metadata, guide: data[0].guide });
-        setDraft(first); setSaved(JSON.stringify(first)); setActiveId(data[0].id);
+        setDraft(first); setSaved(JSON.stringify(first)); setActiveId(data[0].id); setRevision(data[0].revision);
       }
     } catch (error) { setMessage({ tone: "error", text: error instanceof Error ? error.message : "Unable to load agents" }); }
     finally { setLoading(false); }
@@ -66,7 +67,7 @@ export function AgentStudio({ token, onCatalogUpdated, onDraftStateChange }: {
   const select = (entry: Entry) => {
     if (dirty && !window.confirm("Discard unsaved agent changes?")) return;
     const next = copy({ metadata: entry.metadata, guide: entry.guide });
-    setDraft(next); setSaved(JSON.stringify(next)); setActiveId(entry.id); setCreating(false); setMessage(null); setSection("Overview");
+    setDraft(next); setSaved(JSON.stringify(next)); setActiveId(entry.id); setRevision(entry.revision); setCreating(false); setMessage(null); setSection("Overview");
   };
   const add = () => {
     if (dirty && !window.confirm("Discard unsaved agent changes?")) return;
@@ -79,11 +80,12 @@ export function AgentStudio({ token, onCatalogUpdated, onDraftStateChange }: {
     setSaving(true); setMessage(null);
     try {
       const response = await fetch(creating ? "/api/developer/agents" : `/api/developer/agents/${activeId}`, {
-        method: creating ? "POST" : "PUT", headers, body: JSON.stringify(draft),
+        method: creating ? "POST" : "PUT", headers, body: JSON.stringify({ ...draft, revision }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `Save failed (HTTP ${response.status})`);
-      setSaved(JSON.stringify(draft)); setActiveId(draft.metadata.id); setCreating(false);
+      const accepted = { metadata: result.agent, guide: result.guide };
+      setDraft(accepted); setSaved(JSON.stringify(accepted)); setRevision(result.revision); setActiveId(draft.metadata.id); setCreating(false);
       setMessage({ tone: "success", text: `${draft.metadata.name} saved to the local Agent Catalog.` });
       await load(false);
       onCatalogUpdated();

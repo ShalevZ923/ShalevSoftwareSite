@@ -354,7 +354,7 @@ export async function loadAgentEntries(directory = agentsDirectory) {
   if (agentPaths.length === 0) fail(directory, "must contain at least one agent.json entry");
   const entries = await Promise.all(agentPaths.map(async (agentPath) => {
     const source = agentPath;
-    const relativeSegments = relative(directory, agentPath).split("/");
+    const relativeSegments = relative(directory, agentPath).replaceAll("\\", "/").split("/");
     const type = findTypeForPath(relativeSegments, types, source);
     if (relativeSegments.length !== 4 || relativeSegments[3] !== "agent.json" || !idPattern.test(relativeSegments[1]) || !idPattern.test(relativeSegments[2])) {
       fail(source, "must use <type>/<publisher>/<package>/agent.json");
@@ -393,7 +393,7 @@ export async function loadAgentEntries(directory = agentsDirectory) {
       packageType: type.label,
       releases,
     }, guide);
-    return { ...validated, guidePath: `/${relative(repositoryRoot, join(dirname(agentPath), "guide.md")).replaceAll("\\", "/")}` };
+    return { ...validated, guidePath: `/content/agents/${relative(directory, join(dirname(agentPath), "guide.md")).replaceAll("\\", "/")}` };
   }));
   const ids = new Set();
   for (const { metadata } of entries) {

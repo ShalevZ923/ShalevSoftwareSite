@@ -1,3 +1,4 @@
+import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -43,7 +44,8 @@ async function assertConsistent(id, expected) {
 
 describe("isolated software release HTTP round trips", () => {
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "tool-atlas-release-"));
+    const fixture = await createServerFixture();
+    root = fixture.root;
     directory = join(root, "catalog");
     await cp(contentDirectory, directory, { recursive: true });
     // Match the server's canonical source root, including Windows short-name expansion.
@@ -54,7 +56,7 @@ describe("isolated software release HTTP round trips", () => {
     await writeFile(outputs.generatedPath, renderGeneratedCatalog(entries));
     await writeFile(outputs.indexPath, feed.index);
     await writeFile(outputs.toolsPath, feed.tools);
-    server = createToolAtlasServer({ catalogDirectory: directory, catalogOutputs: outputs, packagesDirectory: join(root, "packages") });
+    server = createToolAtlasServer({ ...fixture.options, catalogDirectory: directory, catalogOutputs: outputs, packagesDirectory: join(root, "packages") });
     await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
     baseUrl = `http://127.0.0.1:${server.address().port}`;
   });

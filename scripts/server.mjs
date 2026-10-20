@@ -1,3 +1,4 @@
+import { consistentRead, recordRevision, recoverTransactions } from "./mutation-coordinator.mjs";
 import { saveCatalogEntry } from "./catalog-persistence.mjs";
 import { createServer } from "node:http";
 import { readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
@@ -219,7 +220,14 @@ export function createToolAtlasServer({
   catalogOutputs = {},
   agentContentDirectory = agentsDirectory,
   agentGeneratedFile = generatedAgentsPath,
+  documentationDirectory = docsDir,
+  stateDirectory = join(dirname(agentContentDirectory), ".tool-atlas-state"),
 } = {}) {
+  const recovery = recoverTransactions(stateDirectory, [agentContentDirectory, dirname(agentGeneratedFile)]).catch((error) => {
+    process.stderr.write(`Authoring startup: ${error.message}\nRecovery state: ${stateDirectory}\n`);
+    return error;
+  });
+  const readAgents = () => consistentRead(() => loadAgentEntries(agentContentDirectory));
   const server = createServer(async (req, res) => {
     let pathname;
     try {
@@ -233,6 +241,8 @@ export function createToolAtlasServer({
     }
 
     try {
+      const recoveryError = await recovery;
+      if (recoveryError) throw recoveryError;
       // Authenticate protected namespaces before disclosing routes or methods.
       if (pathname.startsWith("/api/developer/") && pathname !== "/api/developer/verify" && !verifyToken(req)) {
         return sendJson(res, 401, { error: "Unauthorized: Invalid or missing developer token" });
@@ -275,7 +285,7 @@ export function createToolAtlasServer({
         return sendJson(res, 200, { tools, docs });
       }
       if (pathname === "/api/agents" && req.method === "GET") {
-        const entries = await loadAgentEntries(agentContentDirectory);
+        const entries = await readAgents();
         return sendJson(res, 200, entries.map(({ metadata, guidePath }) => ({ ...metadata, guidePath })));
       }
 
@@ -323,30 +333,28 @@ export function createToolAtlasServer({
         }
 
         if (pathname === "/api/developer/agents" && req.method === "GET") {
-          const entries = await loadAgentEntries(agentContentDirectory);
-          return sendJson(res, 200, entries.map(({ metadata, guide }) => ({ id: metadata.id, metadata, guide })));
+          const entries = await readAgents();
+          return sendJson(res, 200, entries.map((entry) => ({ id: entry.metadata.id, metadata: entry.metadata, guide: entry.guide, revision: recordRevision(entry) })));
         }
         if (pathname === "/api/developer/agents" && req.method === "POST") {
           try {
             const body = await readJsonBody(req);
-            const { metadata, guide } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
-            const agent = await saveAgentStudioEntry({ metadata, guide, directory: agentContentDirectory, generatedPath: agentGeneratedFile });
-            return sendJson(res, 201, { success: true, agent });
+            const { metadata, guide, revision } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+            const agent = await saveAgentStudioEntry({ metadata, guide, directory: agentContentDirectory, generatedPath: agentGeneratedFile, stateDirectory, revision });
+            return sendJson(res, 201, { success: true, agent: agent.metadata, guide: agent.guide, revision: recordRevision(agent) });
           } catch (error) {
-            if (error?.statusCode === 413) return sendJson(res, 413, { error: error.message });
-            return sendJson(res, 400, { error: error instanceof Error ? error.message : "Agent validation failed" });
+            return sendJson(res, error.statusCode || 400, { error: error instanceof Error ? error.message : "Agent validation failed", code: error.code });
           }
         }
         const agentMatch = /^\/api\/developer\/agents\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
         if (agentMatch && req.method === "PUT") {
           try {
             const body = await readJsonBody(req);
-            const { metadata, guide } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
-            const agent = await saveAgentStudioEntry({ metadata, guide, existingId: agentMatch[1], directory: agentContentDirectory, generatedPath: agentGeneratedFile });
-            return sendJson(res, 200, { success: true, agent });
+            const { metadata, guide, revision } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+            const agent = await saveAgentStudioEntry({ metadata, guide, existingId: agentMatch[1], directory: agentContentDirectory, generatedPath: agentGeneratedFile, stateDirectory, revision });
+            return sendJson(res, 200, { success: true, agent: agent.metadata, guide: agent.guide, revision: recordRevision(agent) });
           } catch (error) {
-            if (error?.statusCode === 413) return sendJson(res, 413, { error: error.message });
-            return sendJson(res, 400, { error: error instanceof Error ? error.message : "Agent validation failed" });
+            return sendJson(res, error.statusCode || 400, { error: error instanceof Error ? error.message : "Agent validation failed", code: error.code });
           }
         }
 
@@ -445,10 +453,10 @@ export function createToolAtlasServer({
 
         // List documentation files: /api/developer/docs
         if (pathname === "/api/developer/docs" && req.method === "GET") {
-          const files = (await readdir(docsDir)).filter((name) => name.endsWith(".md")).sort();
+          const files = (await readdir(documentationDirectory)).filter((name) => name.endsWith(".md")).sort();
           const list = await Promise.all(
             files.map(async (name) => {
-              const fileStats = await stat(join(docsDir, name));
+              const fileStats = await stat(join(documentationDirectory, name));
               return { name, sizeBytes: fileStats.size, modified: fileStats.mtime.toISOString() };
             }),
           );
@@ -459,7 +467,7 @@ export function createToolAtlasServer({
         const docMatch = /^\/api\/developer\/docs\/([A-Za-z0-9_.-]+\.md)$/.exec(pathname);
         if (docMatch) {
           const docName = docMatch[1];
-          const targetFile = join(docsDir, docName);
+          const targetFile = join(documentationDirectory, docName);
 
           if (req.method === "GET") {
             if (!existsSync(targetFile)) {
@@ -617,7 +625,7 @@ export function createToolAtlasServer({
       createReadStream(candidatePath).pipe(res);
     } catch (error) {
       process.stderr.write(`Server error: ${error.message}\n`);
-      sendJson(res, error.statusCode || 500, { error: error.message });
+      sendJson(res, error.statusCode || 500, { error: error.message, code: error.code });
     }
   });
   // Developer Studio is an optional authoring server. Bound request and header
