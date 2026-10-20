@@ -4,6 +4,7 @@ import { pageFromSearch, type Page } from "./app/routes";
 import { SoftwareCatalog as Catalog } from "./features/software/SoftwareCatalog";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "./data";
+import { agents as staticAgents, type AgentPackage } from "./agents";
 import {
   catalogFiltersToSearch,
   defaultFilters,
@@ -36,6 +37,10 @@ import {
   type CatalogTarget,
 } from "./toolLinks";
 
+const AgentCatalog = lazy(async () => {
+  const module = await import("./components/AgentCatalog");
+  return { default: module.AgentCatalog };
+});
 const About = lazy(async () => {
   const module = await import("./components/About");
   return { default: module.About };
@@ -120,6 +125,7 @@ function App() {
     !studioSaving.current && (!studioDirty.current || window.confirm("Discard unsaved changes?"));
   const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
   const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
+  const [agentPackages] = useState<AgentPackage[]>(staticAgents);
   const [devToken, setDevToken] = useState<string>(() => {
     try {
       return window.sessionStorage.getItem("tool-atlas-dev-token") || "";
@@ -408,6 +414,15 @@ function App() {
             onUpdates={() => navigate("updates")}
             hotkeysEnabled={!drawerOpen}
           />
+        )}
+        {page === "agents" && (
+          <Suspense fallback={<PageFallback />}>
+            <AgentCatalog
+              key={`agents:${routeRevision}:${routeSearch}`}
+              search={routeSearch}
+              agents={agentPackages}
+            />
+          </Suspense>
         )}
         {page === "documentation" && (
           <Suspense fallback={<PageFallback />}>

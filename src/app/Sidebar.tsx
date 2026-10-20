@@ -28,6 +28,7 @@ export function Sidebar({
 }) {
   const links: Array<[Page, string, IconName]> = [
     ["catalog", "Catalog", "catalog"],
+    ["agents", "Agent Catalog", "agents"],
     ["documentation", "Documentation", "book"],
     ["updates", "Updates", "updates"],
     ["about", "About", "info"],

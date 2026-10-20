@@ -1,0 +1,48 @@
+{
+  "id": "anthropic-pdf",
+  "order": 2,
+  "name": "PDF Skill",
+  "icon": "PDF",
+  "updated": "Yesterday",
+  "description": "Anthropic's reviewed PDF skill for extracting text and tables, merging and splitting documents, filling forms, adding watermarks, and running OCR on scanned files.",
+  "riskLevel": "Medium",
+  "permissions": [
+    "Read local PDF files supplied by the user",
+    "Write generated or modified PDF files to the working directory",
+    "Run bundled Python and command-line helpers on the local machine"
+  ],
+  "risks": [
+    "Scripts can read and rewrite files in the project or skills directory.",
+    "OCR and form-filling helpers may invoke local Python packages."
+  ],
+  "contents": [
+    { "path": "SKILL.md", "kind": "skill", "note": "When to use the skill and the core PDF workflow." },
+    { "path": "forms.md", "kind": "doc", "note": "Form-filling instructions." },
+    { "path": "reference.md", "kind": "doc", "note": "Advanced libraries and troubleshooting." },
+    { "path": "scripts", "kind": "script", "note": "Python helpers for extract, merge, split, and related tasks." },
+    { "path": "LICENSE.txt", "kind": "doc", "note": "Source-available license terms for this document skill." }
+  ],
+  "install": {
+    "unpack": {
+      "project": ".agents/skills/pdf",
+      "global": "~/.agents/skills/pdf"
+    }
+  },
+  "notice": {
+    "tone": "info",
+    "title": "Hosted ZIP required",
+    "message": "Download works after a maintainer publishes anthropic-pdf-1.0.zip to the Tool Atlas packages volume with the listed SHA-256."
+  },
+  "maintainer": {
+    "name": "Maya Cohen",
+    "team": "Developer Experience",
+    "initials": "MC",
+    "email": "devex@atlas.local"
+  },
+  "tags": ["Anthropic", "Skill", "PDF", "Documents"],
+  "facts": [
+    { "label": "Publisher", "value": "Anthropic" },
+    { "label": "Delivery", "value": "Same-server ZIP" },
+    { "label": "License", "value": "Source-available document skill" }
+  ]
+}

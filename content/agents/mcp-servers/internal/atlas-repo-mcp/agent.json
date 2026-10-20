@@ -1,0 +1,53 @@
+{
+  "id": "atlas-repo-mcp",
+  "order": 1,
+  "name": "Atlas Repo MCP",
+  "icon": "AR",
+  "updated": "Today",
+  "description": "A reviewed, air-gapped MCP server for internal GitLab repositories. The ZIP contains a stdio binary; VS Code talks to it locally after you unpack the archive.",
+  "riskLevel": "Medium",
+  "permissions": [
+    "Read GitLab projects the signed-in identity can already access on the internal network",
+    "Run the unpacked stdio binary on the local machine",
+    "Write MCP configuration into the chosen VS Code scope"
+  ],
+  "risks": [
+    "The binary runs on the workstation with the user's identity.",
+    "VS Code will prompt you to trust the server before starting it."
+  ],
+  "contents": [
+    { "path": "atlas-repo-mcp", "kind": "script", "note": "Stdio MCP server binary for Linux and Windows." },
+    { "path": "mcp.json", "kind": "config", "note": "Reviewed stdio configuration for VS Code." }
+  ],
+  "install": {
+    "unpack": {
+      "project": ".agents/mcp/atlas-repo-mcp",
+      "global": "~/.agents/mcp/atlas-repo-mcp"
+    },
+    "mcp": {
+      "name": "atlas-repo",
+      "config": {
+        "type": "stdio",
+        "command": "atlas-repo-mcp",
+        "args": []
+      }
+    }
+  },
+  "notice": {
+    "tone": "info",
+    "title": "Hosted ZIP required",
+    "message": "Download works after a maintainer publishes atlas-repo-mcp-1.0.zip to the Tool Atlas packages volume with the listed SHA-256. Put the binary on PATH or invoke it from the unpack folder."
+  },
+  "maintainer": {
+    "name": "Maya Cohen",
+    "team": "Developer Experience",
+    "initials": "MC",
+    "email": "devex@atlas.local"
+  },
+  "tags": ["MCP", "GitLab", "Internal", "Stdio"],
+  "facts": [
+    { "label": "Publisher", "value": "Internal" },
+    { "label": "Transport", "value": "stdio" },
+    { "label": "Delivery", "value": "Same-server ZIP" }
+  ]
+}

@@ -5,6 +5,7 @@ import { getTrustedImageSource } from "../trustedMedia";
 export type IconName =
   | "arrow"
   | "atlas"
+  | "agents"
   | "book"
   | "bookmark"
   | "catalog"
@@ -24,14 +25,7 @@ export type IconName =
   | "updates";
 
 const CONCEPT_BOX = "0 0 40 40";
-const conceptIcons = new Set<IconName>([
-  "book",
-  "bookmark",
-  "catalog",
-  "external",
-  "info",
-  "updates",
-]);
+const conceptIcons = new Set<IconName>(["agents", "book", "bookmark", "catalog", "external", "info", "updates"]);
 
 const iconPaths: Record<IconName, ReactNode> = {
   atlas: (
@@ -44,6 +38,16 @@ const iconPaths: Record<IconName, ReactNode> = {
     <>
       <path d="M4 6h13v13H4zM23 6h13v13H23zM4 25h13v11H4z" />
       <path d="M23 25h13v11H23z" stroke="#f0a51a" />
+    </>
+  ),
+  agents: (
+    <>
+      <circle cx="10" cy="10" r="5" />
+      <circle cx="30" cy="10" r="5" />
+      <circle cx="10" cy="30" r="5" />
+      <circle cx="30" cy="30" r="5" />
+      <path d="M15 10h10M10 15v10M30 15v10M15 30h10" />
+      <path d="M15 15 25 25" stroke="#f0a51a" />
     </>
   ),
   book: (
@@ -176,7 +180,7 @@ export function PlatformMark({ platform }: { platform: Platform }) {
   );
 }
 
-export function ToolGlyph({ tool }: { tool: Tool }) {
+export function ToolGlyph({ tool }: { tool: Pick<Tool, "id" | "icon" | "image"> }) {
   const imageSource = getTrustedImageSource(tool.image?.src);
 
   return (

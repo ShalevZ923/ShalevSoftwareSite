@@ -10,9 +10,9 @@
     "catalog:build": "node scripts/build-catalog.mjs",
     "catalog:check": "node scripts/build-catalog.mjs --check",
     "dev": "npm run build && node scripts/server.mjs",
-    "dev:client": "npm run catalog:build && vite",
-    "test": "npm run catalog:check && vitest run",
-    "build": "npm run catalog:build && tsc -b && vite build",
+    "dev:client": "npm run catalog:build && npm run agents:build && vite",
+    "test": "npm run catalog:check && npm run agents:check && vitest run",
+    "build": "npm run catalog:build && npm run agents:build && tsc -b && vite build",
     "verify": "npm run locks:check && npm run lint && npm run docs:check && npm run typecheck && npm run test && npm run build && node scripts/verify-dist.mjs",
     "preview": "vite preview",
     "serve": "npm run start",
@@ -27,7 +27,9 @@
     "dev:studio": "npm run build && concurrently --kill-others \"node scripts/dev-studio-server.mjs\" \"vite --host 127.0.0.1\"",
     "docs:check": "node scripts/check-documentation-links.mjs",
     "locks:check": "node scripts/lockfile-policy.mjs",
-    "provenance": "node scripts/verification-provenance.mjs"
+    "provenance": "node scripts/verification-provenance.mjs",
+    "agents:build": "node scripts/build-agents.mjs",
+    "agents:check": "node scripts/build-agents.mjs --check"
   },
   "dependencies": {
     "react": "19.3.0",
