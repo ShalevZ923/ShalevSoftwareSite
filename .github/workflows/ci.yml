@@ -16,3 +16,25 @@ concurrency:
 jobs:
   acceptance:
     uses: ./.github/workflows/acceptance.yml
+
+  verify:
+    name: Verify source and production artifact
+    needs: acceptance
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require complete acceptance
+        env:
+          ACCEPTANCE_RESULT: ${{ needs.acceptance.result }}
+        run: test "$ACCEPTANCE_RESULT" = success
+
+  container-smoke:
+    name: Build and smoke-test production image
+    needs: acceptance
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require complete acceptance
+        env:
+          ACCEPTANCE_RESULT: ${{ needs.acceptance.result }}
+        run: test "$ACCEPTANCE_RESULT" = success
