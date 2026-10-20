@@ -14,8 +14,12 @@ test.beforeEach(async ({ page }) => {
   await new Promise<void>((done, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", done); });
   url = `http://127.0.0.1:${server.address().port}`;
 });
-test.afterEach(async () => {
-  if (server?.listening) await new Promise<void>((done) => server.close(() => done()));
+test.afterEach(async ({ page }) => {
+  await page.close({ runBeforeUnload: false });
+  if (server?.listening) await new Promise<void>((done) => {
+    server.close(() => done());
+    server.closeAllConnections();
+  });
   await fixture?.cleanup();
   expect(errors).toEqual([]);
 });
