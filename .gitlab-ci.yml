@@ -1,3 +1,5 @@
+# Mirror this digest-pinned image into the internal GitLab Container Registry
+# before air-gapped runners execute CI. Do not pull Docker Hub from the closed network.
 image: node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
 
 stages:
@@ -5,6 +7,7 @@ stages:
   - catalog
 
 before_script:
+  - if command -v apk >/dev/null; then apk add --no-cache python3; fi
   - node --input-type=module -e "import { assertSupportedNode } from './scripts/runtime-version.mjs'; assertSupportedNode()"
   - corepack enable
   - pnpm install --frozen-lockfile
@@ -13,6 +16,7 @@ verify:
   stage: validate
   script:
     - pnpm verify
+    - pnpm agents:packages
     - pnpm format:check
 
 browser_journeys:

@@ -24,6 +24,9 @@ pnpm-debug.log*
 
 **/.tool-atlas-state
 .tool-atlas-state
+**/__pycache__
+**/*.py[cod]
+**/.tool-atlas-state
 e2e
 test-results
 playwright-report

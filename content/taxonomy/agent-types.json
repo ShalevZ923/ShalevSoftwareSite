@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "types": [
+    { "id": "skills", "label": "Skill", "description": "Reviewed agent skills: instruction files, optional scripts, and supporting references." },
+    { "id": "agent-packs", "label": "Agent Pack", "description": "Bundled prompts, skills, and configuration for a complete agent workflow." },
+    { "id": "role-packs", "label": "Role Pack", "description": "Role-oriented prompt and policy packs for specialized agent identities." },
+    { "id": "mcp-servers", "label": "MCP Server", "description": "Officially supported Model Context Protocol servers from trusted publishers." }
+  ]
+}

@@ -40,7 +40,9 @@ export function DeveloperLockGate({
         <h2 id="page-title" tabIndex={-1}>
           Developer Studio
         </h2>
-        <p>Enter the access token from your local server to edit software and documentation.</p>
+        <p>
+          Enter the access token from your local server to edit software, agents, and documentation.
+        </p>
         <form onSubmit={handleSubmit} className="dev-lock-form">
           <label htmlFor="token-input">Access token</label>
           <input

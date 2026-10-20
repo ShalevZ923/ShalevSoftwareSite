@@ -2,10 +2,13 @@ import { decodeToolEntry, studioResponse } from "./studio/api";
 import { MarkdownDocument } from "../markdown";
 import { OverviewEditor, SupportEditor, ReleasesEditor, GuidesEditor } from "./studio/ToolSections";
 import { Icon, ToolGlyph } from "./ui";
+import { AgentStudio } from "./studio/AgentStudio";
 
 import { useStudioModel } from "./studio/useStudioModel";
 export function DeveloperStudio(props: Parameters<typeof useStudioModel>[0]) {
   const {
+    setAgentDirty,
+    setAgentSaving,
     activeTab,
     switchWorkspace,
     toolsList,
@@ -66,7 +69,7 @@ export function DeveloperStudio(props: Parameters<typeof useStudioModel>[0]) {
             <h1 id="page-title" tabIndex={-1}>
               Developer Studio
             </h1>
-            <p className="dev-header-copy">Maintain software and documentation.</p>
+            <p className="dev-header-copy">Maintain software, agents, and documentation.</p>
             <span className="dev-badge-connected">Local editing</span>
           </div>
         </div>
@@ -78,6 +81,12 @@ export function DeveloperStudio(props: Parameters<typeof useStudioModel>[0]) {
             }}
           >
             <Icon name="catalog" size={16} /> Software Catalog ({toolsList.length})
+          </button>
+          <button
+            className={`dev-tab-btn ${activeTab === "agents" ? "active" : ""}`}
+            onClick={() => switchWorkspace("agents")}
+          >
+            <Icon name="agents" size={16} /> Agent Catalog
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "docs" ? "active" : ""}`}
@@ -149,7 +158,16 @@ export function DeveloperStudio(props: Parameters<typeof useStudioModel>[0]) {
         </details>
       )}
       {/* Main Studio Body */}
-      {activeTab === "tools" ? (
+      {activeTab === "agents" ? (
+        <AgentStudio
+          token={props.token}
+          onCatalogUpdated={props.onCatalogUpdated}
+          onDraftStateChange={(nextDirty, nextSaving) => {
+            setAgentDirty(nextDirty);
+            setAgentSaving(nextSaving);
+          }}
+        />
+      ) : activeTab === "tools" ? (
         <div className="dev-workspace">
           {/* Left Column: Tool Explorer */}
           <nav aria-label="Catalog Tools" className="dev-sidebar">

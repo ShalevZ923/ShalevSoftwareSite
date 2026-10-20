@@ -5,6 +5,7 @@ import { getTrustedImageSource } from "../trustedMedia";
 export type IconName =
   | "arrow"
   | "atlas"
+  | "agents"
   | "book"
   | "bookmark"
   | "catalog"
@@ -14,6 +15,7 @@ export type IconName =
   | "document"
   | "download"
   | "external"
+  | "filter"
   | "info"
   | "link"
   | "mail"
@@ -25,6 +27,7 @@ export type IconName =
 
 const CONCEPT_BOX = "0 0 40 40";
 const conceptIcons = new Set<IconName>([
+  "agents",
   "book",
   "bookmark",
   "catalog",
@@ -44,6 +47,16 @@ const iconPaths: Record<IconName, ReactNode> = {
     <>
       <path d="M4 6h13v13H4zM23 6h13v13H23zM4 25h13v11H4z" />
       <path d="M23 25h13v11H23z" stroke="#f0a51a" />
+    </>
+  ),
+  agents: (
+    <>
+      <circle cx="10" cy="10" r="5" />
+      <circle cx="30" cy="10" r="5" />
+      <circle cx="10" cy="30" r="5" />
+      <circle cx="30" cy="30" r="5" />
+      <path d="M15 10h10M10 15v10M30 15v10M15 30h10" />
+      <path d="M15 15 25 25" stroke="#f0a51a" />
     </>
   ),
   book: (
@@ -82,6 +95,14 @@ const iconPaths: Record<IconName, ReactNode> = {
     <>
       <circle cx="10.5" cy="10.5" r="6.5" />
       <path d="m16 16 4 4" />
+    </>
+  ),
+  filter: (
+    <>
+      <path d="M3 6h18M3 12h18M3 18h18" />
+      <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none" />
     </>
   ),
   chevron: <path d="m7 10 5 5 5-5" />,
@@ -176,7 +197,7 @@ export function PlatformMark({ platform }: { platform: Platform }) {
   );
 }
 
-export function ToolGlyph({ tool }: { tool: Tool }) {
+export function ToolGlyph({ tool }: { tool: Pick<Tool, "id" | "icon" | "image"> }) {
   const imageSource = getTrustedImageSource(tool.image?.src);
 
   return (

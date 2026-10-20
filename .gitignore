@@ -19,3 +19,7 @@ test-results/
 playwright-report/
 
 .internal-generated/
+/test-results/
+/playwright-report/
+__pycache__/
+*.py[cod]
