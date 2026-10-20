@@ -1,3 +1,4 @@
+import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";

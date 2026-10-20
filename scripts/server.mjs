@@ -278,6 +278,8 @@ export function createToolAtlasServer({
   agentGeneratedFile = generatedAgentsPath,
 } = {}) {
   const recovery = recoverTransactions(stateDirectory, [
+    agentContentDirectory,
+    dirname(agentGeneratedFile),
     catalogDirectory,
     dirname(catalogOutputs.generatedPath ?? join(rootDir, "src/generated/catalog.ts")),
     dirname(catalogOutputs.indexPath ?? join(rootDir, "public/catalog/v1/index.json")),
@@ -290,6 +292,7 @@ export function createToolAtlasServer({
     );
     return error;
   });
+  const readAgents = () => consistentRead(() => loadAgentEntries(agentContentDirectory));
   const readCatalog = () => consistentRead(() => loadCatalogEntries(catalogDirectory));
   const server = createServer(async (req, res) => {
     let pathname;
@@ -352,7 +355,7 @@ export function createToolAtlasServer({
         return sendJson(res, 200, { tools, docs });
       }
       if (pathname === "/api/agents" && req.method === "GET") {
-        const entries = await loadAgentEntries(agentContentDirectory);
+        const entries = await readAgents();
         return sendJson(res, 200, entries.map(({ metadata, guidePath }) => ({ ...metadata, guidePath })));
       }
 
@@ -402,30 +405,28 @@ export function createToolAtlasServer({
         }
 
         if (pathname === "/api/developer/agents" && req.method === "GET") {
-          const entries = await loadAgentEntries(agentContentDirectory);
-          return sendJson(res, 200, entries.map(({ metadata, guide }) => ({ id: metadata.id, metadata, guide })));
+          const entries = await readAgents();
+          return sendJson(res, 200, entries.map((entry) => ({ id: entry.metadata.id, metadata: entry.metadata, guide: entry.guide, revision: recordRevision(entry) })));
         }
         if (pathname === "/api/developer/agents" && req.method === "POST") {
           try {
             const body = await readJsonBody(req);
-            const { metadata, guide } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
-            const agent = await saveAgentStudioEntry({ metadata, guide, directory: agentContentDirectory, generatedPath: agentGeneratedFile });
-            return sendJson(res, 201, { success: true, agent });
+            const { metadata, guide, revision } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+            const agent = await saveAgentStudioEntry({ metadata, guide, directory: agentContentDirectory, generatedPath: agentGeneratedFile, stateDirectory, revision });
+            return sendJson(res, 201, { success: true, agent: agent.metadata, guide: agent.guide, revision: recordRevision(agent) });
           } catch (error) {
-            if (error?.statusCode === 413) return sendJson(res, 413, { error: error.message });
-            return sendJson(res, 400, { error: error instanceof Error ? error.message : "Agent validation failed" });
+            return sendJson(res, error.statusCode || 400, { error: error instanceof Error ? error.message : "Agent validation failed", code: error.code });
           }
         }
         const agentMatch = /^\/api\/developer\/agents\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
         if (agentMatch && req.method === "PUT") {
           try {
             const body = await readJsonBody(req);
-            const { metadata, guide } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
-            const agent = await saveAgentStudioEntry({ metadata, guide, existingId: agentMatch[1], directory: agentContentDirectory, generatedPath: agentGeneratedFile });
-            return sendJson(res, 200, { success: true, agent });
+            const { metadata, guide, revision } = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+            const agent = await saveAgentStudioEntry({ metadata, guide, existingId: agentMatch[1], directory: agentContentDirectory, generatedPath: agentGeneratedFile, stateDirectory, revision });
+            return sendJson(res, 200, { success: true, agent: agent.metadata, guide: agent.guide, revision: recordRevision(agent) });
           } catch (error) {
-            if (error?.statusCode === 413) return sendJson(res, 413, { error: error.message });
-            return sendJson(res, 400, { error: error instanceof Error ? error.message : "Agent validation failed" });
+            return sendJson(res, error.statusCode || 400, { error: error instanceof Error ? error.message : "Agent validation failed", code: error.code });
           }
         }
 

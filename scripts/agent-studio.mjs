@@ -1,5 +1,7 @@
+import { tmpdir } from "node:os";
+import { assertRevision, coordinateMutation, publishTransaction, sourceSnapshot, assertSourceSnapshot, recoverTransactions } from "./mutation-coordinator.mjs";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, sep } from "node:path";
 import {
   agentsDirectory,
@@ -17,12 +19,18 @@ function inside(root, candidate) {
   return path && path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path);
 }
 
-export async function saveAgentStudioEntry({
+export function saveAgentStudioEntry(options) {
+  return coordinateMutation(() => persistAgentStudioEntry(options));
+}
+
+async function persistAgentStudioEntry({
   metadata,
   guide,
   existingId,
   directory = agentsDirectory,
   generatedPath = generatedAgentsPath,
+  stateDirectory = join(dirname(directory), ".tool-atlas-state"),
+  revision,
 }) {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || typeof guide !== "string") {
     throw new Error("metadata and guide are required");
@@ -31,7 +39,11 @@ export async function saveAgentStudioEntry({
     typeof metadata.publisher !== "string") {
     throw new Error("Agent id or publisher is invalid");
   }
-  const entries = await loadAgentEntries(directory);
+  const root = await realpath(directory);
+  directory = root;
+  await recoverTransactions(stateDirectory, [root, dirname(generatedPath)]);
+  const snapshot = await sourceSnapshot(root);
+  const entries = await loadAgentEntries(root);
   const existing = existingId && entries.find((item) => item.metadata.id === existingId);
   if (existingId && !existing) throw new Error(`Agent ${existingId} not found`);
   if (existing && (metadata.id !== existingId || metadata.publisher !== existing.metadata.publisher ||
@@ -44,6 +56,7 @@ export async function saveAgentStudioEntry({
   if (existing && existing.metadata.releases.some((release) => !metadata.releases?.some((item) => item.version === release.version))) {
     throw new Error("Existing release versions cannot be removed in Developer Studio");
   }
+  if (existing) assertRevision(revision, existing);
   const publisherId = slugifyId(metadata.publisher);
   const typeId = [...packageTypes].find(([, label]) => label === metadata.packageType)?.[0];
   if (!publisherId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(publisherId) || !typeId) {
@@ -51,9 +64,7 @@ export async function saveAgentStudioEntry({
   }
   const folder = join(directory, typeId, publisherId, metadata.id);
   const publisherFolder = dirname(folder);
-  const root = await realpath(directory);
-  const typeFolder = await realpath(join(directory, typeId));
-  if (!inside(root, typeFolder)) throw new Error("Package type directory escapes agent source");
+
   if (existsSync(publisherFolder)) {
     if (!inside(root, await realpath(publisherFolder))) throw new Error("Publisher directory escapes agent source");
     const publisherFile = join(publisherFolder, "publisher.json");
@@ -68,22 +79,32 @@ export async function saveAgentStudioEntry({
 
   const { publisher, packageType, releases, guidePath, ...record } = metadata;
   const validated = validateAgentEntry(folder, { ...record, publisher, packageType, releases }, guide.trim());
-  const path = existing?.guidePath ?? `/content/agents/${typeId}/${publisherId}/${metadata.id}/guide.md`;
-  const nextEntries = existing
-    ? entries.map((item) => item.metadata.id === existingId ? { ...validated, guidePath: path } : item)
-    : [...entries, { ...validated, guidePath: path }];
-  const generated = renderGeneratedAgents(nextEntries.sort((a, b) => a.metadata.id.localeCompare(b.metadata.id)));
   const { publisher: _publisher, packageType: _packageType, releases: _releases, ...stored } = validated.metadata;
 
-  await mkdir(join(folder, "releases"), { recursive: true });
-  if (!existsSync(join(publisherFolder, "publisher.json"))) {
-    await writeFile(join(publisherFolder, "publisher.json"), JSON.stringify({ name: publisher }) + "\n", "utf8");
+  const changes = [
+    { path: join(folder, "agent.json"), content: JSON.stringify(stored, null, 2) + "\n" },
+    { path: join(folder, "guide.md"), content: guide.trim() + "\n" },
+    ...releases.map((release) => ({ path: join(folder, "releases", `${release.version}.json`), content: JSON.stringify(release, null, 2) + "\n" })),
+  ];
+  if (!existsSync(join(publisherFolder, "publisher.json")))
+    changes.unshift({ path: join(publisherFolder, "publisher.json"), content: JSON.stringify({ name: publisher }) + "\n" });
+  const stage = await mkdtemp(join(tmpdir(), "atlas-agent-save-"));
+  try {
+    const stagedRoot = join(stage, "agents");
+    await cp(root, stagedRoot, { recursive: true });
+    for (const change of changes) {
+      const stagedPath = join(stagedRoot, relative(root, change.path));
+      await mkdir(dirname(stagedPath), { recursive: true });
+      await writeFile(stagedPath, change.content, "utf8");
+    }
+    const accepted = await loadAgentEntries(stagedRoot);
+    await publishTransaction([...changes, { path: generatedPath, content: renderGeneratedAgents(accepted) }], {
+      stateDirectory,
+      roots: [root, dirname(generatedPath)],
+      precondition: () => assertSourceSnapshot(root, snapshot),
+    });
+    return accepted.find((entry) => entry.metadata.id === metadata.id);
+  } finally {
+    await rm(stage, { recursive: true, force: true });
   }
-  await writeFile(join(folder, "agent.json"), JSON.stringify(stored, null, 2) + "\n", "utf8");
-  await writeFile(join(folder, "guide.md"), guide.trim() + "\n", "utf8");
-  for (const release of releases) {
-    await writeFile(join(folder, "releases", `${release.version}.json`), JSON.stringify(release, null, 2) + "\n", "utf8");
-  }
-  await writeFile(generatedPath, generated, "utf8");
-  return validated.metadata;
 }
