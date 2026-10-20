@@ -2,7 +2,7 @@
 
 ## Runtime and commands
 
-Use Node 24 and either `npm ci` or `pnpm install --frozen-lockfile`. Both lockfiles are maintained. `npm run doctor` checks prerequisites.
+Use Node >=24.11.0 <25 and either `npm ci` or `pnpm install --frozen-lockfile`. Both lockfiles are maintained. `npm run doctor` checks the supported minor-version floor as well as prerequisites. Babel 8 in the locked dependency graphs requires this floor.
 
 - `npm run dev:studio`: Vite with HMR on loopback 5173 plus the guarded authoring API on loopback 8081. Open the startup fragment link privately; do not copy token-bearing output into reports.
 - `npm run dev:client`: frontend-only development; the API proxy expects the separate Studio server when authoring.
@@ -34,6 +34,8 @@ Stop the authoring process. Back up the catalog, generated outputs, internal doc
 Server suites and browser journeys use `scripts/test-fixtures/server-fixture.mjs`. Pass its complete `options` object to the server; it supplies disposable source, documentation, output, recovery, download, library and static paths. The repository catalog/docs/build are copied only as read-only inputs. Close the server before cleaning its fixture. New server tests must use this factory so they cannot recover or write a developer's active authoring state.
 
 ## Release boundaries
+
+See [release acceptance](RELEASE_ACCEPTANCE.md) for shared gates, runtime requirements, Windows evidence and outstanding limitations.
 
 1.7.2 is the software-catalog maintenance candidate. Agent Catalog changes remain on experimental 1.8.0. The public image is static NGINX; authoring APIs and credentials remain in the optional local Studio. Tool Atlas MCP remains a separate project. Native Windows and container verification are release gates, not claims inferred from Linux tests.
 

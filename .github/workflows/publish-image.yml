@@ -15,28 +15,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  acceptance:
+    uses: ./.github/workflows/acceptance.yml
+    permissions:
+      contents: read
+
   verify-release:
-    name: Verify tagged source
+    name: Verify tag identity
+    needs: acceptance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           check-latest: true
-      - name: Enable Corepack
-        run: corepack enable
       - name: Verify tag matches package version
         run: |
           package_version="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")"
           test "${GITHUB_REF_NAME#v}" = "$package_version"
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Verify
-        run: pnpm verify
 
   publish:
     name: Publish GHCR image and provenance

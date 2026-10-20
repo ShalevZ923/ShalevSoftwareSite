@@ -50,7 +50,7 @@ See [the 1.7.2 developer guide](docs/development/DEVELOPER_GUIDE.md) for mainten
 
 ## Local development
 
-Use Node.js 24 LTS and npm (included with Node.js). No pnpm installation is required:
+Use Node.js >=24.11.0 <25 and npm (included with Node.js). No pnpm installation is required:
 
 ```bash
 npm ci

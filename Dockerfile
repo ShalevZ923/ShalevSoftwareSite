@@ -4,7 +4,7 @@ WORKDIR /app
 # Node 24 is the supported build and development runtime.
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 COPY index.html tsconfig.json tsconfig.app.json vite.config.ts ./

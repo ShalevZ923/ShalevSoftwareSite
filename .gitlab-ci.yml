@@ -5,6 +5,7 @@ stages:
   - catalog
 
 before_script:
+  - node --input-type=module -e "import { assertSupportedNode } from './scripts/runtime-version.mjs'; assertSupportedNode()"
   - corepack enable
   - pnpm install --frozen-lockfile
 
