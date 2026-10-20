@@ -22,9 +22,7 @@ export function DeveloperLockGate({
     try {
       const ok = await onUnlock(cleanToken);
       if (!ok) {
-        setError(
-          "Invalid or expired token. Check your server console / PowerShell window.",
-        );
+        setError("Invalid or expired token. Check your server console / PowerShell window.");
       }
     } catch {
       setError("Failed to communicate with server verification endpoint.");
@@ -34,10 +32,7 @@ export function DeveloperLockGate({
   };
 
   return (
-    <section
-      className="dev-lock-screen"
-      aria-label="Developer Authentication Gate"
-    >
+    <section className="dev-lock-screen" aria-label="Developer Authentication Gate">
       <div className="dev-lock-card">
         <div className="dev-lock-icon" aria-hidden="true">
           <Icon name="bookmark" size={28} />
@@ -45,10 +40,7 @@ export function DeveloperLockGate({
         <h2 id="page-title" tabIndex={-1}>
           Developer Studio
         </h2>
-        <p>
-          Enter the access token from your local server to edit software and
-          documentation.
-        </p>
+        <p>Enter the access token from your local server to edit software and documentation.</p>
         <form onSubmit={handleSubmit} className="dev-lock-form">
           <label htmlFor="token-input">Access token</label>
           <input

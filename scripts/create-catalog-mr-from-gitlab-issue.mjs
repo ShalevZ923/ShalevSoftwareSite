@@ -1,9 +1,24 @@
+import { parseCatalogSubmission } from "./catalog-submission.mjs";
+import { renderMachineCatalog } from "./catalog-content.mjs";
+import { section, selectedPlatforms, optionalFacts } from "./submission-fields.mjs";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { loadCatalogEntries, loadTaxonomy, parseReleaseList, renderCatalogEntryFiles, renderGeneratedCatalog, repositoryRoot, slugifyId } from "./catalog-content.mjs";
+import {
+  loadCatalogEntries,
+  loadTaxonomy,
+  parseReleaseList,
+  renderCatalogEntryFiles,
+  renderGeneratedCatalog,
+  repositoryRoot,
+  slugifyId,
+} from "./catalog-content.mjs";
 import { relative } from "node:path";
-import { descriptionSha256, requireApprovedDescription, trustedGitLabApiBase } from "./gitlab-catalog-security.mjs";
+import {
+  descriptionSha256,
+  requireApprovedDescription,
+  trustedGitLabApiBase,
+} from "./gitlab-catalog-security.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -13,75 +28,16 @@ async function readStandardInput() {
   return input;
 }
 
-function section(body, label, required = true) {
-  const heading = `### ${label}`;
-  const start = body.indexOf(heading);
-  if (start < 0) {
-    if (required) throw new Error(`Issue template is missing: ${label}`);
-    return "";
-  }
-  const afterHeading = body.slice(start + heading.length).replace(/^\r?\n/, "");
-  const nextHeading = afterHeading.search(/^### /mu);
-  const value = (nextHeading < 0 ? afterHeading : afterHeading.slice(0, nextHeading))
-    .replace(/<!--[\s\S]*?-->/gu, "")
-    .trim();
-  if (value === "_No response_" || !value) {
-    if (required) throw new Error(`Issue template is missing: ${label}`);
-    return "";
-  }
-  return value;
-}
-
-function selectedPlatforms(value) {
-  return ["Windows", "Linux", "macOS", "Web"].filter((platform) => new RegExp(`- \\[x\\] ${platform}`, "iu").test(value));
-}
-
-function optionalFacts(value) {
-  if (!value.trim()) return undefined;
-  return value.split("\n").filter(Boolean).map((line) => {
-    const separator = line.indexOf(":");
-    if (separator < 1) throw new Error("Optional facts must use one Label: value pair per line");
-    return { label: line.slice(0, separator).trim(), value: line.slice(separator + 1).trim() };
-  });
-}
-
 const taxonomy = await loadTaxonomy();
 
 function parseEntry(issue, order) {
-  const body = issue.description;
-  if (typeof body !== "string") throw new Error("Issue description is unavailable");
-  const name = section(body, "Software name");
-  const supportName = section(body, "Support owner");
-  const id = slugifyId(name);
-  if (!id) throw new Error("Software name cannot produce a valid catalog id");
-  const categoryId = section(body, "Category ID");
-  const category = taxonomy.find(({ id }) => id === categoryId);
-  if (!category) throw new Error(`Category ID is not in content/taxonomy/categories.json: ${categoryId}`);
-  return {
-    categoryId,
-    metadata: {
-      id,
-      order,
-      name,
-      company: section(body, "Vendor or company"),
-      category: category.label,
-      platforms: selectedPlatforms(section(body, "Supported platforms")),
-      lifecycle: section(body, "Lifecycle"),
-      icon: section(body, "Catalog tile"),
-      releases: parseReleaseList(section(body, "Approved releases"), `GitLab issue #${issue.iid}`),
-      updated: new Date(issue.updated_at ?? Date.now()).toISOString().slice(0, 10),
-      description: section(body, "Short description"),
-      support: {
-        name: supportName,
-        team: section(body, "Support team"),
-        initials: supportName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
-        email: section(body, "Support email"),
-      },
-      tags: section(body, "Tags").split(",").map((item) => item.trim()).filter(Boolean),
-      facts: optionalFacts(section(body, "Optional facts", false)),
-    },
-    guide: section(body, "Installation and support guide"),
-  };
+  return parseCatalogSubmission({
+    body: issue.description,
+    updatedAt: issue.updated_at ?? new Date().toISOString(),
+    order,
+    taxonomy,
+    source: `GitLab issue #${issue.iid}`,
+  });
 }
 
 async function entryFiles(entry) {
@@ -89,7 +45,10 @@ async function entryFiles(entry) {
   const vendorFile = files[0];
   try {
     const currentVendor = await readFile(vendorFile.path, "utf8");
-    if (currentVendor !== vendorFile.content) throw new Error(`Vendor directory already belongs to a different company: ${vendorFile.path}`);
+    if (currentVendor !== vendorFile.content)
+      throw new Error(
+        `Vendor directory already belongs to a different company: ${vendorFile.path}`,
+      );
     files.shift();
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
@@ -108,10 +67,19 @@ if (process.argv.includes("--dry-run")) {
   if (!issuePath) throw new Error("GITLAB_ISSUE_JSON is required for a dry run");
   const issue = JSON.parse(await readFile(issuePath, "utf8"));
   const existingEntries = await loadCatalogEntries();
-  const entry = parseEntry(issue, Math.max(...existingEntries.map(({ metadata }) => metadata.order)) + 1);
+  const entry = parseEntry(
+    issue,
+    Math.max(...existingEntries.map(({ metadata }) => metadata.order)) + 1,
+  );
+  if (existingEntries.some(({ metadata }) => metadata.id === entry.metadata.id))
+    throw new Error(`Catalog entry already exists: ${entry.metadata.id}`);
   await entryFiles(entry);
-  renderGeneratedCatalog([...existingEntries, entry].sort((left, right) => left.metadata.order - right.metadata.order));
-  process.stdout.write(`Validated catalog entry ${entry.metadata.id} from GitLab issue #${issue.iid}.\n`);
+  renderGeneratedCatalog(
+    [...existingEntries, entry].sort((left, right) => left.metadata.order - right.metadata.order),
+  );
+  process.stdout.write(
+    `Validated catalog entry ${entry.metadata.id} from GitLab issue #${issue.iid}.\n`,
+  );
   process.exit(0);
 }
 
@@ -135,23 +103,40 @@ const headers = {
 };
 
 async function api(path, options = {}) {
-  const response = await fetch(`${apiBase}${path}`, { ...options, headers: { ...headers, ...options.headers } });
+  const response = await fetch(`${apiBase}${path}`, {
+    ...options,
+    headers: { ...headers, ...options.headers },
+  });
   if (!response.ok) throw new Error(`GitLab API request failed (${response.status}) for ${path}`);
   return response.status === 204 ? undefined : response.json();
 }
 
 const issue = await api(`/issues/${encodeURIComponent(process.env.CATALOG_ISSUE_IID)}`);
-if (!issue.labels?.includes("catalog-approved")) throw new Error("Issue must have the catalog-approved label");
+if (!issue.labels?.includes("catalog-approved"))
+  throw new Error("Issue must have the catalog-approved label");
 if (issue.state !== "opened") throw new Error("Issue must be open");
 requireApprovedDescription(issue.description, process.env.CATALOG_APPROVED_DESCRIPTION_SHA256);
 
 const existingEntries = await loadCatalogEntries();
-const entry = parseEntry(issue, Math.max(...existingEntries.map(({ metadata }) => metadata.order)) + 1);
+const entry = parseEntry(
+  issue,
+  Math.max(...existingEntries.map(({ metadata }) => metadata.order)) + 1,
+);
 if (existingEntries.some(({ metadata }) => metadata.id === entry.metadata.id)) {
   throw new Error(`Catalog entry already exists: ${entry.metadata.id}`);
 }
+const acceptedEntries = [...existingEntries, entry].sort(
+  (left, right) => left.metadata.order - right.metadata.order,
+);
+const feed = renderMachineCatalog(acceptedEntries);
+const generated = renderGeneratedCatalog(
+  [...existingEntries, entry].sort((left, right) => left.metadata.order - right.metadata.order),
+);
+const acceptedFiles = await entryFiles(entry);
 const branch = `catalog/issue-${issue.iid}`;
-const branchResponse = await fetch(`${apiBase}/repository/branches/${encodeURIComponent(branch)}`, { headers });
+const branchResponse = await fetch(`${apiBase}/repository/branches/${encodeURIComponent(branch)}`, {
+  headers,
+});
 if (branchResponse.status !== 404) {
   if (branchResponse.ok) throw new Error(`Catalog branch already exists for issue #${issue.iid}`);
   throw new Error(`GitLab API request failed (${branchResponse.status}) while checking branch`);
@@ -164,15 +149,20 @@ await api("/repository/branches", {
   body: JSON.stringify({ branch, ref: targetBranch }),
 });
 
-const generated = renderGeneratedCatalog([...existingEntries, entry].sort((left, right) => left.metadata.order - right.metadata.order));
 await api("/repository/commits", {
   method: "POST",
   body: JSON.stringify({
     branch,
     commit_message: `content: add catalog entry from issue #${issue.iid}`,
     actions: [
-      ...(await entryFiles(entry)).map((file) => ({ action: "create", file_path: file.path, content: file.content })),
+      ...acceptedFiles.map((file) => ({
+        action: "create",
+        file_path: file.path,
+        content: file.content,
+      })),
       { action: "update", file_path: "src/generated/catalog.ts", content: generated },
+      { action: "update", file_path: "public/catalog/v1/index.json", content: feed.index },
+      { action: "update", file_path: "public/catalog/v1/tools.json", content: feed.tools },
     ],
   }),
 });

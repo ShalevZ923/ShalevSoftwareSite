@@ -4,7 +4,7 @@ This guide enables the GitLab issue-to-merge-request path. It keeps catalog publ
 
 ## Prerequisites
 
-1. Merge this repository's GitLab contribution files into the GitLab project's protected default branch: [`.gitlab-ci.yml`](../.gitlab-ci.yml), [issue template](../.gitlab/issue_templates/Add%20catalog%20software.md), and the catalog scripts.
+1. Merge this repository's GitLab contribution files into the GitLab project's protected default branch: [`.gitlab-ci.yml`](../../.gitlab-ci.yml), [issue template](../../.gitlab/issue_templates/Add%20catalog%20software.md), and the catalog scripts.
 2. Confirm a GitLab Runner can pull the digest-pinned `node:24-alpine` image and execute the regular `verify` job.
 3. Protect the default branch. Limit its merge permission and the `catalog-approved` label to maintainers you trust to publish catalog content.
 4. Under **Settings > CI/CD > Pipeline variables**, set **Minimum role to use pipeline variables** to **Maintainer**. The job needs two non-secret pipeline variables, but they must not be available to lower-privileged users.
@@ -19,14 +19,14 @@ In GitLab, open **Settings > Access tokens > Add new token**. Create a named pro
 - Scope: **api**
 - Expiration: the shortest period your operational policy allows (for example, 90 days)
 
-Copy the token immediately: GitLab only displays a newly created token once. On GitLab.com, project access tokens require Premium or Ultimate; on self-managed GitLab they are available with any license. If project access tokens are not available, use the local contributor path in [the catalog guide](../CATALOG_CONTENT_GUIDE.md).
+Copy the token immediately: GitLab only displays a newly created token once. On GitLab.com, project access tokens require Premium or Ultimate; on self-managed GitLab they are available with any license. If project access tokens are not available, use the local contributor path in [the catalog guide](../catalog/CATALOG_CONTENT_GUIDE.md).
 
 ### Store the token as a protected secret
 
 Open **Settings > CI/CD > Variables** and create this variable:
 
-| Key | Value | Required protection |
-| --- | --- | --- |
+| Key                       | Value                    | Required protection                       |
+| ------------------------- | ------------------------ | ----------------------------------------- |
 | `GITLAB_CATALOG_MR_TOKEN` | The project access token | **Masked**, **hidden**, and **protected** |
 
 Do not put the token in an issue, a `.gitlab-ci.yml` file, or a variable entered when starting a pipeline. Protected variables are available only to pipelines running on protected branches or tags, so protect the default branch before testing this path.
@@ -42,6 +42,7 @@ Do not put the token in an issue, a `.gitlab-ci.yml` file, or a variable entered
    ```
 
    Replace `123` with the issue IID. Re-review and recalculate the digest whenever the issue description changes.
+
 4. Go to **Build > Pipelines > New pipeline**, choose the protected default branch, and add both non-secret pipeline variables:
 
    ```text
@@ -50,21 +51,22 @@ Do not put the token in an issue, a `.gitlab-ci.yml` file, or a variable entered
    ```
 
    Start the pipeline. Do not override any predefined `CI_*` variable.
+
 5. Wait for the `verify` job to pass. Select **Run** for `create_catalog_merge_request`; the job is manual and only appears for a web-started default-branch pipeline with both catalog variables set.
 6. The job rechecks that the issue is open and carries `catalog-approved`, verifies the description digest, validates the content, keeps API requests on the checked-out repository origin, creates `catalog/issue-123`, and opens a merge request.
 7. Review that merge request like any other change. Confirm the proposed entry, generated `src/generated/catalog.ts`, download URL, and guide. Merge only after the normal project review and CI requirements pass.
 
 ## Failure handling
 
-| Symptom | Safe response |
-| --- | --- |
-| The manual job is absent | Start a web pipeline on the protected default branch and provide both catalog variables. |
-| The job rejects the issue | Add/correct the `catalog-approved` label only after maintainer review; the issue must remain open. |
-| The description digest is rejected | Re-review the current issue, recalculate its SHA-256 digest, and start a new pipeline with that digest. |
-| The API origin is rejected | Confirm the checkout's `origin` and the GitLab `CI_API_V4_URL` use the same HTTPS host; do not override predefined `CI_*` variables. |
-| Validation fails | Correct the issue template fields, then start a new pipeline. No branch or merge request is created before validation. |
-| A branch already exists | Review its merge request or delete the stale branch through the normal GitLab UI before retrying. Do not rerun blindly. |
-| API authentication fails | Check the variable name, protected-variable access, token expiry, Developer role, and `api` scope. |
+| Symptom                            | Safe response                                                                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| The manual job is absent           | Start a web pipeline on the protected default branch and provide both catalog variables.                                             |
+| The job rejects the issue          | Add/correct the `catalog-approved` label only after maintainer review; the issue must remain open.                                   |
+| The description digest is rejected | Re-review the current issue, recalculate its SHA-256 digest, and start a new pipeline with that digest.                              |
+| The API origin is rejected         | Confirm the checkout's `origin` and the GitLab `CI_API_V4_URL` use the same HTTPS host; do not override predefined `CI_*` variables. |
+| Validation fails                   | Correct the issue template fields, then start a new pipeline. No branch or merge request is created before validation.               |
+| A branch already exists            | Review its merge request or delete the stale branch through the normal GitLab UI before retrying. Do not rerun blindly.              |
+| API authentication fails           | Check the variable name, protected-variable access, token expiry, Developer role, and `api` scope.                                   |
 
 ## Ongoing security operations
 

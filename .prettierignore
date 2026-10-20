@@ -1,0 +1,10 @@
+node_modules/
+dist/
+vendor/
+src/generated/
+public/catalog/
+content/
+.tool-atlas-state/
+deliverables/
+pnpm-lock.yaml
+package-lock.json

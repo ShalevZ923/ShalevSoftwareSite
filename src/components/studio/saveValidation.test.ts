@@ -3,11 +3,25 @@ import { getToolValidationRecovery } from "./saveValidation";
 
 describe("catalog save validation recovery", () => {
   it.each([
-    ["releases[1].artifact version must match the release version", "Releases", "release-version-1"],
+    [
+      "releases[1].artifact version must match the release version",
+      "Releases",
+      "release-version-1",
+    ],
     ["resources.file extension must match resources.format", "Guides", "guide-resource"],
     ["support.email must be an email address", "Support", "support-email"],
     ["platforms must be a non-empty list of strings", "Overview", "platforms"],
   ])("routes %s to the relevant editor control", (message, section, field) => {
     expect(getToolValidationRecovery(message)).toMatchObject({ section, field });
   });
+});
+
+it("uses structured fields independently of translated message wording", () => {
+  expect(getToolValidationRecovery("Unrelated wording", "support.email").field).toBe(
+    "support-email",
+  );
+});
+
+it("routes structured guide fields to the markdown editor", () => {
+  expect(getToolValidationRecovery("Unrelated wording", "guide").field).toBe("guide-markdown");
 });

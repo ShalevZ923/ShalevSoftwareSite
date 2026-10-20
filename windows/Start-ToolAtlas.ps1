@@ -20,6 +20,11 @@ if (-not $node) {
   exit 1
 }
 
+& $node.Source --input-type=module -e "import { assertSupportedNode } from './scripts/runtime-version.mjs'; assertSupportedNode()"
+if ($LASTEXITCODE -ne 0) {
+  throw "Tool Atlas requires Node >=24.11.0 <25. Install a supported Node 24 release."
+}
+
 # 2. Build with npm.cmd to avoid the PowerShell npm.ps1 execution-policy shim.
 $distIndex = Join-Path $repoRoot "dist/index.html"
 if ($SkipBuild) {

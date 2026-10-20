@@ -1,0 +1,131 @@
+name: Complete acceptance
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: ${{ matrix.os }} / ${{ matrix.manager }} / Node ${{ matrix.node }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        manager: [npm, pnpm]
+        node: [24.11.0, '24']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Check supported runtime
+        run: node --input-type=module -e "import { assertSupportedNode } from './scripts/runtime-version.mjs'; assertSupportedNode()"
+      - name: Enable pinned pnpm
+        if: matrix.manager == 'pnpm'
+        run: corepack enable
+      - name: Fresh npm installation
+        if: matrix.manager == 'npm'
+        run: npm ci
+      - name: Fresh pnpm installation
+        if: matrix.manager == 'pnpm'
+        run: pnpm install --frozen-lockfile
+      - name: Verify source and production artifact
+        run: ${{ matrix.manager }} run verify
+      - name: Check formatting
+        run: ${{ matrix.manager }} run format:check
+      - name: Install browser
+        run: npm exec -- playwright install --with-deps chromium
+      - name: Browser journeys
+        env:
+          PLAYWRIGHT_CHROMIUM_CHANNEL: chromium
+        run: ${{ matrix.manager }} run test:e2e
+      - name: Native Windows launcher and filesystem acceptance
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./windows/Test-ToolAtlasLauncher.ps1
+
+      - name: Record dependency and generated-output provenance
+        env:
+          VERIFY_OS: ${{ matrix.os }}
+          VERIFY_MANAGER: ${{ matrix.manager }}
+          VERIFY_NODE: ${{ matrix.node }}
+        run: ${{ matrix.manager }} run provenance
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: evidence-${{ matrix.os }}-${{ matrix.manager }}-${{ matrix.node }}
+          path: .internal-generated/provenance.json
+          include-hidden-files: true
+          if-no-files-found: error
+
+  graph-parity:
+    name: Fresh npm/pnpm generated catalog parity
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          check-latest: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: evidence-*
+          path: .internal-generated/evidence
+      - name: Require all source-qualified graphs and equal generated data
+        run: node scripts/verification-provenance.mjs --compare .internal-generated/evidence
+
+  container-smoke:
+    name: Build and smoke-test production image
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          check-latest: true
+      - name: Build image
+        run: docker build --tag tool-atlas:ci --build-arg VERSION=ci --build-arg VCS_REF=${{ github.sha }} .
+      - name: Smoke test hardened image
+        run: |
+          set -euo pipefail
+          container_id=$(docker run --detach --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --publish 127.0.0.1:18080:8080 tool-atlas:ci)
+          trap 'docker rm --force "$container_id" >/dev/null' EXIT
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --head http://127.0.0.1:18080/; then break; fi
+            sleep 1
+          done
+          test "$(docker inspect --format '{{.Config.User}}' tool-atlas:ci)" = "nginx"
+          curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^content-security-policy:'
+          curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^cache-control: no-store'
+          curl --fail --silent --show-error --head http://127.0.0.1:18080/catalog/v1/index.json | grep --ignore-case '^cache-control: public, max-age=60'
+      - name: Build optional local Studio image
+        run: docker build --target studio --tag tool-atlas:studio-ci .
+      - name: Test optional Caddy settings, health, and local Studio
+        run: node scripts/smoke-docker.mjs tool-atlas:ci tool-atlas:studio-ci
+
+  acceptance-required:
+    name: Complete acceptance required
+    needs: [verify, graph-parity, container-smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every gate
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          PARITY_RESULT: ${{ needs.graph-parity.result }}
+          CONTAINER_RESULT: ${{ needs.container-smoke.result }}
+        run: test "$VERIFY_RESULT" = success && test "$PARITY_RESULT" = success && test "$CONTAINER_RESULT" = success

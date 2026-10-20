@@ -32,12 +32,20 @@ export function withReleaseSource(
   };
 }
 
-export function withReleaseVersion(release: ToolRelease, version: string, toolId: string): ToolRelease {
+export function withReleaseVersion(
+  release: ToolRelease,
+  version: string,
+  toolId: string,
+): ToolRelease {
   return typeof release.artifact === "string"
     ? { version, artifact: `${toolId}/${version}/${getServerFilename(release)}` }
     : { ...release, version };
 }
 
-export function withServerFilename(release: ToolRelease, filename: string, toolId: string): ToolRelease {
+export function withServerFilename(
+  release: ToolRelease,
+  filename: string,
+  toolId: string,
+): ToolRelease {
   return { version: release.version, artifact: `${toolId}/${release.version}/${filename.trim()}` };
 }

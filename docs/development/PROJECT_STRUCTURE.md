@@ -17,7 +17,13 @@ Tool Atlas remains a static, backend-free public catalog. Its source tree separa
 ├── scripts/                           # Content validation, generation, and contribution adapters
 ├── public/                            # Static assets and host response-header configuration
 │   └── catalog/v1/{index,tools}.json  # Generated machine feed; no backend, no guides
-├── docs/                              # Operating, security, and deployment documentation
+├── docs/README.md                     # Master documentation index
+│   ├── development/                   # Setup, Studio, source ownership
+│   ├── catalog/                       # Software content, feed, guide resources
+│   ├── contributing/                  # Review and contribution workflows
+│   ├── deployment/                    # Docker, IIS, downloads and operations
+│   ├── security/                      # Assessments and publication checklist
+│   └── releases/                      # Version notes and acceptance status
 ├── .github/ and .gitlab/              # Approval-gated contribution automation
 └── Dockerfile, compose.yaml, Caddyfile, nginx.conf
                                       # Production image, isolation, TLS edge, static serving
@@ -45,4 +51,4 @@ The initial taxonomy covers editors and IDEs, IDE/extensions, debuggers, profile
 - Run `pnpm verify` for every content, taxonomy, script, or deployment change. It validates sources, checks generated data, runs tests, builds the production bundle, and verifies the `dist/` artifact.
 - Keep deployment files separate from application and catalog changes in review. The application container and Caddy edge configuration are production controls, not content configuration.
 
-For day-to-day additions, use [the catalog content guide](../CATALOG_CONTENT_GUIDE.md). For TLS deployment and operational host setup, use [the README deployment guide](../README.md#production-deployment-with-docker-and-https).
+For day-to-day additions, use [the catalog content guide](../catalog/CATALOG_CONTENT_GUIDE.md). For TLS deployment and operational host setup, use [the README deployment guide](../../README.md#production-deployment-with-docker-and-https).

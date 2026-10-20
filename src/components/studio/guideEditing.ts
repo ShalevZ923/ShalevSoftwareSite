@@ -8,5 +8,12 @@ export function nextGuideId(resources: Pick<GuideResource, "id">[]) {
 }
 
 export function parseGuideVersions(text: string) {
-  return [...new Set(text.split(",").map((version) => version.trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      text
+        .split(",")
+        .map((version) => version.trim())
+        .filter(Boolean),
+    ),
+  ];
 }

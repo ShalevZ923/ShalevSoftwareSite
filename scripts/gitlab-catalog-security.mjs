@@ -15,7 +15,9 @@ export function requireApprovedDescription(description, expectedDigest) {
 
   const actualDigest = descriptionSha256(description);
   if (!timingSafeEqual(Buffer.from(actualDigest, "hex"), Buffer.from(normalizedDigest, "hex"))) {
-    throw new Error("Issue description changed after review; review it again and provide its new SHA-256 digest");
+    throw new Error(
+      "Issue description changed after review; review it again and provide its new SHA-256 digest",
+    );
   }
 }
 

@@ -15,7 +15,10 @@ describe("release editing", () => {
   ] as const;
 
   it("moves a selected approved release to the default position", () => {
-    expect(makeDefaultRelease(releases, 1).map((release) => release.version)).toEqual(["1.0", "2.0"]);
+    expect(makeDefaultRelease(releases, 1).map((release) => release.version)).toEqual([
+      "1.0",
+      "2.0",
+    ]);
   });
 
   it("keeps server-file paths aligned with the tool and release version", () => {

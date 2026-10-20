@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { request } from "node:http";
 import { assertSafeBindHost, createToolAtlasServer, developerToken } from "./server.mjs";
+import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
 
 describe("Tool Atlas Self-Contained Server", () => {
   let server;
@@ -12,18 +12,15 @@ describe("Tool Atlas Self-Contained Server", () => {
   let fixturePackages;
 
   beforeAll(async () => {
-    fixtureRoot = await mkdtemp(join(tmpdir(), "tool-atlas-server-test-"));
+    const fixture = await createServerFixture();
+    fixtureRoot = fixture.root;
     const fixtureDist = join(fixtureRoot, "dist");
     fixturePackages = join(fixtureRoot, "packages");
-    await mkdir(fixtureDist);
-    await mkdir(fixturePackages);
+
     await writeFile(join(fixtureDist, "index.html"), '<div id="root"></div>', "utf8");
     await writeFile(join(fixtureRoot, "dist-secret.txt"), "must not be served", "utf8");
 
-    server = createToolAtlasServer({
-      distDirectory: fixtureDist,
-      packagesDirectory: fixturePackages,
-    });
+    server = createToolAtlasServer(fixture.options);
     await new Promise((resolve) => {
       server.listen(0, "127.0.0.1", () => {
         const address = server.address();
@@ -103,7 +100,9 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(() => assertSafeBindHost("0.0.0.0")).toThrow(/Refusing a non-loopback bind/);
     expect(() => assertSafeBindHost("0.0.0.0", true)).not.toThrow();
     expect(() => assertSafeBindHost("0.0.0.0", false, true)).not.toThrow();
-    expect(() => assertSafeBindHost("192.168.1.10", false, true)).toThrow(/Refusing a non-loopback bind/);
+    expect(() => assertSafeBindHost("192.168.1.10", false, true)).toThrow(
+      /Refusing a non-loopback bind/,
+    );
   });
 
   it("uses short request timeouts for the optional authoring server", () => {
@@ -166,16 +165,16 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(listRes.status).toBe(200);
     const docsList = await listRes.json();
     expect(Array.isArray(docsList)).toBe(true);
-    expect(docsList.some((d) => d.name === "WINDOWS_DEPLOYMENT.md")).toBe(true);
+    expect(docsList.some((d) => d.name === "deployment/WINDOWS_DEPLOYMENT.md")).toBe(true);
 
-    const docRes = await fetch(`${baseUrl}/api/developer/docs/WINDOWS_DEPLOYMENT.md`, {
+    const docRes = await fetch(`${baseUrl}/api/developer/docs/deployment/WINDOWS_DEPLOYMENT.md`, {
       headers: {
         Authorization: `Bearer ${developerToken}`,
       },
     });
     expect(docRes.status).toBe(200);
     const docData = await docRes.json();
-    expect(docData.name).toBe("WINDOWS_DEPLOYMENT.md");
+    expect(docData.name).toBe("deployment/WINDOWS_DEPLOYMENT.md");
     expect(docData.content).toContain("# Windows deployment");
   });
 
@@ -265,11 +264,12 @@ describe("Tool Atlas Self-Contained Server", () => {
   });
 });
 
-
 describe("missing production build", () => {
   it("returns npm-compatible recovery instructions when dist is absent", async () => {
-    const root = await mkdtemp(join(tmpdir(), "tool-atlas-missing-dist-"));
-    const server = createToolAtlasServer({ distDirectory: join(root, "dist") });
+    const fixture = await createServerFixture();
+    const root = fixture.root;
+    await rm(fixture.options.distDirectory, { recursive: true });
+    const server = createToolAtlasServer(fixture.options);
     try {
       await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
       const response = await fetch(`http://127.0.0.1:${server.address().port}/`);

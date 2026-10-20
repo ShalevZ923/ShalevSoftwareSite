@@ -1,6 +1,7 @@
+import { version as packageVersion } from "../../package.json";
 import { Icon } from "./ui";
 
-const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.7.1-beta.1";
+const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || packageVersion;
 
 export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
   return (
@@ -11,9 +12,9 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
           We triage the noise, then we publish what we support.
         </h1>
         <p className="about-lede">
-          Tool Atlas is the catalog Development Management keeps for developers:
-          the software we stand behind, the trusted way to get it, and the
-          shortest path to using it without guessing.
+          Tool Atlas is the catalog Development Management keeps for developers: the software we
+          stand behind, the trusted way to get it, and the shortest path to using it without
+          guessing.
         </p>
         <div className="about-hero-actions">
           <button type="button" className="primary-button" onClick={onOpenCatalog}>
@@ -30,9 +31,9 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
           <p className="about-kicker">Why this exists</p>
           <h2 id="about-mission-title">A shared answer, not another inbox.</h2>
           <p>
-            Developers should not have to hunt for an approved build, wait on a
-            thread to learn whether a tool is supported, or reconstruct setup
-            from folklore. We built this catalog so triage has a destination.
+            Developers should not have to hunt for an approved build, wait on a thread to learn
+            whether a tool is supported, or reconstruct setup from folklore. We built this catalog
+            so triage has a destination.
           </p>
         </div>
         <div className="about-mission-grid">
@@ -40,27 +41,25 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
             <span className="point-number">01</span>
             <h3>Triage the request</h3>
             <p>
-              When someone asks “can I use this?”, Development Management
-              decides: already supported, needs a path, or out of scope. The
-              catalog is that decision made visible.
+              When someone asks “can I use this?”, Development Management decides: already
+              supported, needs a path, or out of scope. The catalog is that decision made visible.
             </p>
           </article>
           <article>
             <span className="point-number">02</span>
             <h3>Name what we support</h3>
             <p>
-              Every listing is software we are willing to stand behind — with
-              platform, lifecycle, owner, and a trusted download or pointer.
-              If it is not here, it is not our supported set.
+              Every listing is software we are willing to stand behind — with platform, lifecycle,
+              owner, and a trusted download or pointer. If it is not here, it is not our supported
+              set.
             </p>
           </article>
           <article>
             <span className="point-number">03</span>
             <h3>Show how to use it</h3>
             <p>
-              Guides answer the immediate work: install, configure, use
-              safely, and ask for help. Support is a named person or team, not
-              a generic desk.
+              Guides answer the immediate work: install, configure, use safely, and ask for help.
+              Support is a named person or team, not a generic desk.
             </p>
           </article>
         </div>
@@ -70,19 +69,19 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
         <p className="about-kicker">Who built this</p>
         <h2 id="about-team-title">Development Management, with Shalev.</h2>
         <p>
-          This catalog was built by the Development Management team — the
-          group that sits between developer questions and the software we
-          actually support. We do not try to list the entire industry. We
-          publish the set we will help you with.
+          This catalog was built by the Development Management team — the group that sits between
+          developer questions and the software we actually support. We do not try to list the entire
+          industry. We publish the set we will help you with.
         </p>
         <p>
-          Shalev designed and built Tool Atlas as the front door for that
-          work: one place to compare tools, take a trusted path, read a
-          practical guide, and see who owns the outcome.
+          Shalev designed and built Tool Atlas as the front door for that work: one place to compare
+          tools, take a trusted path, read a practical guide, and see who owns the outcome.
         </p>
         <div className="about-people">
           <article className="about-person">
-            <span className="about-person-mark" aria-hidden="true">SZ</span>
+            <span className="about-person-mark" aria-hidden="true">
+              SZ
+            </span>
             <div>
               <strong>Shalev</strong>
               <small>Built Tool Atlas · Development Management</small>
@@ -131,22 +130,22 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
           <article>
             <h3>Useful over exhaustive</h3>
             <p>
-              We lead with supported software, then make lifecycle status clear
-              when a legacy tool remains necessary.
+              We lead with supported software, then make lifecycle status clear when a legacy tool
+              remains necessary.
             </p>
           </article>
           <article>
             <h3>Ownership is explicit</h3>
             <p>
-              A product listing includes the team responsible for the
-              platform — not an anonymous help desk.
+              A product listing includes the team responsible for the platform — not an anonymous
+              help desk.
             </p>
           </article>
           <article>
             <h3>Documentation is practical</h3>
             <p>
-              Guides answer the immediate question: install, configure, use
-              safely, and request help.
+              Guides answer the immediate question: install, configure, use safely, and request
+              help.
             </p>
           </article>
         </div>
@@ -157,18 +156,13 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
           <p className="about-kicker">Connect an IDE</p>
           <h2 id="about-ide-title">Search the catalog from Cursor or VS Code.</h2>
           <p>
-            Administrators run a second Docker image, Tool Atlas MCP, beside this
-            static site. It is not inside the catalog NGINX container. After it
-            is deployed, paste only the HTTPS URL into <code>mcp.json</code>.
-            The MCP server never sees the chat; it logs catalog search and
-            lookup tool calls.
+            Administrators run a second Docker image, Tool Atlas MCP, beside this static site. It is
+            not inside the catalog NGINX container. After it is deployed, paste only the HTTPS URL
+            into <code>mcp.json</code>. The MCP server never sees the chat; it logs catalog search
+            and lookup tool calls.
           </p>
         </div>
-        <pre
-          className="about-ide-snippet"
-          tabIndex={0}
-          aria-label="Example Cursor mcp.json"
-        >
+        <pre className="about-ide-snippet" tabIndex={0} aria-label="Example Cursor mcp.json">
           <code>{`{
   "mcpServers": {
     "tool-atlas": {
@@ -178,9 +172,8 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
 }`}</code>
         </pre>
         <p className="about-ide-note">
-          Replace the hostname with the address your administrator publishes.
-          VS Code uses the same URL under <code>servers</code> with{" "}
-          <code>"type": "http"</code>.
+          Replace the hostname with the address your administrator publishes. VS Code uses the same
+          URL under <code>servers</code> with <code>"type": "http"</code>.
         </p>
       </section>
 

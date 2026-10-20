@@ -5,6 +5,7 @@ stages:
   - catalog
 
 before_script:
+  - node --input-type=module -e "import { assertSupportedNode } from './scripts/runtime-version.mjs'; assertSupportedNode()"
   - corepack enable
   - pnpm install --frozen-lockfile
 
@@ -12,10 +13,18 @@ verify:
   stage: validate
   script:
     - pnpm verify
+    - pnpm format:check
+
+browser_journeys:
+  stage: validate
+  image: node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
+  script:
+    - pnpm exec playwright install --with-deps chromium
+    - PLAYWRIGHT_CHROMIUM_CHANNEL=chromium pnpm test:e2e
 
 create_catalog_merge_request:
   stage: catalog
-  needs: ["verify"]
+  needs: ["verify", "browser_journeys"]
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CATALOG_ISSUE_IID && $CATALOG_APPROVED_DESCRIPTION_SHA256'
       when: manual
