@@ -4,6 +4,7 @@ import type { AgentPackage } from "../agentTypes";
 export const agents = [
   {
     "schemaVersion": 1,
+    "catalogTier": "experimental",
     "id": "anthropic-pdf",
     "name": "PDF Skill",
     "icon": "PDF",
@@ -87,6 +88,7 @@ export const agents = [
   },
   {
     "schemaVersion": 1,
+    "catalogTier": "experimental",
     "id": "atlas-repo-mcp",
     "name": "Atlas Repo MCP",
     "icon": "AR",
@@ -174,6 +176,7 @@ export const agents = [
   },
   {
     "schemaVersion": 1,
+    "catalogTier": "experimental",
     "id": "internal-comms",
     "riskLevel": "Low",
     "permissions": [
@@ -283,6 +286,7 @@ export const agents = [
   },
   {
     "schemaVersion": 1,
+    "catalogTier": "experimental",
     "id": "mcp-server-time",
     "name": "Time MCP Server",
     "icon": "TM",
@@ -432,6 +436,7 @@ export const agents = [
   },
   {
     "schemaVersion": 1,
+    "catalogTier": "experimental",
     "id": "openai-developers",
     "name": "OpenAI Developers Pack",
     "icon": "OA",
@@ -536,6 +541,7 @@ export const agents = [
   },
   {
     "schemaVersion": 1,
+    "catalogTier": "experimental",
     "id": "theme-factory",
     "riskLevel": "Low",
     "permissions": [
@@ -653,6 +659,7 @@ export const agents = [
   },
   {
     "schemaVersion": 1,
+    "catalogTier": "experimental",
     "id": "workplace-content-pack",
     "riskLevel": "Low",
     "permissions": [

@@ -8,6 +8,19 @@ export const supportLabels: Record<SupportStatus, string> = {
   deprecated: "Deprecated",
   example: "Example",
 };
+
+export function agentUpdateSummary(agent: Pick<AgentPackage, "catalogTier" | "status">): string {
+  const channel =
+    agent.catalogTier === "experimental" ? "Experimental agent catalog" : "Agent catalog";
+  if (agent.status === "supported") {
+    return `${channel}. Supported status stays in this catalog and does not create an approved software release.`;
+  }
+  if (agent.status === "evaluation")
+    return `${channel}. Evaluation listing, not an approved software release.`;
+  if (agent.status === "deprecated")
+    return `${channel}. Deprecated listing, not an approved software release.`;
+  return `${channel}. Example listing, not an approved software release.`;
+}
 export const agentPackageTypes: AgentPackageType[] = [
   "MCP Server",
   "Skill",

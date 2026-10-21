@@ -108,12 +108,27 @@ jobs:
         with:
           node-version: 24
           check-latest: true
+      - name: Enable pinned pnpm for artifact publication
+        run: corepack enable
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Build and publish audited agent packages
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm agents:packages
+          stage="${RUNNER_TEMP}/agent-packages"
+          mkdir -p "${stage}/revoked-agent/1.0"
+          printf 'revoked' > "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
+          pnpm agents:publish -- --source packages --dest "${stage}"
+          test ! -e "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
+          echo "PUBLISHED_PACKAGES=${stage}" >> "${GITHUB_ENV}"
       - name: Build image
         run: docker build --tag tool-atlas:ci --build-arg VERSION=ci --build-arg VCS_REF=${{ github.sha }} .
       - name: Smoke test hardened image
         run: |
           set -euo pipefail
-          container_id=$(docker run --detach --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --publish 127.0.0.1:18080:8080 tool-atlas:ci)
+          container_id=$(docker run --detach --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --publish 127.0.0.1:18080:8080 --mount "type=bind,src=${PUBLISHED_PACKAGES},dst=/srv/tool-atlas-packages,readonly" tool-atlas:ci)
           trap 'docker rm --force "$container_id" >/dev/null' EXIT
           for attempt in 1 2 3 4 5; do
             if curl --fail --silent --show-error --head http://127.0.0.1:18080/; then break; fi
@@ -123,6 +138,12 @@ jobs:
           curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^content-security-policy:'
           curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^cache-control: no-store'
           curl --fail --silent --show-error --head http://127.0.0.1:18080/catalog/v1/index.json | grep --ignore-case '^cache-control: public, max-age=60'
+          zip_url=http://127.0.0.1:18080/downloads/theme-factory/1.0.0/theme-factory-1.0.0.zip
+          curl --fail --silent --show-error --head "${zip_url}" | grep --ignore-case '^content-disposition: attachment'
+          curl --fail --silent --show-error --output "${RUNNER_TEMP}/theme-factory.zip" "${zip_url}"
+          expected="$(node -e "process.stdout.write(JSON.parse(require('node:fs').readFileSync('content/agents/skills/anthropic/theme-factory/releases/1.0.0.json','utf8')).sha256)")"
+          echo "${expected}  ${RUNNER_TEMP}/theme-factory.zip" | sha256sum --check
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/downloads/revoked-agent/1.0/revoked-agent-1.0.zip)" = "404"
       - name: Build optional local Studio image
         run: docker build --target studio --tag tool-atlas:studio-ci .
       - name: Test optional Caddy settings, health, and local Studio

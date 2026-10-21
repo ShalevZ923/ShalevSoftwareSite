@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import { createReadStream } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { loadAgentEntries } from "./scripts/agents-content.mjs";
+import { downloadableAgentArtifacts } from "./scripts/agent-publication.mjs";
 
 const packageRoot = resolve("packages");
 const agentZipPath =
@@ -37,6 +39,11 @@ export default defineConfig({
             return;
           }
           if (!agentZipPath.test(pathname)) {
+            response.writeHead(404).end();
+            return;
+          }
+          const allowed = downloadableAgentArtifacts(await loadAgentEntries());
+          if (!allowed.has(pathname.slice(1))) {
             response.writeHead(404).end();
             return;
           }

@@ -1,6 +1,7 @@
 {
   "$schema": "../../../../schemas/agent.schema.json",
   "schemaVersion": 1,
+  "catalogTier": "experimental",
   "id": "mcp-server-time",
   "name": "Time MCP Server",
   "icon": "TM",

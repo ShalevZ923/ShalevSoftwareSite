@@ -26,6 +26,42 @@ function inside(root, candidate) {
   return path && path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path);
 }
 
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonical(value[key])]),
+    );
+  }
+  return value;
+}
+
+function sameValue(left, right) {
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+}
+
+function assertStudioReleaseLocks(existing, metadata) {
+  if (metadata.status === "supported" && existing?.metadata.status !== "supported") {
+    throw new Error(
+      "Developer Studio cannot set status to supported. Promote an agent through a reviewed pull request.",
+    );
+  }
+  if (!existing) return;
+  for (const release of existing.metadata.releases) {
+    const next = metadata.releases?.find((item) => item.version === release.version);
+    if (!next) continue;
+    for (const field of ["artifact", "sha256", "archiveRoot", "contents", "review"]) {
+      if (!sameValue(release[field], next[field])) {
+        throw new Error(
+          `Developer Studio cannot change ${field} of published release ${release.version}`,
+        );
+      }
+    }
+  }
+}
+
 export function saveAgentStudioEntry(options) {
   return coordinateMutation(() => persistAgentStudioEntry(options));
 }
@@ -80,6 +116,7 @@ async function persistAgentStudioEntry({
   ) {
     throw new Error("Existing release versions cannot be removed in Developer Studio");
   }
+  assertStudioReleaseLocks(existing, metadata);
   if (existing) assertRevision(revision, existing);
   const publisherId = slugifyId(metadata.publisher);
   const typeId = [...packageTypes].find(([, label]) => label === metadata.packageType)?.[0];

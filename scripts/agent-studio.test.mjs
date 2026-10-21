@@ -51,8 +51,70 @@ describe("Agent Studio authoring", () => {
           metadata: { ...metadata, status: "supported" },
           guide: entry.guide,
         }),
-      ).rejects.toThrow("supported entries require");
+      ).rejects.toThrow("cannot set status to supported");
       expect((await loadAgentEntries(directory))[0].metadata.status).toBe("example");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("rejects checksum and review changes for a release that already exists", async () => {
+    const root = await mkdtemp(join(tmpdir(), "agent-studio-lock-"));
+    const directory = join(root, "agents");
+    const publisher = join(directory, "skills", "anthropic");
+    try {
+      await mkdir(publisher, { recursive: true });
+      await cp(
+        join(agentsDirectory, "skills", "anthropic", "publisher.json"),
+        join(publisher, "publisher.json"),
+      );
+      await cp(
+        join(agentsDirectory, "skills", "anthropic", "theme-factory"),
+        join(publisher, "theme-factory"),
+        { recursive: true },
+      );
+      const [entry] = await loadAgentEntries(directory);
+      const metadata = entry.metadata;
+      const digest = metadata.releases[0].sha256;
+      await expect(
+        saveAgentStudioEntry({
+          directory,
+          generatedPath: join(root, "agents.ts"),
+          existingId: metadata.id,
+          guide: entry.guide,
+          metadata: {
+            ...metadata,
+            releases: [{ ...metadata.releases[0], sha256: "b".repeat(64) }],
+          },
+        }),
+      ).rejects.toThrow("cannot change sha256");
+      await expect(
+        saveAgentStudioEntry({
+          directory,
+          generatedPath: join(root, "agents.ts"),
+          existingId: metadata.id,
+          guide: entry.guide,
+          metadata: {
+            ...metadata,
+            releases: [
+              {
+                ...metadata.releases[0],
+                review: { ...metadata.releases[0].review, evidence: "replaced" },
+              },
+            ],
+          },
+        }),
+      ).rejects.toThrow("cannot change review");
+      await expect(
+        saveAgentStudioEntry({
+          directory,
+          generatedPath: join(root, "agents.ts"),
+          existingId: metadata.id,
+          guide: entry.guide,
+          metadata: { ...metadata, status: "supported" },
+        }),
+      ).rejects.toThrow("cannot set status to supported");
+      expect((await loadAgentEntries(directory))[0].metadata.releases[0].sha256).toBe(digest);
+      expect((await loadAgentEntries(directory))[0].metadata.status).toBe("evaluation");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
