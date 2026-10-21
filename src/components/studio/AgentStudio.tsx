@@ -18,6 +18,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const starter = (): Draft => ({
   metadata: {
     schemaVersion: 1,
+    catalogTier: "experimental",
     id: "new-agent",
     name: "New skill",
     publisher: "Tool Atlas",
@@ -466,7 +467,7 @@ export function AgentStudio({
                     >
                       <option value="example">Example</option>
                       <option value="evaluation">In evaluation</option>
-                      <option value="supported">Supported</option>
+                      {agent.status === "supported" && <option value="supported">Supported</option>}
                       <option value="deprecated">Deprecated</option>
                     </select>
                   </Field>
@@ -484,9 +485,9 @@ export function AgentStudio({
                   </Field>
                 </div>
                 <p className="dev-section-help">
-                  Supported status requires pinned source, license, reviewed current version,
-                  assessed risk, a named owner, and a verified host. The server validates these
-                  before saving.
+                  Developer Studio is a local editor. It cannot promote a listing to Supported or
+                  change the artifact, checksum, or review evidence of a release that already
+                  exists. Those changes belong in a reviewed pull request.
                 </p>
                 <div className="dev-grid-2">
                   <Field label="Source URL">

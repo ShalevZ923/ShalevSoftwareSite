@@ -1,6 +1,7 @@
 {
   "$schema": "../../../../schemas/agent.schema.json",
   "schemaVersion": 1,
+  "catalogTier": "experimental",
   "id": "openai-developers",
   "name": "OpenAI Developers Pack",
   "icon": "OA",

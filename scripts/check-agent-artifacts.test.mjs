@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { auditAgentArtifacts } from "./check-agent-artifacts.mjs";
+import { publishAgentPackages } from "./publish-agent-packages.mjs";
 
 function crc32(bytes) {
   let crc = 0xffffffff;
@@ -143,6 +144,12 @@ describe("agent artifact audit", () => {
           storedZip({ "test-skill/SKILL.md": "a", "test-skill/skill.md": "b" }),
           "duplicate ZIP entry",
         ],
+        [storedZip({ "test-skill/\u00e9.txt": "a" }), "portable ASCII"],
+        [storedZip({ "test-skill/e\u0301.txt": "a" }), "portable ASCII"],
+        [
+          storedZip({ "test-skill/SKILL.md": "a", "test-skill/SKILL.md/extra.txt": "b" }),
+          "conflicts with a child path",
+        ],
         [
           storedZip({ "test-skill/SKILL.md": "good", "test-skill/extra.sh": "bad" }),
           "unlisted ZIP file",
@@ -155,6 +162,70 @@ describe("agent artifact audit", () => {
         entries[0].metadata.releases[0].sha256 = createHash("sha256").update(bytes).digest("hex");
         expect((await auditAgentArtifacts(entries, packageRoot)).errors[0]).toContain(expected);
       }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("agent package publication", () => {
+  it("copies only downloadable ZIPs and removes a revoked archive", async () => {
+    const root = await mkdtemp(join(tmpdir(), "agent-publish-"));
+    try {
+      const source = join(root, "source");
+      const destination = join(root, "volume");
+      const bytes = storedZip({ "test-skill/SKILL.md": "# Test" }, 8);
+      const digest = createHash("sha256").update(bytes).digest("hex");
+      const artifact = "test-skill/1.0/test-skill-1.0.zip";
+      await mkdir(join(source, "test-skill", "1.0"), { recursive: true });
+      await writeFile(join(source, artifact), bytes);
+      await mkdir(join(destination, "revoked-agent", "1.0"), { recursive: true });
+      await writeFile(join(destination, "revoked-agent", "1.0", "revoked-agent-1.0.zip"), "stale");
+      await mkdir(join(destination, "jq", "1.8.2"), { recursive: true });
+      await writeFile(join(destination, "jq", "1.8.2", "jq-windows-amd64.exe"), "installer");
+      const release = {
+        version: "1.0",
+        artifact,
+        sha256: digest,
+        archiveRoot: "test-skill",
+        contents: [{ path: "SKILL.md" }],
+        review: { date: "2026-09-24", evidence: "Review A-1" },
+      };
+      const metadata = {
+        id: "test-skill",
+        catalogTier: "experimental",
+        status: "evaluation",
+        riskLevel: "Low",
+        license: "Apache-2.0",
+        currentVersion: "1.0",
+        source: { revision: "abc" },
+        review: { status: "reviewed", date: "2026-09-24", version: "1.0", evidence: "Review A-1" },
+        releases: [release],
+      };
+      const published = await publishAgentPackages({
+        entries: [{ metadata }],
+        sourceDirectory: source,
+        destinationDirectory: destination,
+      });
+      expect(published.published).toEqual([artifact]);
+      expect(await readFile(join(destination, artifact))).toEqual(bytes);
+      await expect(
+        readFile(join(destination, "revoked-agent", "1.0", "revoked-agent-1.0.zip")),
+      ).rejects.toThrow();
+      expect(await readFile(join(destination, "jq", "1.8.2", "jq-windows-amd64.exe"), "utf8")).toBe(
+        "installer",
+      );
+      const hidden = { ...metadata, status: "deprecated" };
+      const removed = await publishAgentPackages({
+        entries: [{ metadata: hidden }],
+        sourceDirectory: source,
+        destinationDirectory: destination,
+      });
+      expect(removed.published).toEqual([]);
+      await expect(readFile(join(destination, artifact))).rejects.toThrow();
+      expect(await readFile(join(destination, "jq", "1.8.2", "jq-windows-amd64.exe"), "utf8")).toBe(
+        "installer",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

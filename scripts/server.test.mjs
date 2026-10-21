@@ -247,6 +247,15 @@ describe("Tool Atlas Self-Contained Server", () => {
     },
   );
 
+  it("does not serve a ZIP that is not a published agent artifact", async () => {
+    const dir = join(fixturePackages, "theme-factory", "9.9.9");
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "theme-factory-9.9.9.zip"), "not published");
+    const res = await fetch(`${baseUrl}/downloads/theme-factory/9.9.9/theme-factory-9.9.9.zip`);
+    expect(res.status).toBe(404);
+    expect(await res.text()).not.toContain("not published");
+  });
+
   it("serves static index.html and SPA fallback with security headers", async () => {
     const res = await fetch(`${baseUrl}/some-random-route`);
     expect(res.status).toBe(200);
