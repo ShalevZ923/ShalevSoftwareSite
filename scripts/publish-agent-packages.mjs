@@ -7,9 +7,27 @@ import { loadCatalogEntries } from "./catalog-content.mjs";
 import { auditAgentArtifacts } from "./check-agent-artifacts.mjs";
 import { downloadableAgentArtifacts, isDownloadableAgentRelease } from "./agent-publication.mjs";
 
-function option(name) {
-  const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
+export function parsePublicationOptions(args) {
+  const values = new Map();
+  const input = args[0] === "--" ? args.slice(1) : args;
+  for (let index = 0; index < input.length; index += 2) {
+    const name = input[index];
+    const value = input[index + 1];
+    if (
+      !["--source", "--dest"].includes(name) ||
+      values.has(name) ||
+      !value ||
+      value.startsWith("--")
+    ) {
+      throw Object.assign(
+        new Error("Usage: pnpm agents:publish -- --source packages --dest /path/to/volume"),
+        { code: "PUBLICATION_USAGE" },
+      );
+    }
+    values.set(name, value);
+  }
+  const sourceDirectory = values.get("--source") ?? join(repositoryRoot, "packages");
+  return { sourceDirectory, destinationDirectory: values.get("--dest") ?? sourceDirectory };
 }
 
 function posixRelative(root, file) {
@@ -127,25 +145,21 @@ export async function publishAgentPackages({
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const sourceDirectory = option("--source") ?? join(repositoryRoot, "packages");
-  const destinationDirectory = option("--dest") ?? sourceDirectory;
-  if (!sourceDirectory || !destinationDirectory) {
-    console.error("Usage: pnpm agents:publish -- --source packages --dest /path/to/volume");
-    process.exitCode = 2;
-  } else {
-    try {
-      const result = await publishAgentPackages({
-        entries: await loadAgentEntries(),
-        softwareEntries: await loadCatalogEntries(),
-        sourceDirectory,
-        destinationDirectory,
-      });
-      console.log(
-        `Published ${result.published.length} agent artifact${result.published.length === 1 ? "" : "s"} to ${destinationDirectory}.`,
-      );
-    } catch (error) {
-      console.error(error.message);
-      process.exitCode = 1;
-    }
+  try {
+    const { sourceDirectory, destinationDirectory } = parsePublicationOptions(
+      process.argv.slice(2),
+    );
+    const result = await publishAgentPackages({
+      entries: await loadAgentEntries(),
+      softwareEntries: await loadCatalogEntries(),
+      sourceDirectory,
+      destinationDirectory,
+    });
+    console.log(
+      `Published ${result.published.length} agent artifact${result.published.length === 1 ? "" : "s"} to ${destinationDirectory}.`,
+    );
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = error.code === "PUBLICATION_USAGE" ? 2 : 1;
   }
 }
