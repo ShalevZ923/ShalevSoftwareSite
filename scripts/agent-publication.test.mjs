@@ -51,7 +51,9 @@ describe("publication command arguments", () => {
       const result = spawnSync(process.execPath, [script, "--source", root, "--dest"], {
         encoding: "utf8",
       });
+      expect(result.error).toBeUndefined();
       expect(result.status).toBe(2);
+      expect(result.stderr).toContain("Usage:");
       expect(await readFile(sentinel, "utf8")).toBe("keep");
     } finally {
       await rm(root, { recursive: true, force: true });
