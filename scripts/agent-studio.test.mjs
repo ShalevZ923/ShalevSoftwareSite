@@ -113,6 +113,50 @@ describe("Agent Studio authoring", () => {
           metadata: { ...metadata, status: "supported" },
         }),
       ).rejects.toThrow("cannot set status to supported");
+      for (const [field, value] of [
+        ["review", { ...metadata.review, evidence: "changed review" }],
+        ["source", { ...metadata.source, revision: "changed-revision" }],
+        ["license", "changed-license"],
+      ]) {
+        await expect(
+          saveAgentStudioEntry({
+            directory,
+            generatedPath: join(root, "agents.ts"),
+            existingId: metadata.id,
+            revision: recordRevision(entry),
+            guide: entry.guide,
+            metadata: { ...metadata, [field]: value },
+          }),
+        ).rejects.toThrow(`cannot change reviewed ${field}`);
+      }
+      await expect(
+        saveAgentStudioEntry({
+          directory,
+          generatedPath: join(root, "agents.ts"),
+          existingId: metadata.id,
+          revision: recordRevision(entry),
+          guide: entry.guide,
+          metadata: {
+            ...metadata,
+            releases: [
+              ...metadata.releases,
+              {
+                ...metadata.releases[0],
+                version: "2.0.0",
+                artifact: "theme-factory/2.0.0/theme-factory.zip",
+              },
+            ],
+          },
+        }),
+      ).rejects.toThrow("cannot make an agent archive downloadable");
+      await expect(
+        saveAgentStudioEntry({
+          directory,
+          generatedPath: join(root, "agents.ts"),
+          guide: entry.guide,
+          metadata: { ...metadata, id: "new-reviewed-agent" },
+        }),
+      ).rejects.toThrow("cannot make an agent archive downloadable");
       expect((await loadAgentEntries(directory))[0].metadata.releases[0].sha256).toBe(digest);
       expect((await loadAgentEntries(directory))[0].metadata.status).toBe("evaluation");
     } finally {

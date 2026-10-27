@@ -20,6 +20,7 @@ import {
   slugifyId,
   validateAgentEntry,
 } from "./agents-content.mjs";
+import { isDownloadableAgentRelease } from "./agent-publication.mjs";
 
 function inside(root, candidate) {
   const path = relative(root, candidate);
@@ -47,6 +48,26 @@ function assertStudioReleaseLocks(existing, metadata) {
     throw new Error(
       "Developer Studio cannot set status to supported. Promote an agent through a reviewed pull request.",
     );
+  }
+  const previous = existing?.metadata;
+  const hadDownload = previous?.releases.some((release) =>
+    isDownloadableAgentRelease(previous, release),
+  );
+  if (hadDownload) {
+    for (const field of ["review", "source", "license"]) {
+      if (!sameValue(previous[field], metadata[field]))
+        throw new Error(
+          `Developer Studio cannot change reviewed ${field} for a downloadable agent`,
+        );
+    }
+  }
+  for (const release of metadata.releases ?? []) {
+    if (!isDownloadableAgentRelease(metadata, release)) continue;
+    const oldRelease = previous?.releases.find((item) => item.version === release.version);
+    if (!oldRelease || !isDownloadableAgentRelease(previous, oldRelease))
+      throw new Error(
+        "Developer Studio cannot make an agent archive downloadable; use a reviewed pull request",
+      );
   }
   if (!existing) return;
   for (const release of existing.metadata.releases) {

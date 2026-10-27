@@ -32,3 +32,16 @@ export function downloadableAgentArtifacts(entries) {
   }
   return allowed;
 }
+
+export function isDownloadableZip(artifact, agentEntries, softwareEntries) {
+  const declaredAgent = agentEntries.some(({ metadata }) =>
+    (metadata.releases ?? []).some(
+      (release) => release.artifact?.toLowerCase() === artifact.toLowerCase(),
+    ),
+  );
+  const declaredSoftware = softwareEntries.some(({ metadata }) =>
+    (metadata.releases ?? []).some((release) => release.artifact === artifact),
+  );
+  if (declaredAgent && declaredSoftware) return false;
+  return declaredAgent ? downloadableAgentArtifacts(agentEntries).has(artifact) : declaredSoftware;
+}

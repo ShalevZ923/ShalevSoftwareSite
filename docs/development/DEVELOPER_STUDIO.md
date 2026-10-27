@@ -1,6 +1,6 @@
 # Developer Studio
 
-Developer Studio is an optional local authoring interface. It runs `scripts/server.mjs`, reads catalog and documentation files, and can write reviewed changes into the working tree. It does not replace the approval-gated pull-request and merge-request contribution workflows. For agents, it cannot promote a listing to Supported and cannot change the artifact, checksum, or review evidence of a release that already exists.
+Developer Studio is an optional local authoring interface. It runs `scripts/server.mjs`, reads catalog and documentation files, and can write reviewed changes into the working tree. It does not replace the approval-gated pull-request and merge-request contribution workflows. For agents, it cannot promote a listing to Supported, make an archive newly downloadable, change an existing release's artifact or review fields, or change the reviewed source, license, or listing review of a downloadable agent.
 
 ## Safe local setup
 

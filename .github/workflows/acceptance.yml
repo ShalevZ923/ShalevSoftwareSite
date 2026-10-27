@@ -120,6 +120,12 @@ jobs:
           stage="${RUNNER_TEMP}/agent-packages"
           mkdir -p "${stage}/revoked-agent/1.0"
           printf 'revoked' > "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
+          if pnpm agents:publish -- --source packages --dest "${stage}"; then
+            echo 'Publication unexpectedly accepted an unrecognized ZIP' >&2
+            exit 1
+          fi
+          test -f "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
+          rm "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
           pnpm agents:publish -- --source packages --dest "${stage}"
           test ! -e "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
           echo "PUBLISHED_PACKAGES=${stage}" >> "${GITHUB_ENV}"
@@ -130,7 +136,7 @@ jobs:
           set -euo pipefail
           container_id=$(docker run --detach --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --publish 127.0.0.1:18080:8080 --mount "type=bind,src=${PUBLISHED_PACKAGES},dst=/srv/tool-atlas-packages,readonly" tool-atlas:ci)
           trap 'docker rm --force "$container_id" >/dev/null' EXIT
-          for attempt in 1 2 3 4 5; do
+          for _ in 1 2 3 4 5; do
             if curl --fail --silent --show-error --head http://127.0.0.1:18080/; then break; fi
             sleep 1
           done

@@ -206,3 +206,21 @@ test("Updates counts agent-only results and enforces every kind filter on mobile
   }
   await page.screenshot({ path: info.outputPath("mobile-updates.png") });
 });
+
+test("Studio locks reviewed provenance for a downloadable agent", async ({ page }) => {
+  await page.goto(url + "?page=developer#token=" + developerToken);
+  await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
+  await page.locator(".dev-item-card").filter({ hasText: "Theme Factory" }).click();
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  for (const label of [
+    "Source URL",
+    "Pinned revision",
+    "License",
+    "Reviewed version",
+    "Review date",
+    "Review evidence",
+  ]) {
+    await expect(page.getByLabel(label, { exact: true })).toBeDisabled();
+  }
+  await expect(page.getByRole("combobox", { name: "Review status", exact: true })).toBeDisabled();
+});

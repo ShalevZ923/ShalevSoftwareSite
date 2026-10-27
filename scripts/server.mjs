@@ -27,7 +27,7 @@ import {
   validateCatalogEntry,
 } from "./catalog-content.mjs";
 import { agentsDirectory, generatedAgentsPath, loadAgentEntries } from "./agents-content.mjs";
-import { downloadableAgentArtifacts } from "./agent-publication.mjs";
+import { isDownloadableZip } from "./agent-publication.mjs";
 import { saveAgentStudioEntry } from "./agent-studio.mjs";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -703,8 +703,12 @@ export function createToolAtlasServer({
         const [_, toolId, version, filename] = downloadMatch;
         const artifact = `${toolId}/${version}/${filename}`;
         if (filename.endsWith(".zip")) {
-          const allowed = downloadableAgentArtifacts(await loadAgentEntries(agentContentDirectory));
-          if (!allowed.has(artifact)) return sendText(res, 404, "Download not found");
+          const [agents, software] = await Promise.all([
+            loadAgentEntries(agentContentDirectory),
+            loadCatalogEntries(catalogDirectory),
+          ]);
+          if (!isDownloadableZip(artifact, agents, software))
+            return sendText(res, 404, "Download not found");
         }
         const filePath = join(packagesDirectory, toolId, version, filename);
 

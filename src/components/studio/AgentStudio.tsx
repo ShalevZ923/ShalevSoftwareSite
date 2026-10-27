@@ -224,6 +224,10 @@ export function AgentStudio({
   );
   const agent = draft?.metadata;
   const review = agent?.review;
+  const persistedAgent = entries.find((entry) => entry.id === activeId)?.metadata;
+  const provenanceLocked = !!persistedAgent?.releases.some((release) =>
+    agentDownloadTarget({ ...persistedAgent, guidePath: "" }, release),
+  );
   const currentRelease = agent?.releases.find((item) => item.version === agent.currentVersion);
   const previewDownload = agent && agentDownloadTarget({ ...agent, guidePath: "" }, currentRelease);
   const currentReleaseIndex =
@@ -485,14 +489,15 @@ export function AgentStudio({
                   </Field>
                 </div>
                 <p className="dev-section-help">
-                  Developer Studio is a local editor. It cannot promote a listing to Supported or
-                  change the artifact, checksum, or review evidence of a release that already
-                  exists. Those changes belong in a reviewed pull request.
+                  Developer Studio cannot promote a listing to Supported, make an archive
+                  downloadable, or change the provenance of an already downloadable listing. Those
+                  changes belong in a reviewed pull request.
                 </p>
                 <div className="dev-grid-2">
                   <Field label="Source URL">
                     <input
                       type="url"
+                      disabled={provenanceLocked}
                       value={agent.source?.url ?? ""}
                       onChange={(event) =>
                         patch({
@@ -510,6 +515,7 @@ export function AgentStudio({
                   </Field>
                   <Field label="Pinned revision">
                     <input
+                      disabled={provenanceLocked}
                       value={agent.source?.revision ?? ""}
                       onChange={(event) =>
                         patch({
@@ -521,6 +527,7 @@ export function AgentStudio({
                 </div>
                 <Field label="License">
                   <input
+                    disabled={provenanceLocked}
                     value={agent.license ?? ""}
                     onChange={(event) => patch({ license: event.target.value || undefined })}
                   />
@@ -528,6 +535,7 @@ export function AgentStudio({
                 <div className="dev-grid-2">
                   <Field label="Review status">
                     <select
+                      disabled={provenanceLocked}
                       value={review?.status ?? "pending"}
                       onChange={(event) =>
                         patch({
@@ -544,6 +552,7 @@ export function AgentStudio({
                   </Field>
                   <Field label="Reviewed version">
                     <input
+                      disabled={provenanceLocked}
                       value={review?.version ?? ""}
                       onChange={(event) =>
                         patch({ review: { ...review!, version: event.target.value } })
@@ -555,6 +564,7 @@ export function AgentStudio({
                   <Field label="Review date">
                     <input
                       type="date"
+                      disabled={provenanceLocked}
                       value={review?.date ?? ""}
                       onChange={(event) =>
                         patch({ review: { ...review!, date: event.target.value } })
@@ -563,6 +573,7 @@ export function AgentStudio({
                   </Field>
                   <Field label="Review evidence">
                     <input
+                      disabled={provenanceLocked}
                       value={review?.evidence ?? ""}
                       onChange={(event) =>
                         patch({ review: { ...review!, evidence: event.target.value } })
