@@ -5,6 +5,20 @@ function addVersion(graph, name, version) {
   (graph[name] ??= new Set()).add(version);
 }
 
+export function sameManifestValue(left, right) {
+  const canonical = (value) => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === "object")
+      return Object.fromEntries(
+        Object.keys(value)
+          .sort()
+          .map((key) => [key, canonical(value[key])]),
+      );
+    return value;
+  };
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+}
+
 export function lockfileDifferences(npmLock, pnpmText) {
   const npm = {};
   for (const [path, record] of Object.entries(npmLock.packages)) {
@@ -37,7 +51,7 @@ export async function checkLockfilePolicy() {
   const npmLock = JSON.parse(await read("package-lock.json"));
   const root = npmLock.packages[""];
   for (const key of ["name", "version", "dependencies", "devDependencies", "engines"])
-    if (JSON.stringify(root[key]) !== JSON.stringify(manifest[key]))
+    if (!sameManifestValue(root[key], manifest[key]))
       throw new Error(`npm lock root differs from package.json: ${key}`);
   const differences = lockfileDifferences(npmLock, await read("pnpm-lock.yaml"));
   const approved = JSON.parse(await read("config/lockfile-differences.json"));
