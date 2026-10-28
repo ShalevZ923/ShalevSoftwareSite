@@ -20,10 +20,67 @@ import {
   slugifyId,
   validateAgentEntry,
 } from "./agents-content.mjs";
+import { isDownloadableAgentRelease } from "./agent-publication.mjs";
 
 function inside(root, candidate) {
   const path = relative(root, candidate);
   return path && path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path);
+}
+
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonical(value[key])]),
+    );
+  }
+  return value;
+}
+
+function sameValue(left, right) {
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+}
+
+function assertStudioReleaseLocks(existing, metadata) {
+  if (metadata.status === "supported" && existing?.metadata.status !== "supported") {
+    throw new Error(
+      "Developer Studio cannot set status to supported. Promote an agent through a reviewed pull request.",
+    );
+  }
+  const previous = existing?.metadata;
+  const hadDownload = previous?.releases.some((release) =>
+    isDownloadableAgentRelease(previous, release),
+  );
+  if (hadDownload) {
+    for (const field of ["review", "source", "license"]) {
+      if (!sameValue(previous[field], metadata[field]))
+        throw new Error(
+          `Developer Studio cannot change reviewed ${field} for a downloadable agent`,
+        );
+    }
+  }
+  for (const release of metadata.releases ?? []) {
+    if (!isDownloadableAgentRelease(metadata, release)) continue;
+    const oldRelease = previous?.releases.find((item) => item.version === release.version);
+    if (!oldRelease || !isDownloadableAgentRelease(previous, oldRelease))
+      throw new Error(
+        "Developer Studio cannot make an agent archive downloadable; use a reviewed pull request",
+      );
+  }
+  if (!existing) return;
+  for (const release of existing.metadata.releases) {
+    const next = metadata.releases?.find((item) => item.version === release.version);
+    if (!next) continue;
+    for (const field of ["artifact", "sha256", "archiveRoot", "contents", "review"]) {
+      if (!sameValue(release[field], next[field])) {
+        throw new Error(
+          `Developer Studio cannot change ${field} of published release ${release.version}`,
+        );
+      }
+    }
+  }
 }
 
 export function saveAgentStudioEntry(options) {
@@ -80,6 +137,7 @@ async function persistAgentStudioEntry({
   ) {
     throw new Error("Existing release versions cannot be removed in Developer Studio");
   }
+  assertStudioReleaseLocks(existing, metadata);
   if (existing) assertRevision(revision, existing);
   const publisherId = slugifyId(metadata.publisher);
   const typeId = [...packageTypes].find(([, label]) => label === metadata.packageType)?.[0];

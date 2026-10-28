@@ -82,6 +82,10 @@ The Windows installer defaults its initial HTTP binding to loopback, avoids gran
 
 Agent ZIPs reuse the hosted-installer boundary. Content rules allow only a same-server `.zip` whose id and version match the release. NGINX still allowlists `/downloads/<id>/<version>/<file>.zip`, forces `Content-Disposition: attachment`, and uses `Cache-Control: private, no-store`. The browser shows a download only when those content gates pass and a HEAD response looks like an attachment, zip, or octet-stream. That HEAD check confirms presence and response shape. It does not compare bytes with the published SHA-256.
 
+`pnpm agents:packages` rebuilds the pinned snapshot ZIPs and is a required GitHub CI step, so a hash mismatch fails the pull request. `pnpm agents:publish` is the deployment gate: it audits eligible archives and writes only artifacts from `evaluation` or `supported` listings that carry review evidence. When source and destination differ, it also copies and re-audits staging bytes before writing. It preserves referenced software ZIPs, removes ineligible declared agent ZIPs, and fails on unknown ZIPs or symbolic links. Publish only to an offline candidate directory, with no concurrent writers; a write failure can leave a partial candidate that must be discarded or repaired before retrying. Compose mounts the accepted volume read-only. The local download handler and Vite preview return 404 for an agent ZIP that is not in the eligible set. NGINX itself still serves whatever file the published volume contains, which is why publish must be the last write.
+
+`catalogTier` is `experimental` for every agent listing and is separate from `status`. Updates copy follows both fields. A supported agent badge does not publish an approved software release.
+
 Evaluation listings can be downloaded when those gates pass. The catalog labels them for testing and does not treat them as approved software releases. Anyone who can fetch a published ZIP can reuse its URL. Approve and hash every archive before publication, and keep evaluation bytes off the `v1.7.0` image.
 
 ### Resolved: Vite development download traversal — Low (CWE-22)
@@ -96,9 +100,9 @@ The four packaged evaluation archives are pinned snapshots with recorded SHA-256
 
 ### Controlled: Developer Studio agent writes
 
-Agent create and update routes live under `/api/developer/agents` and require the startup bearer token. Saves run the same validator as checked-in content, refuse a `supported` status without evidence, and keep writes inside the agent content directory. The unauthenticated `GET /api/agents` feed exists only on this local server and returns listing metadata, not guide text. The NGINX image has no `/api` process.
+Agent create and update routes live under `/api/developer/agents` and require the startup bearer token. Saves run the same validator as checked-in content and keep writes inside the agent content directory. Studio cannot set `status` to `supported`, make an archive newly downloadable, change the provenance of a downloadable listing, or change `artifact`, `sha256`, `archiveRoot`, `contents`, or `review` on an existing release. Those edits belong in a reviewed pull request. The unauthenticated `GET /api/agents` feed exists only on this local server and returns listing metadata, not guide text. The NGINX image has no `/api` process.
 
-**Required operating control:** keep Developer Studio on loopback. Apply `catalog-approved` to an agent only after a person has reviewed the ZIP bytes, license, permissions, and release metadata. Run `pnpm agents:artifacts` against the staged package volume before that volume is mounted for download.
+**Required operating control:** keep Developer Studio on loopback. Do not use it as an organizational approval system. Apply `catalog-approved` to an agent only after a person has reviewed the ZIP bytes, license, permissions, and release metadata. Run `pnpm agents:publish` against the staged package volume and mount that volume read-only.
 
 ## Verified non-findings
 
@@ -122,7 +126,7 @@ Agent create and update routes live under `/api/developer/agents` and require th
 6. Keep `.env` mode 0600, never commit it, and use a server-side secret manager if future backend credentials are introduced.
 7. For Windows, configure and externally verify an approved HTTPS binding, patch level, firewall scope, read-only application-pool ACL, service recovery, W3C logging, package checksum, and rollback before acceptance.
 8. Keep Developer Studio on loopback. If a reviewed network exception is required, terminate TLS at a trusted proxy, keep the origin private, restrict the firewall, and follow `docs/DEVELOPER_STUDIO.md`.
-9. Do not publish this branch as `v1.7.0`. If an operator later promotes `v1.8.0`, stage only reviewed agent ZIPs, record each SHA-256, run `pnpm agents:artifacts` against that volume, and keep evaluation listings labeled as evaluation.
+9. Do not publish this branch as `v1.7.0`. If an operator later promotes `v1.8.0`, run `pnpm agents:publish` against the staged volume, mount it read-only, and keep `catalogTier` at `experimental`.
 
 ## Validation performed
 

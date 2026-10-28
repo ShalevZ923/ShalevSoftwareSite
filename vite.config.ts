@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react";
 import { createReadStream } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { loadAgentEntries } from "./scripts/agents-content.mjs";
+import { loadCatalogEntries } from "./scripts/catalog-content.mjs";
+import { isDownloadableZip } from "./scripts/agent-publication.mjs";
 
 const packageRoot = resolve("packages");
 const agentZipPath =
@@ -45,6 +48,14 @@ export default defineConfig({
             return;
           }
           try {
+            const [agents, software] = await Promise.all([
+              loadAgentEntries(),
+              loadCatalogEntries(),
+            ]);
+            if (!isDownloadableZip(pathname.slice(1), agents, software)) {
+              response.writeHead(404).end();
+              return;
+            }
             const [root, file] = await Promise.all([
               realpath(packageRoot),
               realpath(join(packageRoot, pathname.slice(1))),
