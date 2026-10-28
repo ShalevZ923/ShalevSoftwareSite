@@ -7,6 +7,7 @@ export function agentDownloadTarget(
   release?: AgentRelease,
 ): ReleaseDownloadTarget | undefined {
   if (
+    agent.catalogTier !== "experimental" ||
     !["supported", "evaluation"].includes(agent.status) ||
     !agent.source?.revision ||
     !agent.license ||
