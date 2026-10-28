@@ -2,7 +2,7 @@
   "name": "tool-atlas",
   "private": true,
   "license": "Apache-2.0",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "packageManager": "pnpm@10.30.2",
   "type": "module",
   "scripts": {
@@ -10,9 +10,9 @@
     "catalog:build": "node scripts/build-catalog.mjs",
     "catalog:check": "node scripts/build-catalog.mjs --check",
     "dev": "npm run build && node scripts/server.mjs",
-    "dev:client": "npm run catalog:build && vite",
-    "test": "npm run catalog:check && vitest run",
-    "build": "npm run catalog:build && tsc -b && vite build",
+    "dev:client": "npm run catalog:build && npm run agents:build && vite",
+    "test": "npm run catalog:check && npm run agents:check && vitest run",
+    "build": "npm run catalog:build && npm run agents:build && tsc -b && vite build",
     "verify": "npm run locks:check && npm run lint && npm run docs:check && npm run typecheck && npm run test && npm run build && node scripts/verify-dist.mjs",
     "preview": "vite preview",
     "serve": "npm run start",
@@ -27,7 +27,12 @@
     "dev:studio": "npm run build && concurrently --kill-others \"node scripts/dev-studio-server.mjs\" \"vite --host 127.0.0.1\"",
     "docs:check": "node scripts/check-documentation-links.mjs",
     "locks:check": "node scripts/lockfile-policy.mjs",
-    "provenance": "node scripts/verification-provenance.mjs"
+    "provenance": "node scripts/verification-provenance.mjs",
+    "agents:build": "node scripts/build-agents.mjs",
+    "agents:check": "node scripts/build-agents.mjs --check",
+    "agents:artifacts": "node scripts/check-agent-artifacts.mjs",
+    "agents:packages": "python3 scripts/build-agent-packages.py && node scripts/check-agent-artifacts.mjs --tracked",
+    "test:e2e": "npm run build && playwright test"
   },
   "dependencies": {
     "react": "19.3.0",
@@ -53,7 +58,8 @@
     "prettier": "3.9.10",
     "typescript": "7.0.2",
     "vite": "8.3.3",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "ajv": "8.20.0"
   },
   "engines": {
     "node": ">=24.11.0 <25"

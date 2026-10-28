@@ -12,6 +12,7 @@ function completeEvidence() {
         locks: { "package-lock.json": "a".repeat(64), "pnpm-lock.yaml": "b".repeat(64) },
         generated: {
           "src/generated/catalog.ts": "c".repeat(64),
+          "src/generated/agents.ts": "9".repeat(64),
           "public/catalog/v1/index.json": "d".repeat(64),
           "public/catalog/v1/tools.json": "e".repeat(64),
         },
@@ -45,6 +46,11 @@ describe("complete acceptance evidence", () => {
       locks: { "package-lock.json": "0".repeat(64), "pnpm-lock.yaml": "b".repeat(64) },
     };
     expect(() => verifyEvidence(records)).toThrow("mixes dependency locks");
+  });
+  it("rejects agent generated output drift", () => {
+    const records = completeEvidence();
+    records[1].generated["src/generated/agents.ts"] = "0".repeat(64);
+    expect(() => verifyEvidence(records)).toThrow("parity failed");
   });
   it("rejects Markdown parser output drift", () => {
     const records = completeEvidence();

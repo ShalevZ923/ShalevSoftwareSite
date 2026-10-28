@@ -46,7 +46,9 @@ export function useStudioModel({
   onCatalogUpdated: () => void;
   onDraftStateChange: (dirty: boolean, saving: boolean) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"tools" | "docs">("tools");
+  const [agentDirty, setAgentDirty] = useState(false);
+  const [agentSaving, setAgentSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"tools" | "docs" | "agents">("tools");
   const [toolsList, setToolsList] = useState<ToolEntryPayload[]>([]);
   const [selectedToolId, setSelectedToolId] = useState<string>("");
   const toolDraft = useDraft<ToolEntryPayload | null>(null);
@@ -126,22 +128,22 @@ export function useStudioModel({
   } = useDocumentModel({ headers, isSaving, setIsSaving, setStatusMessage });
   const toolDirty = !!editingTool && (isCreatingNewTool || toolDraft.dirty);
 
-  const dirty = toolDirty || docDirty;
+  const dirty = toolDirty || docDirty || agentDirty;
   const canDiscard = (hasChanges: boolean) =>
-    !isSaving && (!hasChanges || window.confirm("Discard unsaved changes?"));
+    !isSaving && !agentSaving && (!hasChanges || window.confirm("Discard unsaved changes?"));
   useEffect(() => {
-    onDraftStateChange(dirty, isSaving);
+    onDraftStateChange(dirty, isSaving || agentSaving);
     const guard = (event: BeforeUnloadEvent) => {
-      if (dirty || isSaving) {
+      if (dirty || isSaving || agentSaving) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
-  }, [dirty, isSaving, onDraftStateChange]);
-  const switchWorkspace = (tab: "tools" | "docs") => {
-    if (isSaving) return;
+  }, [dirty, isSaving, agentSaving, onDraftStateChange]);
+  const switchWorkspace = (tab: "tools" | "docs" | "agents") => {
+    if (!canDiscard(activeTab === "agents" && agentDirty)) return;
     setActiveTab(tab);
     setStatusMessage(null);
     setValidationRecovery(null);
@@ -329,6 +331,8 @@ export function useStudioModel({
 
   return {
     activeTab,
+    setAgentDirty,
+    setAgentSaving,
     switchWorkspace,
     toolsList,
     docsList,
