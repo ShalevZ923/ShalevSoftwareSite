@@ -40,7 +40,7 @@ export function writeSavedToolIds(toolIds: readonly string[]) {
   }
 }
 
-export function readSavedAgentIds(knownAgentIds: ReadonlySet<string>) {
+export function readSavedAgentIds() {
   if (typeof window === "undefined") return [];
 
   try {
@@ -48,9 +48,9 @@ export function readSavedAgentIds(knownAgentIds: ReadonlySet<string>) {
     const parsed: unknown = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
 
-    return filterSavedToolIds(
-      parsed.filter((id): id is string => typeof id === "string"),
-      knownAgentIds,
+    return [...new Set(parsed.filter((id): id is string => typeof id === "string"))].slice(
+      0,
+      maximumSavedTools,
     );
   } catch {
     return [];

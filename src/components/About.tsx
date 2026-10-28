@@ -49,9 +49,9 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
             <span className="point-number">02</span>
             <h3>Name what we support</h3>
             <p>
-              Every listing is software we are willing to stand behind — with platform, lifecycle,
-              owner, and a trusted download or pointer. If it is not here, it is not our supported
-              set.
+              Every listing is software we are willing to stand behind — with platform,
+              availability, owner, and a trusted download or pointer. If it is not here, it is not
+              our supported set.
             </p>
           </article>
           <article>
@@ -107,11 +107,14 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
         <ol className="about-steps">
           <li>
             <h3>Search the catalog</h3>
-            <p>Filter by category, platform, and lifecycle until the right tool is in view.</p>
+            <p>Filter by category, platform, and availability until the right tool is in view.</p>
           </li>
           <li>
             <h3>Read the ownership</h3>
-            <p>Check who supports it and whether the release is current, new, or legacy.</p>
+            <p>
+              Check who supports it and whether availability is Standard, Introducing, or Needs
+              review.
+            </p>
           </li>
           <li>
             <h3>Take the trusted path</h3>
@@ -130,8 +133,8 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
           <article>
             <h3>Useful over exhaustive</h3>
             <p>
-              We lead with supported software, then make lifecycle status clear when a legacy tool
-              remains necessary.
+              We show availability so people can identify standard tools, newly introduced tools,
+              and tools awaiting an availability review.
             </p>
           </article>
           <article>

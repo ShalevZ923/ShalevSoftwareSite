@@ -27,8 +27,8 @@ export function Sidebar({
   compact: boolean;
 }) {
   const links: Array<[Page, string, IconName]> = [
-    ["agents", "Agent catalog", "agents"],
-    ["catalog", "Software catalog", "catalog"],
+    ["agents", "Agent Catalog", "agents"],
+    ["catalog", "Software Catalog", "catalog"],
     ["documentation", "Documentation", "book"],
     ["updates", "Updates", "updates"],
     ["about", "About", "info"],

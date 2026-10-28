@@ -12,7 +12,13 @@ const agentZipPath =
   /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*)\/(?:[A-Za-z0-9][A-Za-z0-9._-]*)\/(?:[A-Za-z0-9][A-Za-z0-9._-]*\.zip)$/;
 
 export default defineConfig({
-  server: { proxy: { "/api": "http://127.0.0.1:8081", "/guides": "http://127.0.0.1:8081" } },
+  server: {
+    proxy: {
+      "/api": "http://127.0.0.1:8081",
+      "/guides": "http://127.0.0.1:8081",
+      "/downloads": "http://127.0.0.1:8081",
+    },
+  },
   plugins: [
     react(),
     {
@@ -33,10 +39,14 @@ export default defineConfig({
           }
           next();
         });
-        server.middlewares.use("/downloads", async (request, response) => {
+        server.middlewares.use("/downloads", async (request, response, next) => {
           const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
           if (pathname.includes("..")) {
             response.writeHead(404).end();
+            return;
+          }
+          if (!pathname.toLowerCase().endsWith(".zip")) {
+            next();
             return;
           }
           if (!agentZipPath.test(pathname)) {

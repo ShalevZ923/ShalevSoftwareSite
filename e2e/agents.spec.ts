@@ -57,8 +57,8 @@ test("a delayed live-only deep link opens newly saved and edited guides without 
     await route.continue();
   });
   await page.goto(url + "?page=agents&agent=browser-role");
-  await expect(page.getByRole("heading", { name: "Agent catalog", exact: true })).toBeVisible();
-  await expect(page).toHaveTitle("Tool Atlas — Agent catalog");
+  await expect(page.getByRole("heading", { name: "Agent Catalog", exact: true })).toBeVisible();
+  await expect(page).toHaveTitle("Tool Atlas — Agent Catalog");
   await expect(page).toHaveURL(/agent=browser-role/);
   await expect(page.getByText("This resource is no longer listed.", { exact: false })).toHaveCount(
     0,
@@ -95,9 +95,9 @@ test("filter edits survive delayed metadata and a genuinely missing target gets 
     await route.continue();
   });
   await page.goto(url + "?page=agents&agent=missing-agent");
-  await page.getByLabel("Search agent catalog").fill("PDF");
+  await page.getByLabel("Search Agent Catalog").fill("PDF");
   release();
-  await expect(page.getByLabel("Search agent catalog")).toHaveValue("PDF");
+  await expect(page.getByLabel("Search Agent Catalog")).toHaveValue("PDF");
   await expect(page).not.toHaveURL(/agent=/);
   await page.goto(url + "?page=agents&agent=missing-agent");
   await expect(page.getByText(/This resource is no longer listed/)).toBeVisible();
@@ -137,7 +137,7 @@ for (const reject of [false, true]) {
     page,
   }) => {
     await page.goto(url + "?page=developer#token=" + developerToken);
-    await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
+    await page.locator(".dev-tab-btn").getByText("Agent Catalog", { exact: true }).click();
     await expect(page.getByLabel("Resource ID", { exact: true })).toHaveValue("anthropic-pdf");
     const highlights = page.getByLabel("Highlights · one per line", { exact: true });
     await highlights.fill("First edited line\n\nSecond edited line");
@@ -209,7 +209,7 @@ test("Updates counts agent-only results and enforces every kind filter on mobile
 
 test("Studio locks reviewed provenance for a downloadable agent", async ({ page }) => {
   await page.goto(url + "?page=developer#token=" + developerToken);
-  await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
+  await page.locator(".dev-tab-btn").getByText("Agent Catalog", { exact: true }).click();
   await page.locator(".dev-item-card").filter({ hasText: "Theme Factory" }).click();
   await page.getByRole("button", { name: "Review", exact: true }).click();
   for (const label of [
@@ -223,4 +223,63 @@ test("Studio locks reviewed provenance for a downloadable agent", async ({ page 
     await expect(page.getByLabel(label, { exact: true })).toBeDisabled();
   }
   await expect(page.getByRole("combobox", { name: "Review status", exact: true })).toBeDisabled();
+});
+
+test("saved live-only agents survive delayed and unavailable feeds", async ({ page, request }) => {
+  const entries = await (await request.get(url + "/api/developer/agents", { headers })).json();
+  const seed = entries.find((entry: { id: string }) => entry.id === "anthropic-pdf");
+  const created = await request.post(url + "/api/developer/agents", {
+    headers,
+    data: {
+      metadata: {
+        ...seed.metadata,
+        id: "saved-live-role",
+        name: "Saved Live Role",
+        packageType: "Role Pack",
+      },
+      guide: seed.guide,
+    },
+  });
+  expect(created.status()).toBe(201);
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "tool-atlas.saved-agents.v1",
+      JSON.stringify(["saved-live-role", "removed-agent"]),
+    );
+  });
+  let release!: () => void;
+  const gate = new Promise<void>((done) => {
+    release = done;
+  });
+  await page.route("**/api/agents", async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto(url + "?page=agents");
+  await expect(page.getByRole("heading", { name: "Agent Catalog" })).toBeVisible();
+  expect(
+    await page.evaluate(() => JSON.parse(localStorage.getItem("tool-atlas.saved-agents.v1")!)),
+  ).toEqual(["saved-live-role", "removed-agent"]);
+  release();
+  await expect(page.getByRole("button", { name: "Saved (1)" })).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => JSON.parse(localStorage.getItem("tool-atlas.saved-agents.v1")!)),
+    )
+    .toEqual(["saved-live-role"]);
+  await page.getByRole("button", { name: "Saved (1)" }).click();
+  await expect(page.locator("#agent-saved-live-role")).toBeVisible();
+});
+
+test("an unavailable live feed does not erase saved live-only agents", async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("tool-atlas.saved-agents.v1", JSON.stringify(["saved-live-only"])),
+  );
+  await page.route("**/api/agents", (route) => route.abort());
+  await page.goto(url + "?page=agents");
+  await expect(page.getByRole("heading", { name: "Agent Catalog" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Saved (0)" })).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("tool-atlas.saved-agents.v1")))
+    .toBe(JSON.stringify(["saved-live-only"]));
 });

@@ -1,3 +1,4 @@
+import { availabilityLabel } from "../../catalog";
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { nextGuideId, parseGuideVersions } from "./guideEditing";
 import {
@@ -100,7 +101,7 @@ export function OverviewEditor({
       </div>
 
       <div className="dev-grid-3">
-        <Field label="Lifecycle">
+        <Field label="Availability">
           <select
             value={editingTool.metadata.lifecycle}
             onChange={(e) => {
@@ -115,9 +116,9 @@ export function OverviewEditor({
               );
             }}
           >
-            <option value="Current">Current</option>
-            <option value="New">New</option>
-            <option value="Legacy">Legacy</option>
+            <option value="Current">{availabilityLabel.Current}</option>
+            <option value="New">{availabilityLabel.New}</option>
+            <option value="Legacy">{availabilityLabel.Legacy}</option>
           </select>
         </Field>
       </div>

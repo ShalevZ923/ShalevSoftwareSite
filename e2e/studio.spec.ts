@@ -63,7 +63,7 @@ test("Studio edits survive save and reload; stale drafts cannot overwrite them",
 });
 test("catalog renders and navigates at desktop and mobile widths", async ({ page }) => {
   await page.goto(url + "?page=catalog");
-  await expect(page.getByRole("heading", { name: "Software catalog" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Software Catalog" })).toBeVisible();
   await page.getByLabel("Search tools").fill("IntelliJ");
   await expect(page.locator(".tool-row").filter({ hasText: "IntelliJ" }).first()).toBeVisible();
   await page.screenshot({ path: "/tmp/atlas-172-desktop.png", fullPage: false });
@@ -114,4 +114,19 @@ test("validation moves focus to the precise guide control and preserves input", 
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(guide).toHaveValue("# Draft without required sections");
   await expect(guide).toBeFocused();
+});
+
+test("software catalog filtered views survive reload and keep their page", async ({ page }) => {
+  await page.goto(url + "?page=catalog");
+  await page.getByLabel("Platform").selectOption("Windows");
+  await expect(page).toHaveURL(/page=catalog/);
+  await expect(page).toHaveURL(/platform=Windows/);
+  const filteredUrl = page.url();
+  const count = await page.locator(".tool-row").count();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Software Catalog" })).toBeVisible();
+  await expect(page.getByLabel("Platform")).toHaveValue("Windows");
+  expect(await page.locator(".tool-row").count()).toBe(count);
+  await page.goto(filteredUrl);
+  await expect(page.getByLabel("Platform")).toHaveValue("Windows");
 });

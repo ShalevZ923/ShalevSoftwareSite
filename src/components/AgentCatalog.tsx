@@ -117,7 +117,7 @@ export function AgentCatalog({
       : initial.target;
   });
   const [page, setPage] = useState(() => agentPageFromSearch(search));
-  const [savedIds, setSavedIds] = useState<string[]>(() => readSavedAgentIds(knownIds));
+  const [savedIds, setSavedIds] = useState<string[]>(() => readSavedAgentIds());
   const [savedOnly, setSavedOnly] = useState(
     () => new URLSearchParams(search).get("saved") === "1",
   );
@@ -184,11 +184,12 @@ export function AgentCatalog({
     if (!awaitingFeed) writeSavedAgentIds(savedIds);
   }, [savedIds, awaitingFeed]);
   useEffect(() => {
+    if (feedStatus !== "live") return;
     setSavedIds((current) => {
       const valid = filterSavedToolIds(current, knownIds);
       return valid.length === current.length ? current : valid;
     });
-  }, [knownIds]);
+  }, [knownIds, feedStatus]);
   useEffect(() => {
     if (awaitingFeed) return;
     const url = new URL(window.location.href);
@@ -261,7 +262,7 @@ export function AgentCatalog({
   return (
     <section className="page catalog-page agent-catalog-page">
       <PageHeader
-        title="Agent catalog"
+        title="Agent Catalog"
         copy="Discover MCP servers, skills, and agent packages for your workflows."
       />
       <p className="agent-host-note">
@@ -282,7 +283,7 @@ export function AgentCatalog({
         <Icon name="search" />
         <input
           ref={searchRef}
-          aria-label="Search agent catalog"
+          aria-label="Search Agent Catalog"
           value={filters.query}
           onChange={(event) => updateFilter("query", event.target.value)}
           placeholder="Search resources…"
@@ -415,7 +416,7 @@ export function AgentCatalog({
             }}
           >
             <Icon name="bookmark" size={16} />
-            Saved ({savedIds.length})
+            Saved ({filterSavedToolIds(savedIds, knownIds).length})
           </button>
           <button className="toolbar-button" type="button" onClick={copyLink}>
             <Icon name={copyState === "copied" ? "check" : "link"} size={16} />

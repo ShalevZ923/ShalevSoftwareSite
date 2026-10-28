@@ -11,7 +11,7 @@ export const supportLabels: Record<SupportStatus, string> = {
 
 export function agentUpdateSummary(agent: Pick<AgentPackage, "catalogTier" | "status">): string {
   const channel =
-    agent.catalogTier === "experimental" ? "Experimental agent catalog" : "Agent catalog";
+    agent.catalogTier === "experimental" ? "Experimental Agent Catalog" : "Agent Catalog";
   if (agent.status === "supported") {
     return `${channel}. Supported status stays in this catalog and does not create an approved software release.`;
   }

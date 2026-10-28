@@ -629,7 +629,7 @@ html[data-theme="dark"] .dev-section-invalid {
   font-size: 13px;
 }
 :where(textarea, summary):focus-visible {
-  outline: 3px solid #f59e0b;
+  outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
 @media (max-width: 1200px) {

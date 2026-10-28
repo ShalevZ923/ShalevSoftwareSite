@@ -124,9 +124,9 @@ function App() {
   useEffect(() => {
     document.title =
       page === "agents"
-        ? "Tool Atlas — Agent catalog"
+        ? "Tool Atlas — Agent Catalog"
         : page === "catalog"
-          ? "Tool Atlas — Software catalog"
+          ? "Tool Atlas — Software Catalog"
           : "Tool Atlas";
   }, [page]);
   useEffect(() => {

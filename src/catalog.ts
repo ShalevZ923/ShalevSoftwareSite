@@ -1,5 +1,11 @@
 import type { Lifecycle, Platform, Tool } from "./data";
 
+export const availabilityLabel: Record<Lifecycle, string> = {
+  Current: "Standard",
+  New: "Introducing",
+  Legacy: "Needs review",
+};
+
 export type CatalogFilters = {
   query: string;
   category: string;

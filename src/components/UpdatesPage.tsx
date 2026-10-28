@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { AgentPackage } from "../agentTypes";
 import { agentUpdateSummary, formatAgentDate, supportLabels } from "../agentCatalog";
 import {
+  availabilityLabel,
   catalogUpdateKind,
   catalogUpdateKindLabel,
   getRecentUpdates,
@@ -159,7 +160,7 @@ export function UpdatesPage({
                       <div className="update-card-head">
                         <span className="update-kind">{catalogUpdateKindLabel[updateKind]}</span>
                         <span className={`lifecycle ${tool.lifecycle.toLowerCase()}`}>
-                          {tool.lifecycle}
+                          {availabilityLabel[tool.lifecycle]}
                         </span>
                       </div>
                       <h3>
@@ -196,9 +197,9 @@ export function UpdatesPage({
       )}
       {agentUpdates.length > 0 && (
         <section className="updates-group" aria-labelledby="agent-catalog-updates">
-          <h2 id="agent-catalog-updates">Agent catalog</h2>
+          <h2 id="agent-catalog-updates">Agent Catalog</h2>
           <p>
-            These listings stay in the experimental agent catalog. A status badge does not publish
+            These listings stay in the experimental Agent Catalog. A status badge does not publish
             an approved software release.
           </p>
           {agentUpdates.map((agent) => (
@@ -222,7 +223,7 @@ export function UpdatesPage({
                 </p>
                 <div className="update-card-actions">
                   <button type="button" className="text-action" onClick={() => onAgent(agent.id)}>
-                    <Icon name="agents" size={15} /> View in agent catalog
+                    <Icon name="agents" size={15} /> View in Agent Catalog
                   </button>
                 </div>
               </div>

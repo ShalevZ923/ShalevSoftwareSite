@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "../../data";
 import {
+  availabilityLabel,
   catalogFiltersToSearch,
   defaultFilters,
   getCatalogTools,
@@ -46,7 +47,7 @@ const platforms: Array<"All platforms" | Platform> = [
   "macOS",
   "Web",
 ];
-const lifecycles = ["All lifecycles", "Current", "New", "Legacy"];
+const lifecycles: CatalogFilters["lifecycle"][] = ["All lifecycles", "Current", "New", "Legacy"];
 
 export function SoftwareCatalog({
   search,
@@ -115,8 +116,8 @@ export function SoftwareCatalog({
   useEffect(() => {
     const current = new URL(window.location.href);
     const params = new URLSearchParams(catalogFiltersToSearch(filters));
+    params.set("page", "catalog");
     if (target) {
-      params.set("page", "catalog");
       params.set("tool", target.toolId);
       if (target.version) params.set("version", target.version);
     }
@@ -172,7 +173,7 @@ export function SoftwareCatalog({
   return (
     <section className="page catalog-page">
       <PageHeader
-        title="Software catalog"
+        title="Software Catalog"
         copy="Find, compare, and support the tools your team relies on."
       />
       {initialLink.missingTool && (
@@ -220,7 +221,7 @@ export function SoftwareCatalog({
                 ))}
               </select>
             </Field>
-            <Field label="Lifecycle">
+            <Field label="Availability">
               <select
                 value={filters.lifecycle}
                 onChange={(event) =>
@@ -228,7 +229,9 @@ export function SoftwareCatalog({
                 }
               >
                 {lifecycles.map((item) => (
-                  <option key={item}>{item}</option>
+                  <option key={item} value={item}>
+                    {item === "All lifecycles" ? "All availability" : availabilityLabel[item]}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -280,7 +283,7 @@ export function SoftwareCatalog({
             <div className="list-head">
               <span>Software</span>
               <span>Category</span>
-              <span>Lifecycle</span>
+              <span>Availability</span>
               <span>Platforms</span>
               <span>Support</span>
             </div>
@@ -408,7 +411,9 @@ function ToolRow({
         </span>
         <span className="category-cell">{tool.category}</span>
         <span>
-          <span className={`lifecycle ${tool.lifecycle.toLowerCase()}`}>{tool.lifecycle}</span>
+          <span className={`lifecycle ${tool.lifecycle.toLowerCase()}`}>
+            {availabilityLabel[tool.lifecycle]}
+          </span>
         </span>
         <span className="platforms">
           {tool.platforms.map((item) => (
@@ -434,7 +439,7 @@ function ToolRow({
                 <div className="tag-row">
                   {tool.tags.map((tag) => (
                     <span key={tag} className="tag">
-                      {tag}
+                      {tag === tool.lifecycle ? availabilityLabel[tool.lifecycle] : tag}
                     </span>
                   ))}
                 </div>

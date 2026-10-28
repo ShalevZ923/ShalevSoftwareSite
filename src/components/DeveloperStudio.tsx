@@ -1,3 +1,4 @@
+import { availabilityLabel } from "../catalog";
 import { decodeToolEntry, studioResponse } from "./studio/api";
 import { MarkdownDocument } from "../markdown";
 import { OverviewEditor, SupportEditor, ReleasesEditor, GuidesEditor } from "./studio/ToolSections";
@@ -230,7 +231,7 @@ export function DeveloperStudio(props: Parameters<typeof useStudioModel>[0]) {
                     <div className="dev-item-info">
                       <strong className="dev-item-name">{tool.metadata.name}</strong>
                       <small className="dev-item-sub">
-                        {tool.metadata.category} &bull; {tool.metadata.lifecycle}
+                        {tool.metadata.category} &bull; {availabilityLabel[tool.metadata.lifecycle]}
                       </small>
                     </div>
                   </button>
