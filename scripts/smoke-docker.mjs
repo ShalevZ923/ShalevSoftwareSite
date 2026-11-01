@@ -207,7 +207,7 @@ try {
     app,
     "sh",
     "-c",
-    "wget -S -O /dev/null --header='X-Forwarded-Proto: https' http://127.0.0.1:8080/ 2>&1",
+    "command -v curl >/dev/null && curl -sI -H 'X-Forwarded-Proto: https' http://127.0.0.1:8080/ || wget -S -O /dev/null --header='X-Forwarded-Proto: https' http://127.0.0.1:8080/ 2>&1",
   );
   assert.match(tlsHeaders, /upgrade-insecure-requests/);
   console.log(

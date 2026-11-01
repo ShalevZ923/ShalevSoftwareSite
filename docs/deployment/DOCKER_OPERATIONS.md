@@ -25,7 +25,7 @@ Keep the certificate volumes between restarts. HTTP is intended for local/truste
 
 ```bash
 docker compose logs --tail=100 app proxy
-docker compose exec app wget -qO- http://127.0.0.1:8080/api/health
+docker compose exec app curl -fsS http://127.0.0.1:8080/api/health
 ```
 
 The default image runs NGINX and never starts the Node server. It has no Studio token. Its `/api/health` endpoint never returns credentials.
