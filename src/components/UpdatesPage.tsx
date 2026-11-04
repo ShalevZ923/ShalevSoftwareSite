@@ -158,7 +158,11 @@ export function UpdatesPage({
                           <Icon name="catalog" size={15} /> View in catalog
                         </button>
                         {isPageVisible("documentation") && (
-                          <button type="button" className="text-action" onClick={() => onDocs(tool)}>
+                          <button
+                            type="button"
+                            className="text-action"
+                            onClick={() => onDocs(tool)}
+                          >
                             <Icon name="book" size={15} /> View documentation
                           </button>
                         )}

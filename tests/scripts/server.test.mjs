@@ -2,7 +2,11 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { request } from "node:http";
-import { assertSafeBindHost, createToolAtlasServer, developerToken } from "../../scripts/server.mjs";
+import {
+  assertSafeBindHost,
+  createToolAtlasServer,
+  developerToken,
+} from "../../scripts/server.mjs";
 import { createServerFixture } from "../fixtures/server-fixture.mjs";
 
 describe("Tool Atlas Self-Contained Server", () => {

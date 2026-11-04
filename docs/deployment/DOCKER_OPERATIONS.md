@@ -24,6 +24,7 @@ ACME_EMAIL=ops@example.com
 Keep the certificate volumes between restarts. HTTP is intended for local/trusted network operation; use a configured hostname and HTTPS for public deployments. See [Caddy's site address rules](https://caddyserver.com/docs/caddyfile/concepts#addresses) and [global email option](https://caddyserver.com/docs/caddyfile/options#email).
 
 For internal corporate CA deployments:
+
 - **Static corporate CA certificate & key**: Place `fullchain.pem` and `privkey.pem` in a host directory, set `TLS_CERT_DIR=/path/to/certs`, and set `CADDY_TLS_DIRECTIVE=tls /etc/caddy/certs/fullchain.pem /etc/caddy/certs/privkey.pem`.
 - **Internal ACME CA server**: Set `CADDY_ACME_CA_DIRECTIVE=acme_ca https://ca.company.local/acme/acme/directory` (and mount your corporate Root CA via `TLS_CERT_DIR` if needed).
 

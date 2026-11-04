@@ -150,19 +150,19 @@ chmod 600 .env
 
 `.env` controls the deployment without changing tracked files:
 
-| Variable                   | Required  | Purpose                                                                                                      |
-| -------------------------- | --------- | ------------------------------------------------------------------------------------------------------------ |
-| `SITE_DOMAIN`              | For HTTPS | Public or internal hostname, without `https://`, a path, or a port. Empty uses HTTP on port 80.              |
-| `ACME_EMAIL`               | No        | Optional contact address supplied to the ACME CA.                                                            |
-| `HTTP_PORT` / `HTTPS_PORT` | No        | Host HTTP and HTTPS ports; default to `80` and `443`.                                                        |
-| `TLS_CERT_DIR`             | No        | Host directory mounted read-only at `/etc/caddy/certs` for corporate CA certificates or root CA bundles.     |
-| `CADDY_TLS_DIRECTIVE`      | No        | Optional site-level `tls` directive (e.g. `tls /etc/caddy/certs/fullchain.pem /etc/caddy/certs/privkey.pem`).|
-| `CADDY_ACME_CA_DIRECTIVE`  | No        | Optional global ACME directive for an internal ACME CA server (e.g. `acme_ca https://ca.corp.local/...`).    |
-| `PACKAGES_DIR`             | No        | Host path for same-server installer packages (`/downloads/…`), defaulting to `../../packages` in Compose.    |
-| `GUIDE_LIBRARY_DIR`        | No        | Host path for approved PDF/PPTX guides (`/guides/…`), defaulting to `../../guide-library` in Compose.        |
-| `VITE_HIDDEN_PAGES`        | No        | Comma-separated pages to hide from navigation/routing (`documentation`, `updates`, `about`, `developer`).    |
-| `VITE_SUPPORT_EMAIL`       | No        | Support email address linked on the About page (`devex@atlas.local` by default).                             |
-| `VITE_MCP_URL`             | No        | MCP server URL shown in the About page IDE snippet (`https://mcp.atlas.example.com/mcp` by default).         |
+| Variable                   | Required  | Purpose                                                                                                       |
+| -------------------------- | --------- | ------------------------------------------------------------------------------------------------------------- |
+| `SITE_DOMAIN`              | For HTTPS | Public or internal hostname, without `https://`, a path, or a port. Empty uses HTTP on port 80.               |
+| `ACME_EMAIL`               | No        | Optional contact address supplied to the ACME CA.                                                             |
+| `HTTP_PORT` / `HTTPS_PORT` | No        | Host HTTP and HTTPS ports; default to `80` and `443`.                                                         |
+| `TLS_CERT_DIR`             | No        | Host directory mounted read-only at `/etc/caddy/certs` for corporate CA certificates or root CA bundles.      |
+| `CADDY_TLS_DIRECTIVE`      | No        | Optional site-level `tls` directive (e.g. `tls /etc/caddy/certs/fullchain.pem /etc/caddy/certs/privkey.pem`). |
+| `CADDY_ACME_CA_DIRECTIVE`  | No        | Optional global ACME directive for an internal ACME CA server (e.g. `acme_ca https://ca.corp.local/...`).     |
+| `PACKAGES_DIR`             | No        | Host path for same-server installer packages (`/downloads/…`), defaulting to `../../packages` in Compose.     |
+| `GUIDE_LIBRARY_DIR`        | No        | Host path for approved PDF/PPTX guides (`/guides/…`), defaulting to `../../guide-library` in Compose.         |
+| `VITE_HIDDEN_PAGES`        | No        | Comma-separated pages to hide from navigation/routing (`documentation`, `updates`, `about`, `developer`).     |
+| `VITE_SUPPORT_EMAIL`       | No        | Support email address linked on the About page (`devex@atlas.local` by default).                              |
+| `VITE_MCP_URL`             | No        | MCP server URL shown in the About page IDE snippet (`https://mcp.atlas.example.com/mcp` by default).          |
 
 The static production app has no application secrets and does not consume browser-visible runtime variables. Keep credentials out of Vite variables (`VITE_*` values are compiled into public JavaScript). The optional Developer Studio token belongs only to its local Node.js process and must not be added to a static deployment.
 
