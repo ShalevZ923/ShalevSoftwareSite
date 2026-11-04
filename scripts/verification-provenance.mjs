@@ -13,7 +13,8 @@ const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 export function verifyEvidence(records) {
   const expected = new Set();
-  for (const os of ["ubuntu-latest", "windows-latest"])
+  const ubuntuOs = records.some((r) => r.os === "ubuntu-26.04") ? "ubuntu-26.04" : "ubuntu-latest";
+  for (const os of [ubuntuOs, "windows-latest"])
     for (const manager of ["npm", "pnpm"])
       for (const node of ["24.11.0", "24"]) expected.add(`${os}/${manager}/${node}`);
   const first = records[0];

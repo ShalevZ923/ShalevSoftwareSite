@@ -23,7 +23,7 @@ jobs:
   verify-release:
     name: Verify tag identity
     needs: acceptance
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -40,7 +40,7 @@ jobs:
   publish:
     name: Publish GHCR image and provenance
     needs: verify-release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -76,6 +76,8 @@ jobs:
             VERSION=${{ github.ref_name }}
             VCS_REF=${{ github.sha }}
             VITE_APP_VERSION=${{ steps.app-version.outputs.label }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Generate OCI provenance attestation when supported
         if: github.event.repository.private == false
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.0.0
