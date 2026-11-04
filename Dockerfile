@@ -1,30 +1,43 @@
-FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS build
+# syntax=docker/dockerfile:1
 
-WORKDIR /app
-# Node 24 is the supported build and development runtime.
+ARG NODE_IMAGE=node:24.22.2-alpine3.24@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+# Alpine-slim keeps the runtime package set small while retaining wget for healthchecks.
+ARG NGINX_IMAGE=nginx:1.31.8-alpine3.24-slim@sha256:f45171d36c76a8b2f5ef97108a3a8a2294248a6578a0a180edc2d78f7d2edc26
+
+FROM ${NODE_IMAGE} AS build
+
+# package.json pins the package manager version used by Corepack.
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml .npmrc ./
-RUN pnpm install --frozen-lockfile
+WORKDIR /app
+RUN chown node:node /app
+USER node
 
-COPY index.html tsconfig.json tsconfig.app.json vite.config.ts ./
-COPY public ./public
-COPY content ./content
-COPY scripts ./scripts
-COPY src ./src
+COPY --chown=node:node package.json pnpm-lock.yaml .npmrc ./
+RUN --mount=type=cache,target=/home/node/.cache/node/corepack,uid=1000,gid=1000 \
+    --mount=type=cache,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile
+
+COPY --chown=node:node index.html tsconfig.json tsconfig.app.json vite.config.ts ./
+COPY --chown=node:node public ./public
+COPY --chown=node:node content ./content
+COPY --chown=node:node scripts ./scripts
+COPY --chown=node:node src ./src
 ARG VITE_APP_VERSION=1.7.2
-RUN pnpm build
+RUN --mount=type=cache,target=/home/node/.cache/node/corepack,uid=1000,gid=1000 \
+    pnpm build
 
 # Optional local authoring image; the default final target remains static NGINX.
 FROM build AS studio
 COPY --chown=node:node docs ./docs
+USER root
 RUN mkdir -p /app/guide-library /app/packages && chown -R node:node /app
 USER node
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD node -e "fetch('http://127.0.0.1:8080/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 CMD ["node", "scripts/server.mjs"]
 
-FROM nginx:1.31-alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3 AS runtime
+FROM ${NGINX_IMAGE} AS runtime
 
 ARG VERSION=dev
 ARG VCS_REF=unknown
@@ -35,11 +48,14 @@ LABEL org.opencontainers.image.source="https://github.com/ShalevZ923/ShalevSoftw
   org.opencontainers.image.revision="${VCS_REF}"
 
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
 RUN rm /usr/share/nginx/html/_headers
 
 USER nginx
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/api/health || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+# The configuration is baked into the image, so the upstream entrypoint's
+# runtime template and default-site mutation scripts are not needed.
+ENTRYPOINT ["nginx"]
+CMD ["-g", "daemon off;"]
