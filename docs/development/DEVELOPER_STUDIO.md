@@ -47,7 +47,7 @@ The launcher uses `npm.cmd` to build before startup and stops on a failed build.
 
 ## Local Docker container
 
-The static production image has no Node process or Studio token. Use `docker compose -f compose.studio.yaml up --build --detach` for the opt-in local Studio container. Retrieve its current token with `docker compose -f compose.studio.yaml logs --tail=50 studio`, then open `http://127.0.0.1:8081/?page=developer` and paste it. Its localhost-only port mapping is independent of public Caddy routing. See [Docker operation](../deployment/DOCKER_OPERATIONS.md) for writable mounts, health checks, and token rotation.
+The static production image has no Node process or Studio token. Use `docker compose -f deploy/docker/compose.studio.yaml up --build --detach` for the opt-in local Studio container. Retrieve its current token with `docker compose -f deploy/docker/compose.studio.yaml logs --tail=50 studio`, then open `http://127.0.0.1:8081/?page=developer` and paste it. Its localhost-only port mapping is independent of public Caddy routing. See [Docker operation](../deployment/DOCKER_OPERATIONS.md) for writable mounts, health checks, and token rotation.
 
 ## Network access
 

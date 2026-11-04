@@ -12,7 +12,7 @@ The browser download target is `/downloads/jq/1.8.2/jq-windows-amd64.exe`. It is
 From the repository root:
 
 ```bash
-docker compose -f compose.hosted-downloads.yaml up --build
+docker compose -f deploy/docker/compose.hosted-downloads.yaml up --build
 ```
 
 The publisher defaults to host UID/GID `1000:1000`. If your checkout belongs to another account, set `HOSTED_DOWNLOAD_UID` and `HOSTED_DOWNLOAD_GID` to that account's numeric IDs before starting Compose. The publisher remains unprivileged, has no Linux capabilities, and can write only the mounted package directory.
@@ -39,9 +39,9 @@ The jq release page and GitHub release API publish that digest for the 1,035,264
 ## Inspect and stop it
 
 ```bash
-docker compose -f compose.hosted-downloads.yaml ps
-docker compose -f compose.hosted-downloads.yaml logs publisher app
-docker compose -f compose.hosted-downloads.yaml down
+docker compose -f deploy/docker/compose.hosted-downloads.yaml ps
+docker compose -f deploy/docker/compose.hosted-downloads.yaml logs publisher app
+docker compose -f deploy/docker/compose.hosted-downloads.yaml down
 ```
 
 The downloaded package is deliberately retained in `packages/jq/1.8.2/` after the containers stop so it can be inspected and reused. Remove it through the normal approved package-retirement process when it is no longer needed.

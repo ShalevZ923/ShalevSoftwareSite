@@ -33,15 +33,15 @@ Then open `http://127.0.0.1:8080/`. Use the versioned tag for repeatable testing
 
 ## Docker health, optional HTTPS, and local Studio
 
-The default Docker image serves the static catalog; it has no Developer Studio token. Check it with `docker compose ps` or `curl --fail http://localhost/api/health` (include your `HTTP_PORT` if different). The health response is `{"status":"ok"}`. Use `docker compose logs --tail=100 app proxy` for serving/proxy logs.
+The default Docker image serves the static catalog; it has no Developer Studio token. Check it with `docker compose -f deploy/docker/compose.yaml ps` or `curl --fail http://localhost/api/health` (include your `HTTP_PORT` if different). The health response is `{"status":"ok"}`. Use `docker compose -f deploy/docker/compose.yaml logs --tail=100 app proxy` for serving/proxy logs.
 
 `SITE_DOMAIN` and `ACME_EMAIL` can be omitted or empty. With no domain, Caddy serves HTTP on port 80. Set `SITE_DOMAIN=atlas.example.com` to enable automatic HTTPS; `ACME_EMAIL` is an optional certificate contact. See [the Docker operator guide](docs/deployment/DOCKER_OPERATIONS.md) for startup and health commands.
 
 For local Developer Studio in Docker, use the separate configuration:
 
 ```bash
-docker compose -f compose.studio.yaml up --build --detach
-docker compose -f compose.studio.yaml logs --tail=50 studio
+docker compose -f deploy/docker/compose.studio.yaml up --build --detach
+docker compose -f deploy/docker/compose.studio.yaml logs --tail=50 studio
 ```
 
 Open `http://127.0.0.1:8081/?page=developer` and paste the **Developer Studio Token** from the current startup log. This container writes catalog/document changes to the mounted checkout and publishes only on localhost. Restarting it rotates the token. The public Caddy proxy has no route to Studio. Studio edits still need a reviewed rebuild/deployment before they appear in the static Docker site.
@@ -91,7 +91,7 @@ Conflicting filters are cleared so a linked tool is visible; compatible filters 
 
 Set `VITE_APP_VERSION=1.7.1-beta.1` in the project-root `.env` file (see `.env.example`) to control the small version label on the About page. If unset or blank, the label defaults to the package version.
 
-After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
+After changing it, run `pnpm build` and deploy the updated `dist/`, or restart `pnpm dev` for local use. For Docker Compose, run `docker compose -f deploy/docker/compose.yaml --env-file .env up --build --detach`; Compose passes the value into the image build. A prebuilt image must be rebuilt with the desired version. The value is public and embedded at build time, so changing only a running server's environment will not update the label.
 
 ## Content model
 
@@ -150,12 +150,19 @@ chmod 600 .env
 
 `.env` controls the deployment without changing tracked files:
 
-| Variable      | Required  | Purpose                                                                             |
-| ------------- | --------- | ----------------------------------------------------------------------------------- |
-| `SITE_DOMAIN` | For HTTPS | Public hostname, without `https://`, a path, or a port. Empty uses HTTP on port 80. |
-| `ACME_EMAIL`  | No        | Optional contact address supplied to the ACME CA.                                   |
-| `HTTP_PORT`   | No        | Host HTTP port; use `80` in production.                                             |
-| `HTTPS_PORT`  | No        | Host HTTPS port; use `443` in production.                                           |
+| Variable                   | Required  | Purpose                                                                                                       |
+| -------------------------- | --------- | ------------------------------------------------------------------------------------------------------------- |
+| `SITE_DOMAIN`              | For HTTPS | Public or internal hostname, without `https://`, a path, or a port. Empty uses HTTP on port 80.               |
+| `ACME_EMAIL`               | No        | Optional contact address supplied to the ACME CA.                                                             |
+| `HTTP_PORT` / `HTTPS_PORT` | No        | Host HTTP and HTTPS ports; default to `80` and `443`.                                                         |
+| `TLS_CERT_DIR`             | No        | Host directory mounted read-only at `/etc/caddy/certs` for corporate CA certificates or root CA bundles.      |
+| `CADDY_TLS_DIRECTIVE`      | No        | Optional site-level `tls` directive (e.g. `tls /etc/caddy/certs/fullchain.pem /etc/caddy/certs/privkey.pem`). |
+| `CADDY_ACME_CA_DIRECTIVE`  | No        | Optional global ACME directive for an internal ACME CA server (e.g. `acme_ca https://ca.corp.local/...`).     |
+| `PACKAGES_DIR`             | No        | Host path for same-server installer packages (`/downloads/…`), defaulting to `../../packages` in Compose.     |
+| `GUIDE_LIBRARY_DIR`        | No        | Host path for approved PDF/PPTX guides (`/guides/…`), defaulting to `../../guide-library` in Compose.         |
+| `VITE_HIDDEN_PAGES`        | No        | Comma-separated pages to hide from navigation/routing (`documentation`, `updates`, `about`, `developer`).     |
+| `VITE_SUPPORT_EMAIL`       | No        | Support email address linked on the About page (`devex@atlas.local` by default).                              |
+| `VITE_MCP_URL`             | No        | MCP server URL shown in the About page IDE snippet (`https://mcp.atlas.example.com/mcp` by default).          |
 
 The static production app has no application secrets and does not consume browser-visible runtime variables. Keep credentials out of Vite variables (`VITE_*` values are compiled into public JavaScript). The optional Developer Studio token belongs only to its local Node.js process and must not be added to a static deployment.
 
@@ -164,9 +171,9 @@ The static production app has no application secrets and does not consume browse
 Validate the resolved configuration before starting it, then build and run the stack:
 
 ```bash
-docker compose --env-file .env config
-docker compose --env-file .env up --build --detach
-docker compose --env-file .env ps
+docker compose -f deploy/docker/compose.yaml --env-file .env config
+docker compose -f deploy/docker/compose.yaml --env-file .env up --build --detach
+docker compose -f deploy/docker/compose.yaml --env-file .env ps
 ```
 
 For same-server installers, create `packages/<tool-id>/<version>/` on the host and put only reviewed files there. The directory is ignored by Git and mounted read-only into NGINX; catalog metadata uses `artifact:<tool-id>/<version>/<filename>`. Publish the file before deploying the catalog reference. NGINX disables directory listing, rejects unapproved path shapes/extensions, and forces successful file responses to download as attachments.
@@ -174,7 +181,7 @@ For same-server installers, create `packages/<tool-id>/<version>/` on the host a
 Caddy requests the certificate after DNS and firewall access are correct. Follow its startup until it reports successful certificate management:
 
 ```bash
-docker compose --env-file .env logs --follow proxy
+docker compose -f deploy/docker/compose.yaml --env-file .env logs --follow proxy
 ```
 
 Verify the public endpoint from a separate network when possible:
@@ -189,9 +196,9 @@ The HTTP check should redirect to HTTPS. The HTTPS response should include `Stri
 ### 4. Operate safely
 
 - Certificates renew automatically; retain and back up the Docker volumes `tool-atlas_caddy_data` and `tool-atlas_caddy_config`. Losing them can trigger new certificate issuance and ACME rate limits.
-- For an app update, run `pnpm verify`, build a reviewed image, and then run `docker compose --env-file .env up --build --detach`. The tracked base and proxy images are pinned to immutable digests; update those pins only through a reviewed vulnerability/provenance check.
+- For an app update, run `pnpm verify`, build a reviewed image, and then run `docker compose -f deploy/docker/compose.yaml --env-file .env up --build --detach`. The tracked base and proxy images are pinned to immutable digests; update those pins only through a reviewed vulnerability/provenance check.
 - For a hostname change, update `SITE_DOMAIN`, verify the new DNS record, then run the same `up` command. Caddy will obtain a certificate for the new hostname.
-- Inspect the live state with `docker compose --env-file .env ps` and `docker compose --env-file .env logs proxy app`. Caddy writes JSON access logs (including `/downloads/…`) to stdout. NGINX writes JSON access and error logs to the app container stdout/stderr. Do not copy `.env` into an image or commit it.
+- Inspect the live state with `docker compose -f deploy/docker/compose.yaml --env-file .env ps` and `docker compose -f deploy/docker/compose.yaml --env-file .env logs proxy app`. Caddy writes JSON access logs (including `/downloads/…`) to stdout. NGINX writes JSON access and error logs to the app container stdout/stderr. Do not copy `.env` into an image or commit it.
 
 The app container runs as the unprivileged `nginx` user with a read-only filesystem, a small writable temporary filesystem, no Linux capabilities, and no host port. The proxy is the only public container; it has only the capability needed to bind HTTP(S) ports and persists certificate state in named volumes.
 
@@ -206,3 +213,8 @@ To see the same-server download path working locally with a real, checksum-verif
 ## Windows Server or workstation deployment
 
 The Windows deployment uses IIS as the operating-system-managed web service. The site and installer directory remain static: IIS provides service recovery, W3C access logs, Windows Event Log diagnostics, and forced attachment downloads without adding an application backend. Follow the complete [Windows deployment and operations guide](docs/deployment/WINDOWS_DEPLOYMENT.md).
+
+## Jenkins and Nix Flake deployments
+
+- **Jenkins CI/CD**: Point a Jenkins Pipeline job to [`deploy/jenkins/Jenkinsfile`](./deploy/jenkins/Jenkinsfile) to run the full runtime gate, frozen dependency install, `pnpm verify`, Playwright E2E suite, Docker smoke checks, and approval-gated static image promotion.
+- **Nix Flake & NixOS**: Use [`flake.nix`](./flake.nix) and [`deploy/nix/`](./deploy/nix) to build the static bundle (`nix build .#static-site`), build a rootless OCI NGINX image (`nix build .#container`), enter a reproducible development shell (`nix develop`), or deploy declaratively on NixOS via `services.tool-atlas`. See the [production deployment guide](docs/deployment/PRODUCTION_DEPLOYMENT.md) for details.

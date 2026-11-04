@@ -31,7 +31,7 @@ Stop the authoring process. Back up the catalog, generated outputs, internal doc
 
 ### Test data ownership
 
-Server suites and browser journeys use `scripts/test-fixtures/server-fixture.mjs`. Pass its complete `options` object to the server; it supplies disposable source, documentation, output, recovery, download, library and static paths. The repository catalog/docs/build are copied only as read-only inputs. Close the server before cleaning its fixture. New server tests must use this factory so they cannot recover or write a developer's active authoring state.
+Server suites and browser journeys use `tests/fixtures/server-fixture.mjs`. Pass its complete `options` object to the server; it supplies disposable source, documentation, output, recovery, download, library and static paths. The repository catalog/docs/build are copied only as read-only inputs. Close the server before cleaning its fixture. New server tests must use this factory so they cannot recover or write a developer's active authoring state.
 
 ## Release boundaries
 

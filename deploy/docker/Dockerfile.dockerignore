@@ -1,0 +1,40 @@
+# Version Control & CI/CD
+.git
+.github
+.gitlab
+
+# Dependencies & Build Outputs
+node_modules
+dist
+coverage
+test-results
+playwright-report
+blob-report
+playwright/.cache
+
+# Deployment, Nix & Container Assets
+deploy
+!deploy/docker/nginx.conf
+flake.nix
+flake.lock
+result
+result-*
+packages/*
+
+# Environment & Local State
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+*.tsbuildinfo
+
+# Documentation & Tests (not required for production static bundle; `docs` is re-included for the Studio target)
+README.md
+CONTRIBUTING.md
+SECURITY.md
+CODE_OF_CONDUCT.md
+LICENSE
+NOTICE
+tests
+windows

@@ -16,7 +16,7 @@ The supported runtime is Node >=24.11.0 <25, matching locked Babel 8 requirement
 
 The stable loader already normalizes native separators and has an ordinary Windows-path regression. Existing PR #53 head `5f3c02e7c2feaae33a1e56613b7129764fa1e97d` passed GitHub run [38450910373](https://github.com/ShalevZ923/ShalevSoftwareSite/actions/runs/38450910373): Windows/Linux npm verification, Windows/Linux pnpm verification and browser journeys, plus static/Studio container smoke checks.
 
-`windows/Test-ToolAtlasLauncher.ps1` adds native launcher acceptance to each Windows matrix leg. It runs `Start-ToolAtlas.ps1 -SkipBuild` from a disposable copy under a path containing spaces, requests health, catalog and static content, and terminates only its process tree. The original checkout and recovery data are not authoring targets. The ephemeral startup token is drained privately and never printed in CI.
+`tests/smoke/Test-ToolAtlasLauncher.ps1` adds native launcher acceptance to each Windows matrix leg. It runs `Start-ToolAtlas.ps1 -SkipBuild` from a disposable copy under a path containing spaces, requests health, catalog and static content, and terminates only its process tree. The original checkout and recovery data are not authoring targets. The ephemeral startup token is drained privately and never printed in CI.
 
 This new launcher check still requires a successful run at the proposed revision. IIS installation, ACLs, rollback and experimental immutable-generation selection require separate Windows host evidence; the launcher check does not establish them. M04 stays open until that evidence exists. Never run IIS installation or package publication against a real authoring or production root to satisfy a test.
 
