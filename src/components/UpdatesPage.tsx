@@ -6,6 +6,7 @@ import {
   type CatalogUpdateKind,
 } from "../catalog";
 import type { Tool } from "../data";
+import { isPageVisible } from "../app/routes";
 import { Icon, PageHeader, ToolGlyph } from "./ui";
 
 const kindFilters: Array<{ id: "all" | CatalogUpdateKind; label: string }> = [
@@ -156,9 +157,11 @@ export function UpdatesPage({
                         >
                           <Icon name="catalog" size={15} /> View in catalog
                         </button>
-                        <button type="button" className="text-action" onClick={() => onDocs(tool)}>
-                          <Icon name="book" size={15} /> View documentation
-                        </button>
+                        {isPageVisible("documentation") && (
+                          <button type="button" className="text-action" onClick={() => onDocs(tool)}>
+                            <Icon name="book" size={15} /> View documentation
+                          </button>
+                        )}
                       </div>
                     </div>
                   </article>

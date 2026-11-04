@@ -1,0 +1,24 @@
+{
+	# Certificate contact address comes from the deployment environment.
+	email "{$ACME_EMAIL}"
+	admin off
+	{$CADDY_ACME_CA_DIRECTIVE}
+}
+
+# With no domain, use plain HTTP on :80. A configured public hostname enables
+# automatic HTTPS; DNS and public ports 80/443 must then reach this host.
+{$SITE_DOMAIN::80} {
+	{$CADDY_TLS_DIRECTIVE}
+	encode zstd gzip
+
+	log {
+		output stdout
+		format json
+	}
+
+	@https protocol https
+	header @https Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header -Server
+
+	reverse_proxy app:8080
+}

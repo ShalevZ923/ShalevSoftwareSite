@@ -51,7 +51,7 @@ jobs:
       - name: Native Windows launcher and filesystem acceptance
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./windows/Test-ToolAtlasLauncher.ps1
+        run: ./tests/smoke/Test-ToolAtlasLauncher.ps1
 
       - name: Record dependency and generated-output provenance
         env:
@@ -98,7 +98,7 @@ jobs:
           node-version: 24
           check-latest: true
       - name: Build image
-        run: docker build --tag tool-atlas:ci --build-arg VERSION=ci --build-arg VCS_REF=${{ github.sha }} .
+        run: docker build --file deploy/docker/Dockerfile --tag tool-atlas:ci --build-arg VERSION=ci --build-arg VCS_REF=${{ github.sha }} .
       - name: Smoke test hardened image
         run: |
           set -euo pipefail
@@ -113,9 +113,9 @@ jobs:
           curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^cache-control: no-store'
           curl --fail --silent --show-error --head http://127.0.0.1:18080/catalog/v1/index.json | grep --ignore-case '^cache-control: public, max-age=60'
       - name: Build optional local Studio image
-        run: docker build --target studio --tag tool-atlas:studio-ci .
+        run: docker build --file deploy/docker/Dockerfile --target studio --tag tool-atlas:studio-ci .
       - name: Test optional Caddy settings, health, and local Studio
-        run: node scripts/smoke-docker.mjs tool-atlas:ci tool-atlas:studio-ci
+        run: node tests/smoke/smoke-docker.mjs tool-atlas:ci tool-atlas:studio-ci
 
   acceptance-required:
     name: Complete acceptance required

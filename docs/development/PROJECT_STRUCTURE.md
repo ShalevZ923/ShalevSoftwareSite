@@ -12,9 +12,10 @@ Tool Atlas remains a static, backend-free public catalog. Its source tree separa
 │   │   ├── guide.md                   # Catalog-safe install and support guidance
 │   │   └── releases/<version>.json    # One reviewed download target per version
 │   └── templates/                     # Copy-only starting points; never catalog input
-├── src/                               # React application source and unit tests
+├── src/                               # React application source
 │   └── generated/catalog.ts           # Generated only; checked for staleness in CI
 ├── scripts/                           # Content validation, generation, and contribution adapters
+├── tests/                             # Unit, server/script, E2E, smoke tests, and shared fixtures
 ├── public/                            # Static assets and host response-header configuration
 │   └── catalog/v1/{index,tools}.json  # Generated machine feed; no backend, no guides
 ├── docs/README.md                     # Master documentation index
@@ -24,9 +25,15 @@ Tool Atlas remains a static, backend-free public catalog. Its source tree separa
 │   ├── deployment/                    # Docker, IIS, downloads and operations
 │   ├── security/                      # Assessments and publication checklist
 │   └── releases/                      # Version notes and acceptance status
-├── .github/ and .gitlab/              # Approval-gated contribution automation
-└── Dockerfile, compose.yaml, Caddyfile, nginx.conf
-                                      # Production image, isolation, TLS edge, static serving
+├── config/                            # Prettier, ignore, and TypeScript sub-project configs
+├── deploy/
+│   ├── docker/                        # Dockerfile, Compose stacks, Caddyfile, and nginx.conf
+│   ├── jenkins/                       # Declarative Jenkinsfile CI/CD pipeline
+│   └── nix/                           # Nix package, OCI container, and NixOS service module
+├── flake.nix                          # Nix Flake entrypoint for builds, devShell, and NixOS
+├── .github/ and .gitlab/              # Approval-gated CI/CD and contribution automation
+└── package.json, tsconfig.json, vite.config.ts
+                                       # Root workspace manifest and build entrypoints
 ```
 
 ## Catalog ownership model
