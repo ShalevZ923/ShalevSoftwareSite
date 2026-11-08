@@ -4,7 +4,7 @@ This guide enables the GitLab issue-to-merge-request path. It keeps catalog publ
 
 ## Prerequisites
 
-1. Merge this repository's GitLab contribution files into the GitLab project's protected default branch: [`.gitlab-ci.yml`](../../.gitlab-ci.yml), [issue template](../../.gitlab/issue_templates/Add%20catalog%20software.md), and the catalog scripts.
+1. Merge this repository's GitLab contribution files into the GitLab project's protected default branch: [`.gitlab/ci.yml`](../../.gitlab/ci.yml), [issue template](../../.gitlab/issue_templates/Add%20catalog%20software.md), and the catalog scripts. Under **Settings > CI/CD > General pipelines**, set **CI/CD configuration file** to `.gitlab/ci.yml`.
 2. Confirm a GitLab Runner can pull the digest-pinned `node:24-alpine` image and execute the regular `verify` job.
 3. Protect the default branch. Limit its merge permission and the `catalog-approved` label to maintainers you trust to publish catalog content.
 4. Under **Settings > CI/CD > Pipeline variables**, set **Minimum role to use pipeline variables** to **Maintainer**. The job needs two non-secret pipeline variables, but they must not be available to lower-privileged users.
@@ -29,7 +29,7 @@ Open **Settings > CI/CD > Variables** and create this variable:
 | ------------------------- | ------------------------ | ----------------------------------------- |
 | `GITLAB_CATALOG_MR_TOKEN` | The project access token | **Masked**, **hidden**, and **protected** |
 
-Do not put the token in an issue, a `.gitlab-ci.yml` file, or a variable entered when starting a pipeline. Protected variables are available only to pipelines running on protected branches or tags, so protect the default branch before testing this path.
+Do not put the token in an issue, a `.gitlab/ci.yml` file, or a variable entered when starting a pipeline. Protected variables are available only to pipelines running on protected branches or tags, so protect the default branch before testing this path.
 
 ## Submit and publish a catalog entry
 

@@ -1,0 +1,51 @@
+name: tool-atlas-studio
+
+# Local authoring only. The public Caddy deployment never routes to this service.
+services:
+  studio:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: studio
+      args:
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-1.7.2}
+        VITE_HIDDEN_PAGES: ${VITE_HIDDEN_PAGES:-}
+        VITE_SUPPORT_EMAIL: ${VITE_SUPPORT_EMAIL:-}
+        VITE_MCP_URL: ${VITE_MCP_URL:-}
+    image: tool-atlas:studio-local
+    user: "${STUDIO_UID:-1000}:${STUDIO_GID:-1000}"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8080"
+      TOOL_ATLAS_LOCAL_CONTAINER: "true"
+      TOOL_ATLAS_GUIDE_HOSTS: ${TOOL_ATLAS_GUIDE_HOSTS:-}
+    ports:
+      - "127.0.0.1:${STUDIO_PORT:-8081}:8080"
+    volumes:
+      - ../../content:/app/content
+      - ../../src/generated:/app/src/generated
+      - ../../public/catalog/v1:/app/public/catalog/v1
+      - ../../docs:/app/docs
+      - ${GUIDE_LIBRARY_DIR:-../../guide-library}:/app/guide-library:ro
+      - ${PACKAGES_DIR:-../../packages}:/app/packages:ro
+    # Separate from the public app/proxy network. Normal outbound access allows
+    # operator-allowlisted guide HEAD checks; only the host publishes Studio.
+    networks:
+      - studio_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "2"
+
+networks:
+  studio_network:

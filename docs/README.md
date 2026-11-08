@@ -12,7 +12,7 @@ This is the master index for developer, catalog-maintainer and operator document
 - **Review security or source publication:** the [security assessment](security/SECURITY_REPORT.md) and [publication checklist](security/OPEN_SOURCE_READINESS.md).
 - **Check a version's scope and acceptance:** [release notes index](releases/README.md).
 
-1.7.2 is a local maintenance candidate. Native Windows acceptance remains pending. Version notes and dated assessments describe their own scope; moving a document does not establish new deployment or security evidence.
+  1.7.2 is a local maintenance candidate. Native Windows acceptance remains pending. Version notes and dated assessments describe their own scope; moving a document does not establish new deployment or security evidence.
 
 ## Documentation folders and files
 
@@ -56,7 +56,9 @@ This is the master index for developer, catalog-maintainer and operator document
 - [Software source layout](../content/catalog/README.md) and `content/catalog/<category>/<vendor>/<tool>/guide.md` — catalog-safe product guidance rendered in the app; operational docs belong here in `docs/`.
 - [Machine-feed directory](../public/catalog/README.md) — generated output location and a link to its contract.
 - `content/templates/` — starting points for content contributions.
-- `.github/` and `.gitlab/` — submission templates and review automation.
+- `config/` — Prettier and TypeScript sub-project configuration files.
+- `deploy/` and [`flake.nix`](../flake.nix) — Docker/Compose/Caddy/NGINX deployment files (`deploy/docker/`), Jenkins pipeline (`deploy/jenkins/Jenkinsfile`), and Nix Flake derivations/NixOS module (`deploy/nix/`).
+- `.github/` and `.gitlab/` — submission templates, CI pipelines (`.gitlab/ci.yml`), and review automation.
 - `guide-library/` — approved PDF/PPTX files served with catalog resources; uploaded files have their own ownership and review metadata.
 - `vendor/` — pinned upstream files, documentation and licence notices; keep their source layout intact.
 - `deliverables/` — ignored local reports, screenshots and verification evidence; these are not the canonical checked-in guides.

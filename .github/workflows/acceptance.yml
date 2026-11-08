@@ -81,7 +81,7 @@ jobs:
       - name: Native Windows launcher and filesystem acceptance
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./windows/Test-ToolAtlasLauncher.ps1
+        run: ./tests/smoke/Test-ToolAtlasLauncher.ps1
 
       - name: Record dependency and generated-output provenance
         env:
@@ -133,6 +133,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
+          file: deploy/docker/Dockerfile
           load: true
           tags: tool-atlas:ci
           build-args: |
@@ -157,13 +158,14 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
+          file: deploy/docker/Dockerfile
           target: studio
           load: true
           tags: tool-atlas:studio-ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Test optional Caddy settings, health, and local Studio
-        run: node scripts/smoke-docker.mjs tool-atlas:ci tool-atlas:studio-ci
+        run: node tests/smoke/smoke-docker.mjs tool-atlas:ci tool-atlas:studio-ci
 
   acceptance-required:
     name: Complete acceptance required
