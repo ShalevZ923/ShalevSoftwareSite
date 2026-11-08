@@ -1,6 +1,7 @@
 {
   "$schema": "../../../../schemas/agent.schema.json",
   "schemaVersion": 1,
+  "catalogTier": "experimental",
   "id": "atlas-repo-mcp",
   "name": "Atlas Repo MCP",
   "icon": "AR",

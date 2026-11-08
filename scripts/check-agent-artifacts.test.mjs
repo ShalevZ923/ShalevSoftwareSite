@@ -1,10 +1,23 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deflateRawSync } from "node:zlib";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+const publicationFault = vi.hoisted(() => ({ corruptStagedCopy: false }));
+vi.mock("node:fs/promises", async (original) => {
+  const fs = await original();
+  return {
+    ...fs,
+    copyFile: async (source, destination, ...args) => {
+      await fs.copyFile(source, destination, ...args);
+      if (publicationFault.corruptStagedCopy && String(destination).includes("tool-atlas-publish-"))
+        await fs.writeFile(destination, "changed after source audit");
+    },
+  };
+});
 import { auditAgentArtifacts } from "./check-agent-artifacts.mjs";
+import { publishAgentPackages } from "./publish-agent-packages.mjs";
 
 function crc32(bytes) {
   let crc = 0xffffffff;
@@ -143,6 +156,12 @@ describe("agent artifact audit", () => {
           storedZip({ "test-skill/SKILL.md": "a", "test-skill/skill.md": "b" }),
           "duplicate ZIP entry",
         ],
+        [storedZip({ "test-skill/\u00e9.txt": "a" }), "portable ASCII"],
+        [storedZip({ "test-skill/e\u0301.txt": "a" }), "portable ASCII"],
+        [
+          storedZip({ "test-skill/SKILL.md": "a", "test-skill/SKILL.md/extra.txt": "b" }),
+          "conflicts with a child path",
+        ],
         [
           storedZip({ "test-skill/SKILL.md": "good", "test-skill/extra.sh": "bad" }),
           "unlisted ZIP file",
@@ -159,4 +178,197 @@ describe("agent artifact audit", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+});
+
+describe("agent package publication", () => {
+  it("copies only downloadable ZIPs and removes a revoked archive", async () => {
+    const root = await mkdtemp(join(tmpdir(), "agent-publish-"));
+    try {
+      const source = join(root, "source");
+      const destination = join(root, "volume");
+      const bytes = storedZip({ "test-skill/SKILL.md": "# Test" }, 8);
+      const digest = createHash("sha256").update(bytes).digest("hex");
+      const artifact = "test-skill/1.0/test-skill-1.0.zip";
+      await mkdir(join(source, "test-skill", "1.0"), { recursive: true });
+      await writeFile(join(source, artifact), bytes);
+      await mkdir(join(destination, "revoked-agent", "1.0"), { recursive: true });
+      await writeFile(join(destination, "revoked-agent", "1.0", "revoked-agent-1.0.zip"), "stale");
+      await mkdir(join(destination, "jq", "1.8.2"), { recursive: true });
+      await writeFile(join(destination, "jq", "1.8.2", "jq-windows-amd64.exe"), "installer");
+      const softwareZip = "jq/1.8.2/jq-windows-amd64.zip";
+      await writeFile(join(destination, softwareZip), "software installer");
+      const release = {
+        version: "1.0",
+        artifact,
+        sha256: digest,
+        archiveRoot: "test-skill",
+        contents: [{ path: "SKILL.md" }],
+        review: { date: "2026-09-24", evidence: "Review A-1" },
+      };
+      const metadata = {
+        id: "test-skill",
+        catalogTier: "experimental",
+        status: "evaluation",
+        riskLevel: "Low",
+        license: "Apache-2.0",
+        currentVersion: "1.0",
+        source: { revision: "abc" },
+        review: { status: "reviewed", date: "2026-09-24", version: "1.0", evidence: "Review A-1" },
+        releases: [release],
+      };
+      const published = await publishAgentPackages({
+        entries: [
+          { metadata },
+          {
+            metadata: {
+              status: "deprecated",
+              releases: [{ artifact: "revoked-agent/1.0/revoked-agent-1.0.zip" }],
+            },
+          },
+        ],
+        softwareEntries: [{ metadata: { releases: [{ artifact: softwareZip }] } }],
+        sourceDirectory: source,
+        destinationDirectory: destination,
+      });
+      expect(published.published).toEqual([artifact]);
+      expect(await readFile(join(destination, artifact))).toEqual(bytes);
+      expect(await readFile(join(destination, softwareZip), "utf8")).toBe("software installer");
+      await expect(
+        readFile(join(destination, "revoked-agent", "1.0", "revoked-agent-1.0.zip")),
+      ).rejects.toThrow();
+      expect(await readFile(join(destination, "jq", "1.8.2", "jq-windows-amd64.exe"), "utf8")).toBe(
+        "installer",
+      );
+      const hidden = { ...metadata, status: "deprecated" };
+      const removed = await publishAgentPackages({
+        entries: [{ metadata: hidden }],
+        softwareEntries: [{ metadata: { releases: [{ artifact: softwareZip }] } }],
+        sourceDirectory: source,
+        destinationDirectory: destination,
+      });
+      expect(removed.published).toEqual([]);
+      await expect(readFile(join(destination, artifact))).rejects.toThrow();
+      expect(await readFile(join(destination, "jq", "1.8.2", "jq-windows-amd64.exe"), "utf8")).toBe(
+        "installer",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses unrecognized ZIPs before changing the destination", async () => {
+    const root = await mkdtemp(join(tmpdir(), "agent-publish-unknown-"));
+    try {
+      const unknown = join(root, "unrecognized.zip");
+      await writeFile(unknown, "keep");
+      await expect(
+        publishAgentPackages({ entries: [], sourceDirectory: root, destinationDirectory: root }),
+      ).rejects.toThrow("Unrecognized ZIP");
+      expect(await readFile(unknown, "utf8")).toBe("keep");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an artifact path shared by software and an agent", async () => {
+    const root = await mkdtemp(join(tmpdir(), "agent-publish-collision-"));
+    try {
+      const artifact = "example/1.0/example.zip";
+      await expect(
+        publishAgentPackages({
+          entries: [{ metadata: { releases: [{ artifact }] } }],
+          softwareEntries: [{ metadata: { releases: [{ artifact }] } }],
+          sourceDirectory: root,
+          destinationDirectory: root,
+        }),
+      ).rejects.toThrow("paths collide");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects software and agent paths differing only by case", async () => {
+    const root = await mkdtemp(join(tmpdir(), "agent-publish-case-"));
+    try {
+      await expect(
+        publishAgentPackages({
+          entries: [{ metadata: { releases: [{ artifact: "example/1.0/File.zip" }] } }],
+          softwareEntries: [{ metadata: { releases: [{ artifact: "example/1.0/file.zip" }] } }],
+          sourceDirectory: root,
+          destinationDirectory: root,
+        }),
+      ).rejects.toThrow("differ only by case");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects changed staged bytes before writing to the destination", async () => {
+    const root = await mkdtemp(join(tmpdir(), "agent-publish-staging-"));
+    try {
+      const source = join(root, "source");
+      const destination = join(root, "destination");
+      const artifact = "test-skill/1.0/test-skill.zip";
+      const bytes = storedZip({ "test-skill/SKILL.md": "# Test" }, 8);
+      await mkdir(join(source, "test-skill", "1.0"), { recursive: true });
+      await mkdir(destination);
+      await writeFile(join(source, artifact), bytes);
+      const metadata = {
+        id: "test-skill",
+        catalogTier: "experimental",
+        status: "evaluation",
+        riskLevel: "Low",
+        license: "Apache-2.0",
+        currentVersion: "1.0",
+        source: { revision: "abc" },
+        review: { status: "reviewed", date: "2026-09-24", version: "1.0", evidence: "Review A-1" },
+        releases: [
+          {
+            version: "1.0",
+            artifact,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+            archiveRoot: "test-skill",
+            contents: [{ path: "SKILL.md" }],
+            review: { date: "2026-09-24", evidence: "Review A-1" },
+          },
+        ],
+      };
+      publicationFault.corruptStagedCopy = true;
+      await expect(
+        publishAgentPackages({
+          entries: [{ metadata }],
+          sourceDirectory: source,
+          destinationDirectory: destination,
+        }),
+      ).rejects.toThrow("SHA-256 does not match");
+      await expect(readFile(join(destination, artifact))).rejects.toThrow();
+    } finally {
+      publicationFault.corruptStagedCopy = false;
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "refuses destination symlinks without changing their targets",
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "agent-publish-link-"));
+      try {
+        const destination = join(root, "destination");
+        const outside = join(root, "outside");
+        await mkdir(destination);
+        await writeFile(outside, "protected");
+        await symlink(outside, join(destination, "linked.zip"));
+        await expect(
+          publishAgentPackages({
+            entries: [],
+            sourceDirectory: root,
+            destinationDirectory: destination,
+          }),
+        ).rejects.toThrow("symbolic link");
+        expect(await readFile(outside, "utf8")).toBe("protected");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 });

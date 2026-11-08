@@ -1,0 +1,165 @@
+import { copyFile, lstat, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadAgentEntries, repositoryRoot } from "./agents-content.mjs";
+import { loadCatalogEntries } from "./catalog-content.mjs";
+import { auditAgentArtifacts } from "./check-agent-artifacts.mjs";
+import { downloadableAgentArtifacts, isDownloadableAgentRelease } from "./agent-publication.mjs";
+
+export function parsePublicationOptions(args) {
+  const values = new Map();
+  const input = args[0] === "--" ? args.slice(1) : args;
+  for (let index = 0; index < input.length; index += 2) {
+    const name = input[index];
+    const value = input[index + 1];
+    if (
+      !["--source", "--dest"].includes(name) ||
+      values.has(name) ||
+      !value ||
+      value.startsWith("--")
+    ) {
+      throw Object.assign(
+        new Error("Usage: pnpm agents:publish -- --source packages --dest /path/to/volume"),
+        { code: "PUBLICATION_USAGE" },
+      );
+    }
+    values.set(name, value);
+  }
+  const sourceDirectory = values.get("--source") ?? join(repositoryRoot, "packages");
+  return { sourceDirectory, destinationDirectory: values.get("--dest") ?? sourceDirectory };
+}
+
+function posixRelative(root, file) {
+  return relative(root, file).split(sep).join("/");
+}
+
+async function listFiles(root) {
+  const files = [];
+  try {
+    if ((await lstat(root)).isSymbolicLink())
+      throw new Error("Package destination cannot be a symbolic link");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  const walk = async (dir) => {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") return;
+      throw error;
+    }
+    for (const entry of entries) {
+      const path = join(dir, entry.name);
+      if (entry.isSymbolicLink())
+        throw new Error(`Package destination contains a symbolic link: ${path}`);
+      if (entry.isDirectory()) await walk(path);
+      else if (entry.isFile()) files.push(path);
+    }
+  };
+  await walk(root);
+  return files;
+}
+
+export async function publishAgentPackages({
+  entries,
+  softwareEntries = [],
+  sourceDirectory,
+  destinationDirectory,
+}) {
+  const publishable = entries.map((entry) => ({
+    ...entry,
+    metadata: {
+      ...entry.metadata,
+      releases: (entry.metadata.releases ?? []).filter((release) =>
+        isDownloadableAgentRelease(entry.metadata, release),
+      ),
+    },
+  }));
+  const audit = await auditAgentArtifacts(publishable, sourceDirectory);
+  if (audit.errors.length) {
+    throw new Error(audit.errors.join("\n"));
+  }
+  const allowed = downloadableAgentArtifacts(entries);
+  const declaredAgents = new Set(
+    entries.flatMap(({ metadata }) =>
+      (metadata.releases ?? []).map((release) => release.artifact).filter(Boolean),
+    ),
+  );
+  const software = new Set(
+    softwareEntries.flatMap(({ metadata }) =>
+      (metadata.releases ?? []).map((release) => release.artifact).filter(Boolean),
+    ),
+  );
+  const pathsByCasefold = new Map();
+  for (const artifact of [...declaredAgents, ...software]) {
+    const key = artifact.toLowerCase();
+    if (pathsByCasefold.has(key) && pathsByCasefold.get(key) !== artifact)
+      throw new Error(`Artifact paths differ only by case: ${artifact}`);
+    pathsByCasefold.set(key, artifact);
+  }
+  for (const artifact of declaredAgents) {
+    if (software.has(artifact))
+      throw new Error(`Agent and software artifact paths collide: ${artifact}`);
+  }
+  const sourceRoot = resolve(sourceDirectory);
+  const destinationRoot = resolve(destinationDirectory);
+  const existing = await listFiles(destinationRoot);
+  for (const file of existing) {
+    const artifact = posixRelative(destinationRoot, file);
+    const canonical = pathsByCasefold.get(artifact.toLowerCase());
+    if (canonical && canonical !== artifact)
+      throw new Error(`Destination artifact path has unexpected casing: ${artifact}`);
+    if (artifact.endsWith(".zip") && !software.has(artifact) && !declaredAgents.has(artifact))
+      throw new Error(`Unrecognized ZIP in destination; review it before publishing: ${artifact}`);
+  }
+  const staging = await mkdtemp(join(tmpdir(), "tool-atlas-publish-"));
+  try {
+    if (sourceRoot !== destinationRoot) {
+      for (const artifact of allowed) {
+        const staged = join(staging, artifact);
+        await mkdir(dirname(staged), { recursive: true });
+        await copyFile(join(sourceRoot, artifact), staged);
+      }
+      const stagedAudit = await auditAgentArtifacts(publishable, staging);
+      if (stagedAudit.errors.length) throw new Error(stagedAudit.errors.join("\n"));
+    }
+    await mkdir(destinationRoot, { recursive: true });
+    if (sourceRoot !== destinationRoot) {
+      for (const artifact of allowed) {
+        const destination = join(destinationRoot, artifact);
+        await mkdir(dirname(destination), { recursive: true });
+        await copyFile(join(staging, artifact), destination);
+      }
+    }
+    for (const file of existing) {
+      const artifact = posixRelative(destinationRoot, file);
+      if (artifact.endsWith(".zip") && declaredAgents.has(artifact) && !allowed.has(artifact))
+        await rm(file);
+    }
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
+  return { published: [...allowed].sort() };
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    const { sourceDirectory, destinationDirectory } = parsePublicationOptions(
+      process.argv.slice(2),
+    );
+    const result = await publishAgentPackages({
+      entries: await loadAgentEntries(),
+      softwareEntries: await loadCatalogEntries(),
+      sourceDirectory,
+      destinationDirectory,
+    });
+    console.log(
+      `Published ${result.published.length} agent artifact${result.published.length === 1 ? "" : "s"} to ${destinationDirectory}.`,
+    );
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = error.code === "PUBLICATION_USAGE" ? 2 : 1;
+  }
+}

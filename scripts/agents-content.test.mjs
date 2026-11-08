@@ -8,6 +8,7 @@ import {
 const guide = "## Overview\n\nExample.\n\n## Support\n\nAsk the owner.";
 const metadata = {
   schemaVersion: 1,
+  catalogTier: "experimental",
   id: "test-skill",
   name: "Test Skill",
   publisher: "Example",
@@ -47,6 +48,9 @@ describe("agent catalog content validation", () => {
     expect(() => validateAgentEntry("test", { ...metadata, status: "supported" }, guide)).toThrow(
       "supported entries require",
     );
+    expect(() =>
+      validateAgentEntry("test", { ...metadata, catalogTier: "approved" }, guide),
+    ).toThrow("catalogTier");
     expect(() =>
       validateAgentEntry("test", { ...metadata, review: { status: "reviewed" } }, guide),
     ).toThrow("reviewed entries require");

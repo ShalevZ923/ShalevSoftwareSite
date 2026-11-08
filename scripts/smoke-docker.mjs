@@ -106,19 +106,34 @@ try {
   );
   mkdirSync(join(fixture, "packages", "jq", "1.0"), { recursive: true });
   writeFileSync(join(fixture, "packages", "jq", "1.0", "fixture.exe"), "fixture installer");
+  writeFileSync(join(fixture, "packages", "jq", "1.0", "fixture.zip"), "fixture software zip");
   let agentPublication;
   if (existsSync(resolve("scripts/publish-agent-packages.mjs"))) {
     const { loadAgentEntries } = await import("./agents-content.mjs");
     const { publishAgentPackages } = await import("./publish-agent-packages.mjs");
     const entries = await loadAgentEntries();
-    const approved = await publishAgentPackages({
-      entries,
-      sourceDirectory: resolve("packages"),
-      destinationDirectory: join(fixture, "agent-publication"),
-    });
+    const softwareEntries = [{ metadata: { releases: [{ artifact: "jq/1.0/fixture.zip" }] } }];
     const id = entries[0].metadata.id;
     mkdirSync(join(fixture, "packages", id, "99"), { recursive: true });
-    writeFileSync(join(fixture, "packages", id, "99", "withheld.zip"), "must not serve this agent");
+    const withheld = join(fixture, "packages", id, "99", "withheld.zip");
+    writeFileSync(withheld, "must not serve this agent");
+    await assert.rejects(
+      publishAgentPackages({
+        entries,
+        softwareEntries,
+        sourceDirectory: resolve("packages"),
+        destinationDirectory: join(fixture, "packages"),
+      }),
+      /Unrecognized ZIP/,
+    );
+    assert.equal(readFileSync(withheld, "utf8"), "must not serve this agent");
+    rmSync(withheld);
+    const approved = await publishAgentPackages({
+      entries,
+      softwareEntries,
+      sourceDirectory: resolve("packages"),
+      destinationDirectory: join(fixture, "packages"),
+    });
     agentPublication = { ...approved, withheld: id + "/99/withheld.zip" };
   }
   docker("network", "create", network);
@@ -131,9 +146,6 @@ try {
       "app",
       "--volume",
       `${join(fixture, "packages")}:/srv/tool-atlas-packages:ro`,
-      ...(agentPublication
-        ? ["--volume", `${agentPublication.generationDirectory}:/srv/tool-atlas-agent-packages:ro`]
-        : []),
       "--read-only",
       "--tmpfs",
       "/tmp:rw,noexec,nosuid,size=16m",
@@ -187,13 +199,15 @@ try {
   const publicUrl = urlFor(proxy, 80);
   await waitReady(publicUrl);
   assert.equal((await fetch(publicUrl + "/downloads/jq/1.0/fixture.exe")).status, 200);
+  assert.equal(
+    await (await fetch(publicUrl + "/downloads/jq/1.0/fixture.zip")).text(),
+    "fixture software zip",
+  );
   if (agentPublication) {
     assert.equal((await fetch(publicUrl + "/downloads/" + agentPublication.withheld)).status, 404);
     for (const artifact of agentPublication.published)
       assert.equal((await fetch(publicUrl + "/downloads/" + artifact)).status, 200);
-    console.log(
-      "PASS: Nginx serves reviewed immutable agent artifacts and denies withheld ZIPs in the software mount",
-    );
+    console.log("PASS: Nginx serves audited agent artifacts and denies withheld ZIPs");
   }
   const appResponse = await fetch(publicUrl);
   assert.equal(appResponse.status, 200);

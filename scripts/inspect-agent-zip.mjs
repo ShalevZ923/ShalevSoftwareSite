@@ -37,10 +37,12 @@ function safeEntryName(bytes) {
   } catch {
     throw new Error("ZIP entry name is not UTF-8");
   }
+  // Portable ASCII avoids extractors that fold Unicode (NFC/NFD) or case onto one path.
+  if (!name || !/^[A-Za-z0-9._/-]+$/u.test(name)) {
+    throw new Error(`ZIP entry name must be portable ASCII: ${JSON.stringify(name)}`);
+  }
   if (
-    !name ||
     name.startsWith("/") ||
-    /[\\<>:"|?*\x00-\x1f\x7f]/u.test(name) ||
     name
       .split("/")
       .some(

@@ -44,6 +44,7 @@ export type AgentMaintainer = {
 };
 
 export type SupportStatus = "supported" | "evaluation" | "deprecated" | "example";
+export type AgentCatalogTier = "experimental";
 export type AgentCompatibility = {
   target: string;
   status: "verified" | "unverified";
@@ -80,6 +81,7 @@ export type AgentPackage = {
   currentVersion?: string;
   updatedAt: string;
   status: SupportStatus;
+  catalogTier: AgentCatalogTier;
   review: { status: "pending" | "reviewed"; date?: string; version?: string; evidence?: string };
   capabilities: string[];
   compatibility: AgentCompatibility[];

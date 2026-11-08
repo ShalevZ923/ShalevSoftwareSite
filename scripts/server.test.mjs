@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { request } from "node:http";
 import { assertSafeBindHost, createToolAtlasServer, developerToken } from "./server.mjs";
@@ -246,6 +246,40 @@ describe("Tool Atlas Self-Contained Server", () => {
       expect(await res.text()).not.toContain("must not cross the package root");
     },
   );
+
+  it("does not serve a ZIP that is not a published agent artifact", async () => {
+    const dir = join(fixturePackages, "theme-factory", "9.9.9");
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "theme-factory-9.9.9.zip"), "not published");
+    const res = await fetch(`${baseUrl}/downloads/theme-factory/9.9.9/theme-factory-9.9.9.zip`);
+    expect(res.status).toBe(404);
+    expect(await res.text()).not.toContain("not published");
+  });
+
+  it("serves a ZIP referenced by the software catalog", async () => {
+    const releasePath = join(
+      fixtureRoot,
+      "catalog",
+      "development",
+      "debuggers",
+      "jqlang",
+      "jq",
+      "releases",
+      "1.8.2.json",
+    );
+    const previous = await readFile(releasePath, "utf8");
+    const artifact = "jq/1.8.2/jq-windows-amd64.zip";
+    try {
+      await mkdir(join(fixturePackages, "jq", "1.8.2"), { recursive: true });
+      await writeFile(join(fixturePackages, artifact), "software zip");
+      await writeFile(releasePath, JSON.stringify({ version: "1.8.2", artifact }));
+      const response = await fetch(`${baseUrl}/downloads/${artifact}`);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe("software zip");
+    } finally {
+      await writeFile(releasePath, previous);
+    }
+  });
 
   it("serves static index.html and SPA fallback with security headers", async () => {
     const res = await fetch(`${baseUrl}/some-random-route`);

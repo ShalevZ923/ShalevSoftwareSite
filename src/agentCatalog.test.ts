@@ -3,6 +3,7 @@ import { agents, type AgentPackage } from "./agents";
 import {
   agentFiltersFromSearch,
   agentFiltersToSearch,
+  agentUpdateSummary,
   defaultAgentFilters,
   getAgentCatalog,
   getRecentAgentUpdates,
@@ -93,5 +94,15 @@ describe("agent discovery", () => {
         .map((agent) => agent.id)
         .sort(),
     ).toEqual(["internal-comms", "mcp-server-time", "theme-factory", "workplace-content-pack"]);
+    expect(agents.every((agent) => agent.catalogTier === "experimental")).toBe(true);
+    expect(agentUpdateSummary(agents.find((agent) => agent.status === "evaluation")!)).toContain(
+      "Evaluation listing",
+    );
+    expect(agentUpdateSummary({ catalogTier: "experimental", status: "supported" })).toContain(
+      "does not create an approved software release",
+    );
+    expect(agentUpdateSummary({ catalogTier: "experimental", status: "example" })).toContain(
+      "Example listing",
+    );
   });
 });

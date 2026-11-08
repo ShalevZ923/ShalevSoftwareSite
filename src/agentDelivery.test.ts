@@ -7,6 +7,7 @@ import {
 import type { AgentPackage } from "./agentTypes";
 
 const reviewed = {
+  catalogTier: "experimental",
   status: "supported",
   packageType: "MCP Server",
   currentVersion: "1.0",

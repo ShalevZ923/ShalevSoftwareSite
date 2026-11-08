@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { AgentPackage } from "../agentTypes";
-import { formatAgentDate, supportLabels } from "../agentCatalog";
+import { agentUpdateSummary, formatAgentDate, supportLabels } from "../agentCatalog";
 import {
   catalogUpdateKind,
   catalogUpdateKindLabel,
@@ -197,7 +197,10 @@ export function UpdatesPage({
       {agentUpdates.length > 0 && (
         <section className="updates-group" aria-labelledby="agent-catalog-updates">
           <h2 id="agent-catalog-updates">Agent catalog</h2>
-          <p>Experimental listings for evaluation. These are not approved software releases.</p>
+          <p>
+            These listings stay in the experimental agent catalog. A status badge does not publish
+            an approved software release.
+          </p>
           {agentUpdates.map((agent) => (
             <article className="update-card" key={agent.id}>
               <ToolGlyph tool={agent} />
@@ -212,6 +215,7 @@ export function UpdatesPage({
                   {agent.name}
                   {agent.currentVersion ? ` ${agent.currentVersion}` : ""}
                 </h3>
+                <p>{agentUpdateSummary(agent)}</p>
                 <p>{agent.description}</p>
                 <p className="update-card-meta">
                   {formatAgentDate(agent.updatedAt)} · {agent.publisher}

@@ -12,6 +12,7 @@
     "highlights",
     "updatedAt",
     "status",
+    "catalogTier",
     "review",
     "capabilities",
     "compatibility",
@@ -79,6 +80,10 @@
         "deprecated",
         "example"
       ]
+    },
+    "catalogTier": {
+      "description": "Publication channel. experimental is the only agent-catalog tier. An approved software release is a software catalog record, not an agent status change.",
+      "const": "experimental"
     },
     "review": {
       "type": "object",
