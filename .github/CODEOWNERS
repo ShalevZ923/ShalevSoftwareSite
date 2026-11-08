@@ -3,9 +3,10 @@
 
 # Security-sensitive implementation and publication paths.
 /.github/ @ShalevZ923
+/.gitlab/ @ShalevZ923
+/config/ @ShalevZ923
+/deploy/ @ShalevZ923
+/flake.nix @ShalevZ923
 /scripts/ @ShalevZ923
-/Dockerfile @ShalevZ923
-/compose.yaml @ShalevZ923
-/Caddyfile @ShalevZ923
-/nginx.conf @ShalevZ923
 /windows/ @ShalevZ923
+/tests/ @ShalevZ923

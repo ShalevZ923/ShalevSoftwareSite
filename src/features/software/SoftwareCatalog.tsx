@@ -38,6 +38,7 @@ import {
   toolPageHref,
   type CatalogTarget,
 } from "../../toolLinks";
+import { isPageVisible } from "../../app/routes";
 
 const platforms: Array<"All platforms" | Platform> = [
   "All platforms",
@@ -508,10 +509,12 @@ function ToolRow({
                 {downloadTarget.external && <Icon name="external" size={15} />}
               </a>
             )}
-            <button className="secondary-button" onClick={() => onDocs(selectedRelease.version)}>
-              <Icon name="book" />
-              View documentation
-            </button>
+            {isPageVisible("documentation") && (
+              <button className="secondary-button" onClick={() => onDocs(selectedRelease.version)}>
+                <Icon name="book" />
+                View documentation
+              </button>
+            )}
             <button
               className={saved ? "secondary-button saved-tool" : "secondary-button"}
               aria-pressed={saved}
@@ -544,9 +547,11 @@ function Updates({ tools, onViewAll }: { tools: Tool[]; onViewAll: () => void })
             </div>
           </div>
         ))}
-      <button className="updates-link" onClick={onViewAll}>
-        View all updates <Icon name="arrow" size={17} />
-      </button>
+      {isPageVisible("updates") && (
+        <button className="updates-link" onClick={onViewAll}>
+          View all updates <Icon name="arrow" size={17} />
+        </button>
+      )}
     </aside>
   );
 }

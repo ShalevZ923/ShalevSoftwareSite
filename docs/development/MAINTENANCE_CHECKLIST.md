@@ -208,7 +208,7 @@ A checked item means its stated local scope is verified. Partial or reopened ite
 
   **Acceptance:** Create one shared fixture factory overriding every source/output/docs/state root. Seed protected canary state outside the fixture and verify all bytes/status remain unchanged after suites; no journal entry targets a fixture outside its state root.
 
-  **Source:** [scripts/server.test.mjs:23](../../scripts/server.test.mjs), [scripts/server.contract.test.mjs:27](../../scripts/server.contract.test.mjs), `scripts/agent-studio.test.mjs:144` (experimental track).
+  **Source:** [tests/scripts/server.test.mjs:23](../../tests/scripts/server.test.mjs), [tests/scripts/server.contract.test.mjs:27](../../tests/scripts/server.contract.test.mjs), `scripts/agent-studio.test.mjs:144` (experimental track).
 
 - [ ] **M26 — Make maintainer onboarding and ownership explicit** (P3; Opportunity; effort M; proposed owner: Project maintainer).
 

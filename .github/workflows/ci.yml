@@ -21,7 +21,7 @@ jobs:
     name: Verify source and production artifact
     needs: acceptance
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Require complete acceptance
         env:
@@ -32,7 +32,7 @@ jobs:
     name: Build and smoke-test production image
     needs: acceptance
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Require complete acceptance
         env:

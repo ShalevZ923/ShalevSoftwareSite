@@ -1,7 +1,10 @@
 import { version as packageVersion } from "../../package.json";
 import { Icon } from "./ui";
 
-const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "1.8.0";
+const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || packageVersion;
+const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL?.trim() || "devex@atlas.local";
+const mcpUrl = import.meta.env.VITE_MCP_URL?.trim() || "https://mcp.atlas.example.com/mcp";
+
 
 export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
   return (
@@ -20,7 +23,7 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
           <button type="button" className="primary-button" onClick={onOpenCatalog}>
             Open the catalog <Icon name="arrow" />
           </button>
-          <a href="mailto:devex@atlas.local" className="about-secondary">
+          <a href={`mailto:${supportEmail}`} className="about-secondary">
             Talk to the team <Icon name="mail" size={16} />
           </a>
         </div>
@@ -166,7 +169,7 @@ export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
           <code>{`{
   "mcpServers": {
     "tool-atlas": {
-      "url": "https://mcp.atlas.example.com/mcp"
+      "url": "${mcpUrl}"
     }
   }
 }`}</code>

@@ -1,0 +1,134 @@
+// Tool Atlas — Declarative Jenkins CI/CD Pipeline
+// Enforces the repository verification contract, container smoke checks, and
+// tag-gated immutable static NGINX image promotion.
+
+pipeline {
+  agent any
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
+    disableConcurrentBuilds(abortPrevious: true)
+    timestamps()
+    timeout(time: 45, unit: 'MINUTES')
+  }
+
+  parameters {
+    string(
+      name: 'IMAGE_REGISTRY',
+      defaultValue: 'ghcr.io/shalevz923/shalevsoftwaresite',
+      description: 'Container registry repository for the static production NGINX image.'
+    )
+    booleanParam(
+      name: 'RUN_E2E_BROWSER_TESTS',
+      defaultValue: true,
+      description: 'Execute Playwright desktop and mobile browser journeys.'
+    )
+    booleanParam(
+      name: 'PUBLISH_RELEASE_IMAGE',
+      defaultValue: false,
+      description: 'Promote and push the immutable static NGINX container image (requires tag or manual approval).'
+    )
+  }
+
+  environment {
+    CI = 'true'
+    COREPACK_ENABLE_DOWNLOAD_PROMPT = '0'
+    DOCKER_BUILDKIT = '1'
+    COMPOSE_DOCKER_CLI_BUILD = '1'
+    VCS_REF = "${env.GIT_COMMIT ?: 'unknown'}"
+    IMAGE_VERSION = "${env.TAG_NAME ?: (env.GIT_COMMIT ? env.GIT_COMMIT.take(12) : 'ci')}"
+  }
+
+  stages {
+    stage('Preflight & Runtime Gate') {
+      steps {
+        sh '''
+          node --version
+          node --input-type=module -e "import { assertSupportedNode } from './scripts/runtime-version.mjs'; assertSupportedNode()"
+          corepack enable
+          pnpm --version
+        '''
+      }
+    }
+
+    stage('Install Frozen Dependencies') {
+      steps {
+        sh 'pnpm install --frozen-lockfile'
+      }
+    }
+
+    stage('Verification & Formatting Gate') {
+      steps {
+        sh '''
+          pnpm verify
+          pnpm format:check
+        '''
+      }
+    }
+
+    stage('Browser Journeys (E2E)') {
+      when {
+        expression { return params.RUN_E2E_BROWSER_TESTS }
+      }
+      steps {
+        sh '''
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e
+        '''
+      }
+    }
+
+    stage('Build & Smoke-Test Containers') {
+      steps {
+        sh '''
+          docker build \
+            --file deploy/docker/Dockerfile \
+            --tag "tool-atlas:${IMAGE_VERSION}" \
+            --tag "tool-atlas:ci" \
+            --build-arg "VERSION=${IMAGE_VERSION}" \
+            --build-arg "VCS_REF=${VCS_REF}" \
+            .
+
+          docker build \
+            --file deploy/docker/Dockerfile \
+            --target studio \
+            --tag "tool-atlas:studio-ci" \
+            .
+
+          node tests/smoke/smoke-docker.mjs "tool-atlas:ci" "tool-atlas:studio-ci"
+        '''
+      }
+    }
+
+    stage('Publish Immutable Production Image') {
+      when {
+        anyOf {
+          buildingTag()
+          expression { return params.PUBLISH_RELEASE_IMAGE }
+        }
+      }
+      steps {
+        input(
+          message: "Promote static NGINX image ${params.IMAGE_REGISTRY}:${env.IMAGE_VERSION} to registry?",
+          ok: 'Publish Image'
+        )
+        sh '''
+          docker tag "tool-atlas:${IMAGE_VERSION}" "${IMAGE_REGISTRY}:${IMAGE_VERSION}"
+          docker push "${IMAGE_REGISTRY}:${IMAGE_VERSION}"
+          if [ -n "${TAG_NAME:-}" ]; then
+            docker tag "tool-atlas:${IMAGE_VERSION}" "${IMAGE_REGISTRY}:latest"
+            docker push "${IMAGE_REGISTRY}:latest"
+          fi
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      sh '''
+        docker image rm -f "tool-atlas:ci" "tool-atlas:studio-ci" "tool-atlas:${IMAGE_VERSION}" >/dev/null 2>&1 || true
+      '''
+    }
+  }
+}

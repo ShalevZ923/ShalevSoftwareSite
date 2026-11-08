@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { Icon, type IconName } from "../components/ui";
 import type { Theme } from "../theme";
-import type { Page } from "./routes";
+import { isPageVisible, type Page } from "./routes";
 
 export function Sidebar({
   page,
@@ -26,14 +26,18 @@ export function Sidebar({
   sidebarRef: RefObject<HTMLElement | null>;
   compact: boolean;
 }) {
-  const links: Array<[Page, string, IconName]> = [
+  const allLinks: Array<[Page, string, IconName]> = [
     ["agents", "Agent catalog", "agents"],
     ["catalog", "Software catalog", "catalog"],
+
     ["documentation", "Documentation", "book"],
     ["updates", "Updates", "updates"],
     ["about", "About", "info"],
   ];
-  if (page === "developer") links.push(["developer", "Developer Studio", "catalog"]);
+  const links = allLinks.filter(([id]) => isPageVisible(id));
+  if (page === "developer" && isPageVisible("developer")) {
+    links.push(["developer", "Developer Studio", "catalog"]);
+  }
   const drawerOpen = compact && isOpen;
   return (
     <aside
@@ -50,9 +54,10 @@ export function Sidebar({
         className="brand"
         aria-label="Tool Atlas home"
         onClick={() => {
-          navigate("agents");
+          navigate(isPageVisible("agents") ? "agents" : "catalog");
           close();
         }}
+
       >
         <img src="/logo.svg" width={32} height={32} alt="" />
         <span>Tool Atlas</span>

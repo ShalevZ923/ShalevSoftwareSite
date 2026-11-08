@@ -27,16 +27,59 @@ curl --fail --head http://127.0.0.1:8080/
 For the tracked Caddy deployment, set `TOOL_ATLAS_IMAGE` in the host-local `.env` to the reviewed digest, then pull and start without rebuilding:
 
 ```bash
-docker compose --env-file .env pull app
-docker compose --env-file .env up --no-build --detach
-docker compose --env-file .env ps
+docker compose -f deploy/docker/compose.yaml --env-file .env pull app
+docker compose -f deploy/docker/compose.yaml --env-file .env up --no-build --detach
+docker compose -f deploy/docker/compose.yaml --env-file .env ps
 ```
 
 For public HTTPS, configure `SITE_DOMAIN`; `ACME_EMAIL` is optional. With no domain, Caddy uses HTTP on port 80 for local/trusted network access. See [Docker operation](DOCKER_OPERATIONS.md) for health checks and the separate local Studio container.
 
 Keep the deployed application behind Caddy, publish only 80/443, retain the certificate volumes, and verify HTTPS and security headers from a separate network. Roll back by changing `TOOL_ATLAS_IMAGE` to the previously recorded digest and repeating the final two Compose commands.
 
-Caddy JSON access logs (including `/downloads/…`) are the visitor-IP record at the public edge (`docker compose logs proxy`). NGINX JSON access and error logs are on the `app` container stdout/stderr; `remote` is the visitor after Caddy's `X-Forwarded-For`, trusted only from private Docker peers. The companion MCP image, if used, has its own Caddy and tool-call logs; see [the machine catalog contract](../catalog/CATALOG_MACHINE_FEED.md).
+Caddy JSON access logs (including `/downloads/…`) are the visitor-IP record at the public edge (`docker compose -f deploy/docker/compose.yaml logs proxy`). NGINX JSON access and error logs are on the `app` container stdout/stderr; `remote` is the visitor after Caddy's `X-Forwarded-For`, trusted only from private Docker peers. The companion MCP image, if used, has its own Caddy and tool-call logs; see [the machine catalog contract](../catalog/CATALOG_MACHINE_FEED.md).
+
+## Jenkins CI/CD pipeline (`deploy/jenkins/Jenkinsfile`)
+
+For organizations running Jenkins, configure a Pipeline or Multibranch Pipeline job with **Script Path** set to [`deploy/jenkins/Jenkinsfile`](../../deploy/jenkins/Jenkinsfile). The pipeline enforces the same verification contract as GitHub Actions:
+
+1. **Preflight & Runtime Gate** — verifies Node.js 24 (`scripts/runtime-version.mjs`) and enables `pnpm` via Corepack.
+2. **Install Frozen Dependencies** — runs `pnpm install --frozen-lockfile`.
+3. **Verification & Formatting Gate** — runs `pnpm verify` and `pnpm format:check`.
+4. **Browser Journeys (E2E)** — runs Playwright desktop and mobile journeys (`pnpm test:e2e`).
+5. **Build & Smoke-Test Containers** — builds both the production static NGINX image and the local Studio image from [`deploy/docker/Dockerfile`](../../deploy/docker/Dockerfile) and runs [`tests/smoke/smoke-docker.mjs`](../../tests/smoke/smoke-docker.mjs).
+6. **Publish Immutable Production Image** — gated by a manual operator confirmation step on release tags (`v*`) or explicit `PUBLISH_RELEASE_IMAGE=true`; promotes only the static NGINX image and never publishes the Developer Studio runtime.
+
+## Nix Flake and NixOS deployment (`flake.nix`, `deploy/nix/`)
+
+The repository includes a reproducible Nix Flake at [`flake.nix`](../../flake.nix) backed by derivations in [`deploy/nix/`](../../deploy/nix):
+
+- **Static production bundle** ([`deploy/nix/package.nix`](../../deploy/nix/package.nix)):
+  ```bash
+  nix build .#static-site
+  ```
+  Compiles the catalog, builds `dist/`, runs `node scripts/verify-dist.mjs`, and outputs the verified static files under `result/share/tool-atlas`.
+- **Rootless OCI NGINX container** ([`deploy/nix/container.nix`](../../deploy/nix/container.nix)):
+  ```bash
+  nix build .#container
+  docker load < result
+  ```
+  Produces a layered, Node-free OCI container running NGINX with [`deploy/docker/nginx.conf`](../../deploy/docker/nginx.conf).
+- **Declarative NixOS module** ([`deploy/nix/nixos-module.nix`](../../deploy/nix/nixos-module.nix)):
+  Import `inputs.tool-atlas.nixosModules.default` and enable `services.tool-atlas`:
+  ```nix
+  services.tool-atlas = {
+    enable = true;
+    domain = "atlas.example.com";
+    enableCaddyEdge = true;
+    packagesDir = "/srv/tool-atlas-packages";
+  };
+  ```
+  An optional `services.tool-atlas.studio` block runs Developer Studio under a hardened `systemd` unit asserted to bind only to loopback (`127.0.0.1` or `::1`).
+- **Developer shell**:
+  ```bash
+  nix develop
+  ```
+  Provides `nodejs_24`, `pnpm_10`, `git`, `jq`, `caddy`, and `nginx`.
 
 ## Windows Server decision
 

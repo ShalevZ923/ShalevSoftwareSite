@@ -33,8 +33,12 @@ import { saveAgentStudioEntry } from "./agent-studio.mjs";
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const distDir = join(rootDir, "dist");
 const docsDir = join(rootDir, "docs");
-const packagesDir = join(rootDir, "packages");
-const guideLibraryDir = join(rootDir, "guide-library");
+const packagesDir = process.env.PACKAGES_DIR
+  ? resolve(rootDir, process.env.PACKAGES_DIR)
+  : join(rootDir, "packages");
+const guideLibraryDir = process.env.GUIDE_LIBRARY_DIR
+  ? resolve(rootDir, process.env.GUIDE_LIBRARY_DIR)
+  : join(rootDir, "guide-library");
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const HOST = process.env.HOST || "127.0.0.1";

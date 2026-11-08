@@ -15,12 +15,12 @@ export default [
   },
   {
     ...js.configs.recommended,
-    files: ["scripts/**/*.mjs", "*.mjs"],
+    files: ["scripts/**/*.mjs", "tests/**/*.mjs", "*.mjs"],
     languageOptions: { globals: globals.node },
     rules: { "no-unused-vars": "off" },
   },
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
     languageOptions: {
       parser: babelParser,
       globals: globals.browser,

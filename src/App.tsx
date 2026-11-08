@@ -1,6 +1,6 @@
 import { decodeCatalog } from "./contracts";
 import { Sidebar } from "./app/Sidebar";
-import { pageFromSearch, type Page } from "./app/routes";
+import { isPageVisible, pageFromSearch, type Page } from "./app/routes";
 import { SoftwareCatalog as Catalog } from "./features/software/SoftwareCatalog";
 import {
   useCallback,
@@ -205,7 +205,7 @@ function App() {
   );
 
   const verifyDeveloperToken = async (candidateToken: string) => {
-    if (!candidateToken) return false;
+    if (!isPageVisible("developer") || !candidateToken) return false;
     try {
       const res = await fetch("/api/developer/verify", {
         method: "POST",
@@ -256,13 +256,15 @@ function App() {
   }, [refreshCatalog]);
 
   const navigate = (nextPage: Page, nextTool = selectedDoc, version?: string) => {
-    if (nextPage === "developer" && page === "developer") return;
-    if (nextPage !== "developer" && !canLeaveStudio()) return;
+    const defaultPage: Page = isPageVisible("agents") ? "agents" : "catalog";
+    const targetPage: Page = isPageVisible(nextPage) ? nextPage : defaultPage;
+    if (targetPage === "developer" && page === "developer") return;
+    if (targetPage !== "developer" && !canLeaveStudio()) return;
     studioDirty.current = false;
     const url = new URL(window.location.href);
-    if (nextPage === "agents") url.searchParams.delete("page");
-    else url.searchParams.set("page", nextPage);
-    if (page === "agents" && nextPage !== "agents") {
+    if (targetPage === defaultPage) url.searchParams.delete("page");
+    else url.searchParams.set("page", targetPage);
+    if (page === "agents" && targetPage !== "agents") {
       for (const key of [
         "agent",
         "saved",
@@ -279,17 +281,18 @@ function App() {
       }
     }
 
-    if (nextPage === "documentation") url.searchParams.set("tool", nextTool);
+
+    if (targetPage === "documentation") url.searchParams.set("tool", nextTool);
     else url.searchParams.delete("tool");
     url.searchParams.delete("version");
-    if (nextPage === "documentation" && version) url.searchParams.set("version", version);
+    if (targetPage === "documentation" && version) url.searchParams.set("version", version);
     url.hash = "";
 
     window.history.pushState(null, "", `${url.pathname}${url.search}`);
-    setPage(nextPage);
+    setPage(targetPage);
     setRouteSearch(url.search);
     setRouteRevision((revision) => revision + 1);
-    if (nextPage === "documentation") setSelectedDoc(nextTool);
+    if (targetPage === "documentation") setSelectedDoc(nextTool);
   };
 
   const openCatalogTool = (tool: Tool, version?: string) => {
