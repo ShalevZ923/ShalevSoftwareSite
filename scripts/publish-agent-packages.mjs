@@ -155,7 +155,6 @@ export async function publishAgentPackages({
       if (/\.zip$/iu.test(artifact) && declaredAgents.has(artifact) && !allowed.has(artifact))
         await rm(file);
     }
-
   } finally {
     await rm(staging, { recursive: true, force: true });
   }

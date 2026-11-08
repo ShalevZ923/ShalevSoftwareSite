@@ -6,7 +6,6 @@ import {
 } from "../../src/agentDelivery";
 import type { AgentPackage } from "../../src/agentTypes";
 
-
 const reviewed = {
   catalogTier: "experimental",
   status: "supported",

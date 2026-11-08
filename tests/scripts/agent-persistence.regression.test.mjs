@@ -16,7 +16,11 @@ vi.mock("node:fs/promises", async (original) => {
   };
 });
 import { createServerFixture } from "../fixtures/server-fixture.mjs";
-import { loadAgentEntries, packageTypes, renderGeneratedAgents } from "../../scripts/agents-content.mjs";
+import {
+  loadAgentEntries,
+  packageTypes,
+  renderGeneratedAgents,
+} from "../../scripts/agents-content.mjs";
 import { saveAgentStudioEntry } from "../../scripts/agent-studio.mjs";
 import { recordRevision, sourceSnapshot } from "../../scripts/mutation-coordinator.mjs";
 

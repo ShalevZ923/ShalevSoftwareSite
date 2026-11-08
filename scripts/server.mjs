@@ -75,7 +75,6 @@ const safeDownloadRegex =
 const safeGuideRegex =
   /^\/guides\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx))$/i;
 
-
 function validationError(message, field = "resources") {
   return Object.assign(new Error(message), { statusCode: 400, code: "VALIDATION_ERROR", field });
 }
@@ -303,9 +302,7 @@ export function createToolAtlasServer({
     return isDownloadableZip(artifact, cachedDownloadables.agents, cachedDownloadables.software);
   }
 
-
   const recovery = recoverTransactions(stateDirectory, [
-
     agentContentDirectory,
     dirname(agentGeneratedFile),
     catalogDirectory,
@@ -506,7 +503,6 @@ export function createToolAtlasServer({
             });
             invalidateDownloadableCache();
             return sendJson(res, 200, {
-
               success: true,
               agent: agent.metadata,
               guide: agent.guide,
@@ -581,7 +577,6 @@ export function createToolAtlasServer({
             });
             invalidateDownloadableCache();
             return sendJson(res, 201, {
-
               success: true,
               tool: accepted.metadata,
               entry: { id: accepted.metadata.id, ...accepted, revision: recordRevision(accepted) },
@@ -647,7 +642,6 @@ export function createToolAtlasServer({
               });
               invalidateDownloadableCache();
               return sendJson(res, 200, {
-
                 success: true,
                 tool: accepted.metadata,
                 entry: {
@@ -739,10 +733,8 @@ export function createToolAtlasServer({
         const [_, toolId, version, filename] = downloadMatch;
         const artifact = `${toolId}/${version}/${filename}`;
         if (/\.zip$/iu.test(filename)) {
-          if (!(await checkDownloadable(artifact)))
-            return sendText(res, 404, "Download not found");
+          if (!(await checkDownloadable(artifact))) return sendText(res, 404, "Download not found");
         }
-
 
         const filePath = join(packagesDirectory, toolId, version, filename);
 

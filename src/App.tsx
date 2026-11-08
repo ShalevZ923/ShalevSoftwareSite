@@ -281,7 +281,6 @@ function App() {
       }
     }
 
-
     if (targetPage === "documentation") url.searchParams.set("tool", nextTool);
     else url.searchParams.delete("tool");
     url.searchParams.delete("version");

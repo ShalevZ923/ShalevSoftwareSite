@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sameManifestValue } from "../../scripts/lockfile-policy.mjs";
 
-
 describe("lockfile manifest comparison", () => {
   it("ignores object key ordering without ignoring actual changes", () => {
     expect(

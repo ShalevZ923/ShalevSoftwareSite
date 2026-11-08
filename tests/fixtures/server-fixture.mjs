@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { agentsDirectory } from "../../scripts/agents-content.mjs";
 import { contentDirectory, repositoryRoot } from "../../scripts/catalog-content.mjs";
 
-
 /** All mutable server paths belong to a disposable directory; source copies are read-only inputs. */
 export async function createServerFixture({
   seedDocumentation = true,

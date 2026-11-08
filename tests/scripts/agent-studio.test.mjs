@@ -8,7 +8,6 @@ import { agentsDirectory, loadAgentEntries } from "../../scripts/agents-content.
 import { saveAgentStudioEntry } from "../../scripts/agent-studio.mjs";
 import { createToolAtlasServer, developerToken } from "../../scripts/server.mjs";
 
-
 describe("Agent Studio authoring", () => {
   it("saves validated listing text and button labels without weakening support gates", async () => {
     const root = await mkdtemp(join(tmpdir(), "agent-studio-"));

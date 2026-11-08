@@ -81,12 +81,13 @@ export default defineConfig({
             const info = await stat(file);
             if (!info.isFile()) throw new Error("Not a file");
             response.writeHead(200, {
-              "Content-Type": /\.zip$/iu.test(file) ? "application/zip" : "application/octet-stream",
+              "Content-Type": /\.zip$/iu.test(file)
+                ? "application/zip"
+                : "application/octet-stream",
               "Content-Disposition": `attachment; filename="${file.split(sep).at(-1)}"`,
               "Content-Length": info.size,
               "Cache-Control": "private, no-store",
               "X-Content-Type-Options": "nosniff",
-
             });
             if (request.method === "HEAD") response.end();
             else createReadStream(file).pipe(response);

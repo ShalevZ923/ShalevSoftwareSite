@@ -57,7 +57,6 @@ export function Sidebar({
           navigate(isPageVisible("agents") ? "agents" : "catalog");
           close();
         }}
-
       >
         <img src="/logo.svg" width={32} height={32} alt="" />
         <span>Tool Atlas</span>

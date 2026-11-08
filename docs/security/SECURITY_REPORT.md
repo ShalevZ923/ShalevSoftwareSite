@@ -38,7 +38,6 @@ The previous direct-container pattern published plaintext HTTP on port 8080. It 
 | Agent guides                | Usage guides use the same Markdown renderer as software guides: no raw HTML, and images stay on local `/tool-images/` paths.                                                                                                                                                                                                   | `src/markdown.tsx`, `src/components/AgentCatalog.tsx`                                                         |
 | Agent publication           | The GitLab agent template is maintainer-authored intake. The software-catalog merge-request job does not create agent files.                                                                                                                                                                                                   | `.gitlab/issue_templates/Add catalog agent.md`, `docs/AIRGAPPED_AGENT_CATALOG.md`                             |
 
-
 ## Findings
 
 ### Resolved: plaintext public deployment — Medium (CWE-319)

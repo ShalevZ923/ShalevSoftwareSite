@@ -269,7 +269,6 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(await res.text()).not.toContain("not published");
   });
 
-
   it("serves a ZIP referenced by the software catalog", async () => {
     const releasePath = join(
       fixtureRoot,

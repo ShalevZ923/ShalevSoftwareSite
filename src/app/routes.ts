@@ -40,8 +40,8 @@ export function pageFromSearch(
     page === "about" ||
     page === "developer"
       ? page
-      : (isPageVisible("agents", hiddenPages) ? "agents" : "catalog");
+      : isPageVisible("agents", hiddenPages)
+        ? "agents"
+        : "catalog";
   return isPageVisible(candidate, hiddenPages) ? candidate : "catalog";
 }
-
-

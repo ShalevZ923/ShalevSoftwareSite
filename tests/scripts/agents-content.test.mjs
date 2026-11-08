@@ -5,7 +5,6 @@ import {
   validateAgentReleaseRecords,
 } from "../../scripts/agents-content.mjs";
 
-
 const guide = "## Overview\n\nExample.\n\n## Support\n\nAsk the owner.";
 const metadata = {
   schemaVersion: 1,

@@ -918,7 +918,8 @@ export function AgentStudio({
                       ) : (
                         release.contents && (
                           <small>
-                            Archived release retains {release.contents.length} reviewed path records.
+                            Archived release retains {release.contents.length} reviewed path
+                            records.
                           </small>
                         )
                       )}
@@ -980,7 +981,9 @@ export function AgentStudio({
                         type="button"
                         className="dev-danger-btn"
                         onClick={() => {
-                          const contents = agent.contents.filter((_, position) => position !== index);
+                          const contents = agent.contents.filter(
+                            (_, position) => position !== index,
+                          );
                           patch({
                             contents,
                             releases: agent.releases.map((release) =>

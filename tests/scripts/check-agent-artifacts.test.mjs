@@ -19,7 +19,6 @@ vi.mock("node:fs/promises", async (original) => {
 import { auditAgentArtifacts } from "../../scripts/check-agent-artifacts.mjs";
 import { publishAgentPackages } from "../../scripts/publish-agent-packages.mjs";
 
-
 function crc32(bytes) {
   let crc = 0xffffffff;
   for (const byte of bytes) {

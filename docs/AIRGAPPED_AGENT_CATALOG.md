@@ -12,7 +12,6 @@ This optional artifact workflow is for networks that cannot reach GitHub, npm, o
 
 Site **build** still uses Node in GitLab CI. That is an operator toolchain. Mirror the digest-pinned job image into your internal Container Registry so runners never pull Docker Hub. See [`.gitlab/ci.yml`](../.gitlab/ci.yml).
 
-
 ## Operator flow
 
 1. Receive or build a reviewed ZIP on a connected jump host or approved media. Do not fetch vendor archives from the internet in GitLab CI.

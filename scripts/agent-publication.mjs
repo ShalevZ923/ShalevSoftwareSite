@@ -54,4 +54,3 @@ export function isDownloadableZip(artifact, agentEntries, softwareEntries) {
   }
   return declaredSoftware;
 }
-

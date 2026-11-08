@@ -7,7 +7,6 @@ import {
   unpackPathForScope,
 } from "../../src/agentInstall";
 
-
 const mcp = {
   name: "atlas-repo",
   config: {

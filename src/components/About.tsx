@@ -5,7 +5,6 @@ const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || packageVersion;
 const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL?.trim() || "devex@atlas.local";
 const mcpUrl = import.meta.env.VITE_MCP_URL?.trim() || "https://mcp.atlas.example.com/mcp";
 
-
 export function About({ onOpenCatalog }: { onOpenCatalog: () => void }) {
   return (
     <article className="page about-page">

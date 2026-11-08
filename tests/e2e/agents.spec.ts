@@ -237,7 +237,9 @@ test("Studio locks reviewed provenance and published release files for a downloa
   ]) {
     await expect(page.getByLabel(label, { exact: true })).toBeDisabled();
   }
-  await expect(page.getByText(/Package files for published release 1.0.0 are locked/)).toBeVisible();
+  await expect(
+    page.getByText(/Package files for published release 1.0.0 are locked/),
+  ).toBeVisible();
 });
 
 test("Studio workspace tab switching guards unsaved changes across tools, docs, and agents", async ({
@@ -267,6 +269,3 @@ test("Studio workspace tab switching guards unsaved changes across tools, docs, 
   await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
   await expect(page.getByLabel("Resource ID", { exact: true })).toBeVisible();
 });
-
-
-

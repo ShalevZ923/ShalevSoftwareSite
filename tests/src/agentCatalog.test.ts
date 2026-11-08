@@ -10,7 +10,6 @@ import {
   paginateAgents,
 } from "../../src/agentCatalog";
 
-
 const pdf = agents.find((item) => item.id === "anthropic-pdf")!;
 
 describe("agent discovery", () => {

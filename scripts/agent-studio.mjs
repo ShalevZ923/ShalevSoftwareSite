@@ -71,7 +71,6 @@ function assertStudioReleaseLocks(existing, metadata) {
   }
   if (!existing) return;
   for (const release of existing.metadata.releases ?? []) {
-
     const next = metadata.releases?.find((item) => item.version === release.version);
     if (!next) continue;
     for (const field of ["artifact", "sha256", "archiveRoot", "contents", "review"]) {
