@@ -226,7 +226,7 @@ test("Studio locks reviewed provenance and published release files for a downloa
     await expect(page.getByLabel(label, { exact: true })).toBeDisabled();
   }
   await expect(page.getByRole("combobox", { name: "Review status", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "Releases & files", exact: true }).click();
+  await page.getByRole("button", { name: "Delivery", exact: true }).click();
   for (const label of [
     "Version",
     "Artifact · ID/version/file.zip",
@@ -244,21 +244,29 @@ test("Studio workspace tab switching guards unsaved changes across tools, docs, 
   page,
 }) => {
   await page.goto(url + "?page=developer#token=" + developerToken);
-  await expect(page.getByLabel("Tool name", { exact: true })).toBeVisible();
-  await page.getByLabel("Tool name", { exact: true }).fill("Modified Tool Name");
+  const toolName = page.getByLabel("Tool name", { exact: true });
+  await expect(toolName).toBeVisible();
+  await toolName.fill("Modified Tool Name");
 
   let dialogMessage = "";
-  page.once("dialog", (dialog) => {
+  let allowDiscard = false;
+  page.on("dialog", async (dialog) => {
     dialogMessage = dialog.message();
-    dialog.dismiss();
+    if (allowDiscard) {
+      await dialog.accept();
+    } else {
+      await dialog.dismiss();
+    }
   });
 
   await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
   expect(dialogMessage).toBe("Discard unsaved changes?");
-  await expect(page.getByLabel("Tool name", { exact: true })).toHaveValue("Modified Tool Name");
+  await expect(toolName).toHaveValue("Modified Tool Name");
 
-  page.once("dialog", (dialog) => dialog.accept());
+  allowDiscard = true;
   await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
   await expect(page.getByLabel("Resource ID", { exact: true })).toBeVisible();
 });
+
+
 
