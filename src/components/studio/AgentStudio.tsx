@@ -237,6 +237,11 @@ export function AgentStudio({
       .find((entry) => entry.id === activeId)
       ?.metadata.releases?.map((release) => release.version) ?? [],
   );
+  const currentReleaseContentsLocked = !!(
+    agent?.currentVersion &&
+    existingVersions.has(agent.currentVersion) &&
+    currentRelease?.artifact
+  );
 
   const updateRelease = (index: number, change: Partial<AgentRelease>) => {
     const previous = agent!.releases[index];
@@ -811,152 +816,123 @@ export function AgentStudio({
                     Add release
                   </button>
                 </div>
-                {agent.releases.map((release, index) => (
-                  <div className="dev-agent-item" key={index}>
-                    <div className="dev-grid-2">
-                      <Field label="Version">
+                {agent.releases.map((release, index) => {
+                  const releaseLocked = existingVersions.has(release.version);
+                  return (
+                    <div className="dev-agent-item" key={index}>
+                      <div className="dev-grid-2">
+                        <Field label="Version">
+                          <input
+                            value={release.version}
+                            disabled={releaseLocked}
+                            onChange={(event) =>
+                              updateRelease(index, { version: event.target.value })
+                            }
+                          />
+                        </Field>
+                        <Field label="Released">
+                          <input
+                            type="date"
+                            value={release.releasedAt}
+                            onChange={(event) =>
+                              updateRelease(index, { releasedAt: event.target.value })
+                            }
+                          />
+                        </Field>
+                      </div>
+                      <Field label="Release note">
                         <input
-                          value={release.version}
-                          disabled={existingVersions.has(release.version)}
+                          value={release.notes ?? ""}
                           onChange={(event) =>
-                            updateRelease(index, { version: event.target.value })
+                            updateRelease(index, { notes: event.target.value || undefined })
                           }
                         />
                       </Field>
-                      <Field label="Released">
+                      <div className="dev-grid-2">
+                        <Field label="Artifact · ID/version/file.zip">
+                          <input
+                            value={release.artifact ?? ""}
+                            disabled={releaseLocked}
+                            onChange={(event) =>
+                              updateRelease(index, {
+                                artifact: event.target.value || undefined,
+                                ...(event.target.value && !release.contents
+                                  ? { contents: agent.contents }
+                                  : {}),
+                              })
+                            }
+                          />
+                        </Field>
+                        <Field label="SHA-256">
+                          <input
+                            value={release.sha256 ?? ""}
+                            disabled={releaseLocked}
+                            onChange={(event) =>
+                              updateRelease(index, { sha256: event.target.value || undefined })
+                            }
+                          />
+                        </Field>
+                      </div>
+                      <div className="dev-grid-2">
+                        <Field label="Archive root">
+                          <input
+                            value={release.archiveRoot ?? ""}
+                            disabled={releaseLocked}
+                            onChange={(event) =>
+                              updateRelease(index, { archiveRoot: event.target.value || undefined })
+                            }
+                          />
+                        </Field>
+                        <Field label="Archive review date">
+                          <input
+                            type="date"
+                            disabled={releaseLocked}
+                            value={release.review?.date ?? ""}
+                            onChange={(event) =>
+                              updateRelease(index, {
+                                review: {
+                                  date: event.target.value,
+                                  evidence: release.review?.evidence ?? "",
+                                },
+                              })
+                            }
+                          />
+                        </Field>
+                      </div>
+                      <Field label="Archive review evidence">
                         <input
-                          type="date"
-                          value={release.releasedAt}
-                          onChange={(event) =>
-                            updateRelease(index, { releasedAt: event.target.value })
-                          }
-                        />
-                      </Field>
-                    </div>
-                    <Field label="Release note">
-                      <input
-                        value={release.notes ?? ""}
-                        onChange={(event) =>
-                          updateRelease(index, { notes: event.target.value || undefined })
-                        }
-                      />
-                    </Field>
-                    <div className="dev-grid-2">
-                      <Field label="Artifact · ID/version/file.zip">
-                        <input
-                          value={release.artifact ?? ""}
-                          onChange={(event) =>
-                            updateRelease(index, {
-                              artifact: event.target.value || undefined,
-                              ...(event.target.value && !release.contents
-                                ? { contents: agent.contents }
-                                : {}),
-                            })
-                          }
-                        />
-                      </Field>
-                      <Field label="SHA-256">
-                        <input
-                          value={release.sha256 ?? ""}
-                          onChange={(event) =>
-                            updateRelease(index, { sha256: event.target.value || undefined })
-                          }
-                        />
-                      </Field>
-                    </div>
-                    <div className="dev-grid-2">
-                      <Field label="Archive root">
-                        <input
-                          value={release.archiveRoot ?? ""}
-                          onChange={(event) =>
-                            updateRelease(index, { archiveRoot: event.target.value || undefined })
-                          }
-                        />
-                      </Field>
-                      <Field label="Archive review date">
-                        <input
-                          type="date"
-                          value={release.review?.date ?? ""}
+                          value={release.review?.evidence ?? ""}
+                          disabled={releaseLocked}
                           onChange={(event) =>
                             updateRelease(index, {
                               review: {
-                                date: event.target.value,
-                                evidence: release.review?.evidence ?? "",
+                                date: release.review?.date ?? "",
+                                evidence: event.target.value,
                               },
                             })
                           }
                         />
                       </Field>
+                      {index === currentReleaseIndex ? (
+                        <small>Current release files are managed below.</small>
+                      ) : (
+                        release.contents && (
+                          <small>
+                            Archived release retains {release.contents.length} reviewed path records.
+                          </small>
+                        )
+                      )}
                     </div>
-                    <Field label="Archive review evidence">
-                      <input
-                        value={release.review?.evidence ?? ""}
-                        onChange={(event) =>
-                          updateRelease(index, {
-                            review: {
-                              date: release.review?.date ?? "",
-                              evidence: event.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </Field>
-                    {index === currentReleaseIndex ? (
-                      <small>Current release files are managed below.</small>
-                    ) : (
-                      release.contents && (
-                        <small>
-                          Archived release retains {release.contents.length} reviewed path records.
-                        </small>
-                      )
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
                 <div className="dev-agent-subhead">
                   <h3>Current package files</h3>
-                  <button
-                    type="button"
-                    className="dev-small-btn"
-                    onClick={() => {
-                      const contents = [...agent.contents, { path: "", kind: "doc" as const }];
-                      patch({
-                        contents,
-                        releases: agent.releases.map((release) =>
-                          release.version === agent.currentVersion && release.artifact
-                            ? { ...release, contents }
-                            : release,
-                        ),
-                      });
-                    }}
-                  >
-                    Add file or folder
-                  </button>
-                </div>
-                {agent.contents.map((item, index) => (
-                  <div className="dev-agent-file" key={index}>
-                    <Field label="Relative path">
-                      <input
-                        value={item.path}
-                        onChange={(event) => updateContent(index, { path: event.target.value })}
-                      />
-                    </Field>
-                    <Field label="Kind">
-                      <select
-                        value={item.kind}
-                        onChange={(event) =>
-                          updateContent(index, { kind: event.target.value as AgentContent["kind"] })
-                        }
-                      >
-                        {["skill", "script", "prompt", "config", "doc", "asset"].map((kind) => (
-                          <option key={kind}>{kind}</option>
-                        ))}
-                      </select>
-                    </Field>
+                  {!currentReleaseContentsLocked && (
                     <button
                       type="button"
-                      className="dev-danger-btn"
+                      className="dev-small-btn"
                       onClick={() => {
-                        const contents = agent.contents.filter((_, position) => position !== index);
+                        const contents = [...agent.contents, { path: "", kind: "doc" as const }];
                         patch({
                           contents,
                           releases: agent.releases.map((release) =>
@@ -967,10 +943,83 @@ export function AgentStudio({
                         });
                       }}
                     >
-                      Remove
+                      Add file or folder
                     </button>
+                  )}
+                </div>
+                {currentReleaseContentsLocked && (
+                  <p className="dev-section-help">
+                    Package files for published release {agent.currentVersion} are locked. Edits
+                    belong in a reviewed pull request.
+                  </p>
+                )}
+                {agent.contents.map((item, index) => (
+                  <div className="dev-agent-file" key={index}>
+                    <Field label="Relative path">
+                      <input
+                        value={item.path}
+                        disabled={currentReleaseContentsLocked}
+                        onChange={(event) => updateContent(index, { path: event.target.value })}
+                      />
+                    </Field>
+                    <Field label="Kind">
+                      <select
+                        value={item.kind}
+                        disabled={currentReleaseContentsLocked}
+                        onChange={(event) =>
+                          updateContent(index, { kind: event.target.value as AgentContent["kind"] })
+                        }
+                      >
+                        {["skill", "script", "prompt", "config", "doc", "asset"].map((kind) => (
+                          <option key={kind}>{kind}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    {!currentReleaseContentsLocked && (
+                      <button
+                        type="button"
+                        className="dev-danger-btn"
+                        onClick={() => {
+                          const contents = agent.contents.filter((_, position) => position !== index);
+                          patch({
+                            contents,
+                            releases: agent.releases.map((release) =>
+                              release.version === agent.currentVersion && release.artifact
+                                ? { ...release, contents }
+                                : release,
+                            ),
+                          });
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
                 ))}
+                {agent.packageType !== "MCP Server" && (
+                  <div className="dev-agent-subhead">
+                    <h3>Unpack destinations</h3>
+                    {!agent.install?.unpack && (
+                      <button
+                        type="button"
+                        className="dev-small-btn"
+                        onClick={() =>
+                          patch({
+                            install: {
+                              ...agent.install,
+                              unpack: {
+                                project: `.agents/${agent.packageType === "Skill" ? "skills" : "packs"}/${agent.id}`,
+                                global: `~/.agents/${agent.packageType === "Skill" ? "skills" : "packs"}/${agent.id}`,
+                              },
+                            },
+                          })
+                        }
+                      >
+                        Add unpack locations
+                      </button>
+                    )}
+                  </div>
+                )}
                 {agent.install?.unpack && (
                   <div className="dev-grid-2">
                     <Field label="Project unpack folder">

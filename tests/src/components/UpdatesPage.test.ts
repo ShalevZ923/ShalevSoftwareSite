@@ -1,9 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { agents } from "../agents";
-import { tools } from "../data";
-import { UpdatesPage } from "./UpdatesPage";
+import { agents } from "../../../src/agents";
+import { tools } from "../../../src/data";
+import { UpdatesPage } from "../../../src/components/UpdatesPage";
 describe("experimental update counts", () => {
   it("counts agent-only output and omits the contradictory empty state", () => {
     const html = renderToStaticMarkup(

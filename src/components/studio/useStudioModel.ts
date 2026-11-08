@@ -143,7 +143,10 @@ export function useStudioModel({
     return () => window.removeEventListener("beforeunload", guard);
   }, [dirty, isSaving, agentSaving, onDraftStateChange]);
   const switchWorkspace = (tab: "tools" | "docs" | "agents") => {
-    if (!canDiscard(activeTab === "agents" && agentDirty)) return;
+    if (tab === activeTab) return;
+    const currentTabDirty =
+      activeTab === "agents" ? agentDirty : activeTab === "tools" ? toolDirty : docDirty;
+    if (!canDiscard(currentTabDirty)) return;
     setActiveTab(tab);
     setStatusMessage(null);
     setValidationRecovery(null);

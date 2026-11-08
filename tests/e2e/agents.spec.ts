@@ -208,7 +208,9 @@ test("Updates counts agent-only results and enforces every kind filter on mobile
   await page.screenshot({ path: info.outputPath("mobile-updates.png") });
 });
 
-test("Studio locks reviewed provenance for a downloadable agent", async ({ page }) => {
+test("Studio locks reviewed provenance and published release files for a downloadable agent", async ({
+  page,
+}) => {
   await page.goto(url + "?page=developer#token=" + developerToken);
   await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
   await page.locator(".dev-item-card").filter({ hasText: "Theme Factory" }).click();
@@ -224,4 +226,39 @@ test("Studio locks reviewed provenance for a downloadable agent", async ({ page 
     await expect(page.getByLabel(label, { exact: true })).toBeDisabled();
   }
   await expect(page.getByRole("combobox", { name: "Review status", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Releases & files", exact: true }).click();
+  for (const label of [
+    "Version",
+    "Artifact · ID/version/file.zip",
+    "SHA-256",
+    "Archive root",
+    "Archive review date",
+    "Archive review evidence",
+  ]) {
+    await expect(page.getByLabel(label, { exact: true })).toBeDisabled();
+  }
+  await expect(page.getByText(/Package files for published release 1.0.0 are locked/)).toBeVisible();
 });
+
+test("Studio workspace tab switching guards unsaved changes across tools, docs, and agents", async ({
+  page,
+}) => {
+  await page.goto(url + "?page=developer#token=" + developerToken);
+  await expect(page.getByLabel("Tool name", { exact: true })).toBeVisible();
+  await page.getByLabel("Tool name", { exact: true }).fill("Modified Tool Name");
+
+  let dialogMessage = "";
+  page.once("dialog", (dialog) => {
+    dialogMessage = dialog.message();
+    dialog.dismiss();
+  });
+
+  await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
+  expect(dialogMessage).toBe("Discard unsaved changes?");
+  await expect(page.getByLabel("Tool name", { exact: true })).toHaveValue("Modified Tool Name");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Agent Catalog", exact: true }).click();
+  await expect(page.getByLabel("Resource ID", { exact: true })).toBeVisible();
+});
+
