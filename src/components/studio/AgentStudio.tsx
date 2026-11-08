@@ -225,18 +225,19 @@ export function AgentStudio({
   const agent = draft?.metadata;
   const review = agent?.review;
   const persistedAgent = entries.find((entry) => entry.id === activeId)?.metadata;
-  const provenanceLocked = !!persistedAgent?.releases.some((release) =>
+  const provenanceLocked = !!persistedAgent?.releases?.some((release) =>
     agentDownloadTarget({ ...persistedAgent, guidePath: "" }, release),
   );
-  const currentRelease = agent?.releases.find((item) => item.version === agent.currentVersion);
+  const currentRelease = agent?.releases?.find((item) => item.version === agent.currentVersion);
   const previewDownload = agent && agentDownloadTarget({ ...agent, guidePath: "" }, currentRelease);
   const currentReleaseIndex =
-    agent?.releases.findIndex((item) => item.version === agent.currentVersion) ?? -1;
+    agent?.releases?.findIndex((item) => item.version === agent.currentVersion) ?? -1;
   const existingVersions = new Set(
     entries
       .find((entry) => entry.id === activeId)
-      ?.metadata.releases.map((release) => release.version) ?? [],
+      ?.metadata.releases?.map((release) => release.version) ?? [],
   );
+
   const updateRelease = (index: number, change: Partial<AgentRelease>) => {
     const previous = agent!.releases[index];
     patch({

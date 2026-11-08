@@ -8,8 +8,8 @@ import { loadCatalogEntries } from "./scripts/catalog-content.mjs";
 import { isDownloadableZip } from "./scripts/agent-publication.mjs";
 
 const packageRoot = resolve("packages");
-const agentZipPath =
-  /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*)\/(?:[A-Za-z0-9][A-Za-z0-9._-]*)\/(?:[A-Za-z0-9][A-Za-z0-9._-]*\.zip)$/;
+const packagePathPattern =
+  /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*)\/(?:[A-Za-z0-9][A-Za-z0-9._-]*)\/(?:[A-Za-z0-9][A-Za-z0-9._-]*\.(?:exe|msi|msix|zip|dmg|pkg|deb|rpm))$/iu;
 
 export default defineConfig({
   server: { proxy: { "/api": "http://127.0.0.1:8081", "/guides": "http://127.0.0.1:8081" } },
@@ -39,7 +39,7 @@ export default defineConfig({
             response.writeHead(404).end();
             return;
           }
-          if (!agentZipPath.test(pathname)) {
+          if (!packagePathPattern.test(pathname)) {
             response.writeHead(404).end();
             return;
           }
@@ -52,13 +52,26 @@ export default defineConfig({
               loadAgentEntries(),
               loadCatalogEntries(),
             ]);
-            if (!isDownloadableZip(pathname.slice(1), agents, software)) {
-              response.writeHead(404).end();
-              return;
+            const artifactPath = pathname.slice(1);
+            if (/\.zip$/iu.test(pathname)) {
+              if (!isDownloadableZip(artifactPath, agents, software)) {
+                response.writeHead(404).end();
+                return;
+              }
+            } else {
+              const declaredSoftware = software.some(({ metadata }) =>
+                (metadata.releases ?? []).some(
+                  (release) => release.artifact?.toLowerCase() === artifactPath.toLowerCase(),
+                ),
+              );
+              if (!declaredSoftware) {
+                response.writeHead(404).end();
+                return;
+              }
             }
             const [root, file] = await Promise.all([
               realpath(packageRoot),
-              realpath(join(packageRoot, pathname.slice(1))),
+              realpath(join(packageRoot, artifactPath)),
             ]);
             const inside = relative(root, file);
             if (!inside || inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
@@ -68,11 +81,12 @@ export default defineConfig({
             const info = await stat(file);
             if (!info.isFile()) throw new Error("Not a file");
             response.writeHead(200, {
-              "Content-Type": "application/zip",
+              "Content-Type": /\.zip$/iu.test(file) ? "application/zip" : "application/octet-stream",
               "Content-Disposition": `attachment; filename="${file.split(sep).at(-1)}"`,
               "Content-Length": info.size,
               "Cache-Control": "private, no-store",
               "X-Content-Type-Options": "nosniff",
+
             });
             if (request.method === "HEAD") response.end();
             else createReadStream(file).pipe(response);

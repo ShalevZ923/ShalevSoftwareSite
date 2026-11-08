@@ -50,7 +50,7 @@ function assertStudioReleaseLocks(existing, metadata) {
     );
   }
   const previous = existing?.metadata;
-  const hadDownload = previous?.releases.some((release) =>
+  const hadDownload = previous?.releases?.some((release) =>
     isDownloadableAgentRelease(previous, release),
   );
   if (hadDownload) {
@@ -63,14 +63,15 @@ function assertStudioReleaseLocks(existing, metadata) {
   }
   for (const release of metadata.releases ?? []) {
     if (!isDownloadableAgentRelease(metadata, release)) continue;
-    const oldRelease = previous?.releases.find((item) => item.version === release.version);
+    const oldRelease = previous?.releases?.find((item) => item.version === release.version);
     if (!oldRelease || !isDownloadableAgentRelease(previous, oldRelease))
       throw new Error(
         "Developer Studio cannot make an agent archive downloadable; use a reviewed pull request",
       );
   }
   if (!existing) return;
-  for (const release of existing.metadata.releases) {
+  for (const release of existing.metadata.releases ?? []) {
+
     const next = metadata.releases?.find((item) => item.version === release.version);
     if (!next) continue;
     for (const field of ["artifact", "sha256", "archiveRoot", "contents", "review"]) {

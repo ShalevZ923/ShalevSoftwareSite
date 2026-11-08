@@ -256,6 +256,16 @@ describe("Tool Atlas Self-Contained Server", () => {
     expect(await res.text()).not.toContain("not published");
   });
 
+  it("does not serve an unapproved ZIP with uppercase extension", async () => {
+    const dir = join(fixturePackages, "theme-factory", "9.9.9");
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "theme-factory-9.9.9.ZIP"), "not published");
+    const res = await fetch(`${baseUrl}/downloads/theme-factory/9.9.9/theme-factory-9.9.9.ZIP`);
+    expect(res.status).toBe(404);
+    expect(await res.text()).not.toContain("not published");
+  });
+
+
   it("serves a ZIP referenced by the software catalog", async () => {
     const releasePath = join(
       fixtureRoot,

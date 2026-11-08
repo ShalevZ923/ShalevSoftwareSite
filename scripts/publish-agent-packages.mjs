@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { copyFile, lstat, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -111,7 +112,7 @@ export async function publishAgentPackages({
     const canonical = pathsByCasefold.get(artifact.toLowerCase());
     if (canonical && canonical !== artifact)
       throw new Error(`Destination artifact path has unexpected casing: ${artifact}`);
-    if (artifact.endsWith(".zip") && !software.has(artifact) && !declaredAgents.has(artifact))
+    if (/\.zip$/iu.test(artifact) && !software.has(artifact) && !declaredAgents.has(artifact))
       throw new Error(`Unrecognized ZIP in destination; review it before publishing: ${artifact}`);
   }
   const staging = await mkdtemp(join(tmpdir(), "tool-atlas-publish-"));
@@ -121,6 +122,14 @@ export async function publishAgentPackages({
         const staged = join(staging, artifact);
         await mkdir(dirname(staged), { recursive: true });
         await copyFile(join(sourceRoot, artifact), staged);
+      }
+      for (const artifact of software) {
+        const sourcePath = join(sourceRoot, artifact);
+        if (existsSync(sourcePath)) {
+          const staged = join(staging, artifact);
+          await mkdir(dirname(staged), { recursive: true });
+          await copyFile(sourcePath, staged);
+        }
       }
       const stagedAudit = await auditAgentArtifacts(publishable, staging);
       if (stagedAudit.errors.length) throw new Error(stagedAudit.errors.join("\n"));
@@ -132,12 +141,21 @@ export async function publishAgentPackages({
         await mkdir(dirname(destination), { recursive: true });
         await copyFile(join(staging, artifact), destination);
       }
+      for (const artifact of software) {
+        const staged = join(staging, artifact);
+        if (existsSync(staged)) {
+          const destination = join(destinationRoot, artifact);
+          await mkdir(dirname(destination), { recursive: true });
+          await copyFile(staged, destination);
+        }
+      }
     }
     for (const file of existing) {
       const artifact = posixRelative(destinationRoot, file);
-      if (artifact.endsWith(".zip") && declaredAgents.has(artifact) && !allowed.has(artifact))
+      if (/\.zip$/iu.test(artifact) && declaredAgents.has(artifact) && !allowed.has(artifact))
         await rm(file);
     }
+
   } finally {
     await rm(staging, { recursive: true, force: true });
   }

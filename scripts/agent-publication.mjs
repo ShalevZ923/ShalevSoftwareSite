@@ -34,14 +34,24 @@ export function downloadableAgentArtifacts(entries) {
 }
 
 export function isDownloadableZip(artifact, agentEntries, softwareEntries) {
+  const normalized = artifact.replaceAll("\\", "/");
   const declaredAgent = agentEntries.some(({ metadata }) =>
     (metadata.releases ?? []).some(
-      (release) => release.artifact?.toLowerCase() === artifact.toLowerCase(),
+      (release) => release.artifact?.toLowerCase() === normalized.toLowerCase(),
     ),
   );
   const declaredSoftware = softwareEntries.some(({ metadata }) =>
-    (metadata.releases ?? []).some((release) => release.artifact === artifact),
+    (metadata.releases ?? []).some(
+      (release) => release.artifact?.toLowerCase() === normalized.toLowerCase(),
+    ),
   );
   if (declaredAgent && declaredSoftware) return false;
-  return declaredAgent ? downloadableAgentArtifacts(agentEntries).has(artifact) : declaredSoftware;
+  if (declaredAgent) {
+    const allowed = new Set(
+      [...downloadableAgentArtifacts(agentEntries)].map((item) => item.toLowerCase()),
+    );
+    return allowed.has(normalized.toLowerCase());
+  }
+  return declaredSoftware;
 }
+

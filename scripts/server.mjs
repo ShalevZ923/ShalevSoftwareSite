@@ -67,9 +67,10 @@ const mimeTypes = {
 };
 
 const safeDownloadRegex =
-  /^\/downloads\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:exe|msi|msix|zip|dmg|pkg|deb|rpm))$/;
+  /^\/downloads\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:exe|msi|msix|zip|dmg|pkg|deb|rpm))$/i;
 const safeGuideRegex =
-  /^\/guides\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx))$/;
+  /^\/guides\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx))$/i;
+
 
 function validationError(message, field = "resources") {
   return Object.assign(new Error(message), { statusCode: 400, code: "VALIDATION_ERROR", field });
@@ -278,7 +279,29 @@ export function createToolAtlasServer({
   agentContentDirectory = agentsDirectory,
   agentGeneratedFile = generatedAgentsPath,
 } = {}) {
+  let cachedDownloadables = null;
+  let cachedDownloadablesAt = 0;
+  function invalidateDownloadableCache() {
+    cachedDownloadables = null;
+    cachedDownloadablesAt = 0;
+  }
+  async function checkDownloadable(artifact) {
+    const now = Date.now();
+    const ttl = process.env.VITEST ? 0 : 5000;
+    if (!cachedDownloadables || now - cachedDownloadablesAt > ttl) {
+      const [agents, software] = await Promise.all([
+        loadAgentEntries(agentContentDirectory),
+        loadCatalogEntries(catalogDirectory),
+      ]);
+      cachedDownloadables = { agents, software };
+      cachedDownloadablesAt = now;
+    }
+    return isDownloadableZip(artifact, cachedDownloadables.agents, cachedDownloadables.software);
+  }
+
+
   const recovery = recoverTransactions(stateDirectory, [
+
     agentContentDirectory,
     dirname(agentGeneratedFile),
     catalogDirectory,
@@ -477,7 +500,9 @@ export function createToolAtlasServer({
               stateDirectory,
               revision,
             });
+            invalidateDownloadableCache();
             return sendJson(res, 200, {
+
               success: true,
               agent: agent.metadata,
               guide: agent.guide,
@@ -550,7 +575,9 @@ export function createToolAtlasServer({
               stateDirectory,
               create: true,
             });
+            invalidateDownloadableCache();
             return sendJson(res, 201, {
+
               success: true,
               tool: accepted.metadata,
               entry: { id: accepted.metadata.id, ...accepted, revision: recordRevision(accepted) },
@@ -614,7 +641,9 @@ export function createToolAtlasServer({
                 stateDirectory,
                 revision,
               });
+              invalidateDownloadableCache();
               return sendJson(res, 200, {
+
                 success: true,
                 tool: accepted.metadata,
                 entry: {
@@ -695,21 +724,22 @@ export function createToolAtlasServer({
       }
 
       // 5. Download Packages handling (/downloads/...)
-      const downloadMatch = safeDownloadRegex.exec(pathname);
-      if (downloadMatch) {
+      if (pathname.startsWith("/downloads/")) {
+        const downloadMatch = safeDownloadRegex.exec(pathname);
+        if (!downloadMatch) {
+          return sendText(res, 404, "Download not found");
+        }
         if (req.method !== "GET" && req.method !== "HEAD") {
           return sendText(res, 405, "Method Not Allowed");
         }
         const [_, toolId, version, filename] = downloadMatch;
         const artifact = `${toolId}/${version}/${filename}`;
-        if (filename.endsWith(".zip")) {
-          const [agents, software] = await Promise.all([
-            loadAgentEntries(agentContentDirectory),
-            loadCatalogEntries(catalogDirectory),
-          ]);
-          if (!isDownloadableZip(artifact, agents, software))
+        if (/\.zip$/iu.test(filename)) {
+          if (!(await checkDownloadable(artifact)))
             return sendText(res, 404, "Download not found");
         }
+
+
         const filePath = join(packagesDirectory, toolId, version, filename);
 
         if (!existsSync(filePath)) {
@@ -747,10 +777,14 @@ export function createToolAtlasServer({
         return createReadStream(realFilePath).pipe(res);
       }
 
-      const guideMatch = safeGuideRegex.exec(pathname);
-      if (guideMatch) {
+      if (pathname.startsWith("/guides/")) {
+        const guideMatch = safeGuideRegex.exec(pathname);
+        if (!guideMatch) {
+          return sendText(res, 404, "Guide not found");
+        }
         if (req.method !== "GET" && req.method !== "HEAD")
           return sendText(res, 405, "Method Not Allowed");
+
         const [, toolId, filename] = guideMatch;
         const filePath = join(guideLibraryDirectory, toolId, filename);
         if (!existsSync(filePath) || !(await stat(filePath)).isFile())

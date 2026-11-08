@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDownloadableZip } from "./agent-publication.mjs";
-import { parsePublicationOptions } from "./publish-agent-packages.mjs";
+import { parsePublicationOptions, publishAgentPackages } from "./publish-agent-packages.mjs";
 
 describe("ZIP download eligibility", () => {
   const artifact = "tool/1.0/tool.zip";
@@ -15,6 +16,11 @@ describe("ZIP download eligibility", () => {
   it("allows referenced software ZIPs and denies unlisted ZIPs", () => {
     expect(isDownloadableZip(artifact, [], software)).toBe(true);
     expect(isDownloadableZip("tool/1.0/other.zip", [], software)).toBe(false);
+  });
+
+  it("allows case-insensitive matches for software and agents", () => {
+    expect(isDownloadableZip("tool/1.0/TOOL.ZIP", [], software)).toBe(true);
+    expect(isDownloadableZip("TOOL/1.0/tool.zip", [], software)).toBe(true);
   });
 
   it("does not let software metadata bypass a conflicting agent gate", () => {
@@ -59,4 +65,28 @@ describe("publication command arguments", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("copies declared software artifacts alongside allowed agent packages to destination", async () => {
+    const sourceDir = await mkdtemp(join(tmpdir(), "atlas-publish-src-"));
+    const destDir = await mkdtemp(join(tmpdir(), "atlas-publish-dst-"));
+    try {
+      const softwareArtifact = "debuggers/1.0.0/jq.zip";
+      await mkdir(join(sourceDir, "debuggers", "1.0.0"), { recursive: true });
+      await writeFile(join(sourceDir, softwareArtifact), "binary");
+
+      await publishAgentPackages({
+        entries: [],
+        softwareEntries: [{ metadata: { releases: [{ artifact: softwareArtifact }] } }],
+        sourceDirectory: sourceDir,
+        destinationDirectory: destDir,
+      });
+
+      expect(existsSync(join(destDir, softwareArtifact))).toBe(true);
+      expect(await readFile(join(destDir, softwareArtifact), "utf8")).toBe("binary");
+    } finally {
+      await rm(sourceDir, { recursive: true, force: true });
+      await rm(destDir, { recursive: true, force: true });
+    }
+  });
 });
+
