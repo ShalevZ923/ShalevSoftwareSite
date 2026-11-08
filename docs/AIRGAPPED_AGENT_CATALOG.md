@@ -10,7 +10,8 @@ Focused Playwright journeys run against a fresh disposable server fixture for ev
 
 This optional artifact workflow is for networks that cannot reach GitHub, npm, or public MCP hosts. The checked-in Agent Catalog examples do not include approved artifacts or checksums. Internal GitLab owns review and metadata. When a ZIP is published, Tool Atlas `/downloads` serves the bytes. A listing can exist without an artifact. Users install by downloading and unpacking. Tool Atlas never runs package scripts, and end users do not need Node, npm, or npx.
 
-Site **build** still uses Node in GitLab CI. That is an operator toolchain. Mirror the digest-pinned job image into your internal Container Registry so runners never pull Docker Hub. See [`.gitlab-ci.yml`](../.gitlab-ci.yml).
+Site **build** still uses Node in GitLab CI. That is an operator toolchain. Mirror the digest-pinned job image into your internal Container Registry so runners never pull Docker Hub. See [`.gitlab/ci.yml`](../.gitlab/ci.yml).
+
 
 ## Operator flow
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
-import { createToolAtlasServer, developerToken } from "./server.mjs";
+import { createServerFixture } from "../fixtures/server-fixture.mjs";
+import { createToolAtlasServer, developerToken } from "../../scripts/server.mjs";
+
 describe("live agent guides", () => {
   it("serves newly created and edited guides without a frontend rebuild", async () => {
     const fixture = await createServerFixture();

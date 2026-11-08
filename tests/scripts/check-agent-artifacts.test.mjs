@@ -16,8 +16,9 @@ vi.mock("node:fs/promises", async (original) => {
     },
   };
 });
-import { auditAgentArtifacts } from "./check-agent-artifacts.mjs";
-import { publishAgentPackages } from "./publish-agent-packages.mjs";
+import { auditAgentArtifacts } from "../../scripts/check-agent-artifacts.mjs";
+import { publishAgentPackages } from "../../scripts/publish-agent-packages.mjs";
+
 
 function crc32(bytes) {
   let crc = 0xffffffff;

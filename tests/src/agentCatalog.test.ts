@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agents, type AgentPackage } from "./agents";
+import { agents, type AgentPackage } from "../../src/agents";
 import {
   agentFiltersFromSearch,
   agentFiltersToSearch,
@@ -8,7 +8,8 @@ import {
   getAgentCatalog,
   getRecentAgentUpdates,
   paginateAgents,
-} from "./agentCatalog";
+} from "../../src/agentCatalog";
+
 
 const pdf = agents.find((item) => item.id === "anthropic-pdf")!;
 

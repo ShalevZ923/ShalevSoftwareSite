@@ -15,10 +15,11 @@ vi.mock("node:fs/promises", async (original) => {
     },
   };
 });
-import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
-import { loadAgentEntries, packageTypes, renderGeneratedAgents } from "./agents-content.mjs";
-import { saveAgentStudioEntry } from "./agent-studio.mjs";
-import { recordRevision, sourceSnapshot } from "./mutation-coordinator.mjs";
+import { createServerFixture } from "../fixtures/server-fixture.mjs";
+import { loadAgentEntries, packageTypes, renderGeneratedAgents } from "../../scripts/agents-content.mjs";
+import { saveAgentStudioEntry } from "../../scripts/agent-studio.mjs";
+import { recordRevision, sourceSnapshot } from "../../scripts/mutation-coordinator.mjs";
+
 let fixture;
 afterEach(async () => {
   faults.target = "";

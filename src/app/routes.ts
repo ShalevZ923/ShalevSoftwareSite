@@ -29,7 +29,9 @@ export function pageFromSearch(
   hiddenPages: ReadonlySet<Page> = parseHiddenPages(),
 ): Page {
   const page = new URLSearchParams(search).get("page");
-  const defaultPage: Page = isPageVisible("agents", hiddenPages) ? "agents" : "catalog";
+  if (!page) {
+    return isPageVisible("agents", hiddenPages) ? "agents" : "catalog";
+  }
   const candidate: Page =
     page === "catalog" ||
     page === "agents" ||
@@ -38,7 +40,8 @@ export function pageFromSearch(
     page === "about" ||
     page === "developer"
       ? page
-      : defaultPage;
-  return isPageVisible(candidate, hiddenPages) ? candidate : defaultPage;
+      : (isPageVisible("agents", hiddenPages) ? "agents" : "catalog");
+  return isPageVisible(candidate, hiddenPages) ? candidate : "catalog";
 }
+
 

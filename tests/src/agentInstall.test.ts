@@ -5,7 +5,8 @@ import {
   mcpInstallHref,
   mcpInstallPayload,
   unpackPathForScope,
-} from "./agentInstall";
+} from "../../src/agentInstall";
+
 
 const mcp = {
   name: "atlas-repo",

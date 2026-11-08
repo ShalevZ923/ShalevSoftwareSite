@@ -6,7 +6,8 @@ describe("portable tracked archive metadata", () => {
   it("produces identical reviewed ZIP bytes for Unix and Windows defaults", async () => {
     const script = `
 import importlib.util, pathlib, tempfile, sys, zipfile
-spec = importlib.util.spec_from_file_location('builder', ${JSON.stringify(fileURLToPath(new URL("./build-agent-packages.py", import.meta.url)))})
+spec = importlib.util.spec_from_file_location('builder', ${JSON.stringify(fileURLToPath(new URL("../../scripts/build-agent-packages.py", import.meta.url)))})
+
 builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
 with tempfile.TemporaryDirectory(prefix='atlas zip portability ') as directory:

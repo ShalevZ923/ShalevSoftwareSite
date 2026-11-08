@@ -3,8 +3,9 @@ import {
   agentDownloadTarget,
   canInstallMcpInVsCode,
   checkArtifactAvailability,
-} from "./agentDelivery";
-import type { AgentPackage } from "./agentTypes";
+} from "../../src/agentDelivery";
+import type { AgentPackage } from "../../src/agentTypes";
+
 
 const reviewed = {
   catalogTier: "experimental",

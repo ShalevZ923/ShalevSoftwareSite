@@ -5,8 +5,9 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isDownloadableZip } from "./agent-publication.mjs";
-import { parsePublicationOptions, publishAgentPackages } from "./publish-agent-packages.mjs";
+import { isDownloadableZip } from "../../scripts/agent-publication.mjs";
+import { parsePublicationOptions, publishAgentPackages } from "../../scripts/publish-agent-packages.mjs";
+
 
 describe("ZIP download eligibility", () => {
   const artifact = "tool/1.0/tool.zip";
@@ -53,7 +54,8 @@ describe("publication command arguments", () => {
     try {
       const sentinel = join(root, "keep.zip");
       await writeFile(sentinel, "keep");
-      const script = fileURLToPath(new URL("./publish-agent-packages.mjs", import.meta.url));
+      const script = fileURLToPath(new URL("../../scripts/publish-agent-packages.mjs", import.meta.url));
+
       const result = spawnSync(process.execPath, [script, "--source", root, "--dest"], {
         encoding: "utf8",
       });

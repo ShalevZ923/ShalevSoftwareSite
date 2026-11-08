@@ -7,7 +7,8 @@ vi.mock("node:path", async (original) => {
     relative: (...args) => path.relative(...args).replaceAll("/", "\\"),
   };
 });
-const { loadAgentEntries } = await import("./agents-content.mjs");
+const { loadAgentEntries } = await import("../../scripts/agents-content.mjs");
+
 describe("native Windows agent hierarchy", () => {
   it("loads taxonomy and canonical portable guide paths", async () => {
     const entries = await loadAgentEntries();

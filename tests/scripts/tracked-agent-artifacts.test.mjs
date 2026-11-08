@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { trackedAgentEntries } from "./check-agent-artifacts.mjs";
+import { trackedAgentEntries } from "../../scripts/check-agent-artifacts.mjs";
+
 describe("tracked-source archive audit scope", () => {
   const entry = {
     metadata: {

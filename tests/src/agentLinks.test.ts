@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { agents, type AgentPackage } from "./agents";
-import { defaultAgentFilters } from "./agentCatalog";
-import { agentPageHref, agentTargetFromSearch, resolveAgentRelease } from "./agentLinks";
+import { agents, type AgentPackage } from "../../src/agents";
+import { defaultAgentFilters } from "../../src/agentCatalog";
+import { agentPageHref, agentTargetFromSearch, resolveAgentRelease } from "../../src/agentLinks";
+
 
 const listing = agents.find((item) => item.id === "anthropic-pdf")!;
 const released: AgentPackage = {

@@ -1,12 +1,13 @@
-import { recordRevision } from "./mutation-coordinator.mjs";
-import { createServerFixture } from "./test-fixtures/server-fixture.mjs";
+import { recordRevision } from "../../scripts/mutation-coordinator.mjs";
+import { createServerFixture } from "../fixtures/server-fixture.mjs";
 import { describe, expect, it } from "vitest";
 import { cp, mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { agentsDirectory, loadAgentEntries } from "./agents-content.mjs";
-import { saveAgentStudioEntry } from "./agent-studio.mjs";
-import { createToolAtlasServer, developerToken } from "./server.mjs";
+import { agentsDirectory, loadAgentEntries } from "../../scripts/agents-content.mjs";
+import { saveAgentStudioEntry } from "../../scripts/agent-studio.mjs";
+import { createToolAtlasServer, developerToken } from "../../scripts/server.mjs";
+
 
 describe("Agent Studio authoring", () => {
   it("saves validated listing text and button labels without weakening support gates", async () => {
