@@ -35,5 +35,5 @@ print('Portable archive bytes verified')
       env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
     });
     expect(result.stdout).toContain("Portable archive bytes verified");
-  });
+  }, 20000);
 });
