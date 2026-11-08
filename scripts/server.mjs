@@ -26,6 +26,9 @@ import {
   loadTaxonomy,
   validateCatalogEntry,
 } from "./catalog-content.mjs";
+import { agentsDirectory, generatedAgentsPath, loadAgentEntries } from "./agents-content.mjs";
+import { isDownloadableZip } from "./agent-publication.mjs";
+import { saveAgentStudioEntry } from "./agent-studio.mjs";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const distDir = join(rootDir, "dist");
@@ -68,9 +71,9 @@ const mimeTypes = {
 };
 
 const safeDownloadRegex =
-  /^\/downloads\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:exe|msi|msix|zip|dmg|pkg|deb|rpm))$/;
+  /^\/downloads\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:exe|msi|msix|zip|dmg|pkg|deb|rpm))$/i;
 const safeGuideRegex =
-  /^\/guides\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx))$/;
+  /^\/guides\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:pdf|pptx))$/i;
 
 function validationError(message, field = "resources") {
   return Object.assign(new Error(message), { statusCode: 400, code: "VALIDATION_ERROR", field });
@@ -276,8 +279,32 @@ export function createToolAtlasServer({
   catalogOutputs = {},
   documentationDirectory = docsDir,
   stateDirectory = join(dirname(catalogDirectory), ".tool-atlas-state"),
+  agentContentDirectory = agentsDirectory,
+  agentGeneratedFile = generatedAgentsPath,
 } = {}) {
+  let cachedDownloadables = null;
+  let cachedDownloadablesAt = 0;
+  function invalidateDownloadableCache() {
+    cachedDownloadables = null;
+    cachedDownloadablesAt = 0;
+  }
+  async function checkDownloadable(artifact) {
+    const now = Date.now();
+    const ttl = process.env.VITEST ? 0 : 5000;
+    if (!cachedDownloadables || now - cachedDownloadablesAt > ttl) {
+      const [agents, software] = await Promise.all([
+        loadAgentEntries(agentContentDirectory),
+        loadCatalogEntries(catalogDirectory),
+      ]);
+      cachedDownloadables = { agents, software };
+      cachedDownloadablesAt = now;
+    }
+    return isDownloadableZip(artifact, cachedDownloadables.agents, cachedDownloadables.software);
+  }
+
   const recovery = recoverTransactions(stateDirectory, [
+    agentContentDirectory,
+    dirname(agentGeneratedFile),
     catalogDirectory,
     dirname(catalogOutputs.generatedPath ?? join(rootDir, "src/generated/catalog.ts")),
     dirname(catalogOutputs.indexPath ?? join(rootDir, "public/catalog/v1/index.json")),
@@ -290,6 +317,7 @@ export function createToolAtlasServer({
     );
     return error;
   });
+  const readAgents = () => consistentRead(() => loadAgentEntries(agentContentDirectory));
   const readCatalog = () => consistentRead(() => loadCatalogEntries(catalogDirectory));
   const server = createServer(async (req, res) => {
     let pathname;
@@ -317,7 +345,11 @@ export function createToolAtlasServer({
       const apiRoutes = [
         [/^\/api\/health$/, ["GET"]],
         [/^\/api\/catalog$/, ["GET"]],
+        [/^\/api\/agents$/, ["GET"]],
+        [/^\/api\/agents\/[a-z0-9]+(?:-[a-z0-9]+)*\/guide$/, ["GET"]],
         [/^\/api\/developer\/verify$/, ["POST"]],
+        [/^\/api\/developer\/agents$/, ["GET", "POST"]],
+        [/^\/api\/developer\/agents\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["PUT"]],
         [/^\/api\/developer\/tools$/, ["GET", "POST"]],
         [/^\/api\/developer\/tools\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["GET", "PUT"]],
         [/^\/api\/developer\/guide-library\/[a-z0-9]+(?:-[a-z0-9]+)*$/, ["GET"]],
@@ -347,6 +379,27 @@ export function createToolAtlasServer({
         });
         const docs = Object.fromEntries(entries.map(({ metadata, guide }) => [metadata.id, guide]));
         return sendJson(res, 200, { tools, docs });
+      }
+      const agentGuideMatch = /^\/api\/agents\/([a-z0-9]+(?:-[a-z0-9]+)*)\/guide$/.exec(pathname);
+      if (agentGuideMatch && req.method === "GET") {
+        return await consistentRead(async () => {
+          const entries = await loadAgentEntries(agentContentDirectory);
+          const entry = entries.find((item) => item.metadata.id === agentGuideMatch[1]);
+          if (!entry) return sendJson(res, 404, { error: "Agent guide not found" });
+          const root = await realpath(agentContentDirectory);
+          const guidePath = entry.guidePath.slice("/content/agents/".length);
+          const file = await realpath(join(root, guidePath));
+          if (!isPathInside(root, file)) return sendJson(res, 403, { error: "Forbidden" });
+          return sendJson(res, 200, { guide: entry.guide });
+        });
+      }
+      if (pathname === "/api/agents" && req.method === "GET") {
+        const entries = await readAgents();
+        return sendJson(
+          res,
+          200,
+          entries.map(({ metadata, guidePath }) => ({ ...metadata, guidePath })),
+        );
       }
 
       // 3. Developer Token Verification
@@ -392,6 +445,75 @@ export function createToolAtlasServer({
       if (pathname.startsWith("/api/developer/")) {
         if (!verifyToken(req)) {
           return sendJson(res, 401, { error: "Unauthorized: Invalid or missing developer token" });
+        }
+
+        if (pathname === "/api/developer/agents" && req.method === "GET") {
+          const entries = await readAgents();
+          return sendJson(
+            res,
+            200,
+            entries.map((entry) => ({
+              id: entry.metadata.id,
+              metadata: entry.metadata,
+              guide: entry.guide,
+              revision: recordRevision(entry),
+            })),
+          );
+        }
+        if (pathname === "/api/developer/agents" && req.method === "POST") {
+          try {
+            const body = await readJsonBody(req);
+            const { metadata, guide, revision } =
+              body && typeof body === "object" && !Array.isArray(body) ? body : {};
+            const agent = await saveAgentStudioEntry({
+              metadata,
+              guide,
+              directory: agentContentDirectory,
+              generatedPath: agentGeneratedFile,
+              stateDirectory,
+              revision,
+            });
+            return sendJson(res, 201, {
+              success: true,
+              agent: agent.metadata,
+              guide: agent.guide,
+              revision: recordRevision(agent),
+            });
+          } catch (error) {
+            return sendJson(res, error.statusCode || 400, {
+              error: error instanceof Error ? error.message : "Agent validation failed",
+              code: error.code,
+            });
+          }
+        }
+        const agentMatch = /^\/api\/developer\/agents\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname);
+        if (agentMatch && req.method === "PUT") {
+          try {
+            const body = await readJsonBody(req);
+            const { metadata, guide, revision } =
+              body && typeof body === "object" && !Array.isArray(body) ? body : {};
+            const agent = await saveAgentStudioEntry({
+              metadata,
+              guide,
+              existingId: agentMatch[1],
+              directory: agentContentDirectory,
+              generatedPath: agentGeneratedFile,
+              stateDirectory,
+              revision,
+            });
+            invalidateDownloadableCache();
+            return sendJson(res, 200, {
+              success: true,
+              agent: agent.metadata,
+              guide: agent.guide,
+              revision: recordRevision(agent),
+            });
+          } catch (error) {
+            return sendJson(res, error.statusCode || 400, {
+              error: error instanceof Error ? error.message : "Agent validation failed",
+              code: error.code,
+            });
+          }
         }
 
         // List all tools (with metadata and raw markdown guide)
@@ -453,6 +575,7 @@ export function createToolAtlasServer({
               stateDirectory,
               create: true,
             });
+            invalidateDownloadableCache();
             return sendJson(res, 201, {
               success: true,
               tool: accepted.metadata,
@@ -517,6 +640,7 @@ export function createToolAtlasServer({
                 stateDirectory,
                 revision,
               });
+              invalidateDownloadableCache();
               return sendJson(res, 200, {
                 success: true,
                 tool: accepted.metadata,
@@ -598,12 +722,20 @@ export function createToolAtlasServer({
       }
 
       // 5. Download Packages handling (/downloads/...)
-      const downloadMatch = safeDownloadRegex.exec(pathname);
-      if (downloadMatch) {
+      if (pathname.startsWith("/downloads/")) {
+        const downloadMatch = safeDownloadRegex.exec(pathname);
+        if (!downloadMatch) {
+          return sendText(res, 404, "Download not found");
+        }
         if (req.method !== "GET" && req.method !== "HEAD") {
           return sendText(res, 405, "Method Not Allowed");
         }
         const [_, toolId, version, filename] = downloadMatch;
+        const artifact = `${toolId}/${version}/${filename}`;
+        if (/\.zip$/iu.test(filename)) {
+          if (!(await checkDownloadable(artifact))) return sendText(res, 404, "Download not found");
+        }
+
         const filePath = join(packagesDirectory, toolId, version, filename);
 
         if (!existsSync(filePath)) {
@@ -641,10 +773,14 @@ export function createToolAtlasServer({
         return createReadStream(realFilePath).pipe(res);
       }
 
-      const guideMatch = safeGuideRegex.exec(pathname);
-      if (guideMatch) {
+      if (pathname.startsWith("/guides/")) {
+        const guideMatch = safeGuideRegex.exec(pathname);
+        if (!guideMatch) {
+          return sendText(res, 404, "Guide not found");
+        }
         if (req.method !== "GET" && req.method !== "HEAD")
           return sendText(res, 405, "Method Not Allowed");
+
         const [, toolId, filename] = guideMatch;
         const filePath = join(guideLibraryDirectory, toolId, filename);
         if (!existsSync(filePath) || !(await stat(filePath)).isFile())

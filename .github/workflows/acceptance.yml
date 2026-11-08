@@ -15,6 +15,7 @@ jobs:
         os: [ubuntu-26.04, windows-latest]
         manager: [npm, pnpm]
         node: [24.11.0, '24']
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,6 +59,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify source and production artifact
         run: ${{ matrix.manager }} run verify
+      - name: Build and audit tracked agent archives
+        run: ${{ matrix.manager }} run agents:packages
       - name: Check formatting
         run: ${{ matrix.manager }} run format:check
       - name: Cache Playwright browser
@@ -73,7 +76,9 @@ jobs:
             ${{ runner.os }}-playwright-
       - name: Install browser
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
         run: npm exec -- playwright install --with-deps chromium
+
       - name: Browser journeys
         env:
           PLAYWRIGHT_CHROMIUM_CHANNEL: chromium
@@ -95,6 +100,13 @@ jobs:
           path: .internal-generated/provenance.json
           include-hidden-files: true
           if-no-files-found: error
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: browser-${{ matrix.os }}-${{ matrix.manager }}-${{ matrix.node }}
+          path: test-results
+          if-no-files-found: ignore
 
   graph-parity:
     name: Fresh npm/pnpm generated catalog parity
@@ -127,8 +139,30 @@ jobs:
         with:
           node-version: 24
           check-latest: true
+      - name: Enable pinned pnpm for artifact publication
+        run: corepack enable
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Build and publish audited agent packages
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm agents:packages
+          stage="${RUNNER_TEMP}/agent-packages"
+          mkdir -p "${stage}/revoked-agent/1.0"
+          printf 'revoked' > "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
+          if pnpm agents:publish -- --source packages --dest "${stage}"; then
+            echo 'Publication unexpectedly accepted an unrecognized ZIP' >&2
+            exit 1
+          fi
+          test -f "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
+          rm "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
+          pnpm agents:publish -- --source packages --dest "${stage}"
+          test ! -e "${stage}/revoked-agent/1.0/revoked-agent-1.0.zip"
+          echo "PUBLISHED_PACKAGES=${stage}" >> "${GITHUB_ENV}"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
       - name: Build image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -144,9 +178,9 @@ jobs:
       - name: Smoke test hardened image
         run: |
           set -euo pipefail
-          container_id=$(docker run --detach --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --publish 127.0.0.1:18080:8080 tool-atlas:ci)
+          container_id=$(docker run --detach --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --publish 127.0.0.1:18080:8080 --mount "type=bind,src=${PUBLISHED_PACKAGES},dst=/srv/tool-atlas-packages,readonly" tool-atlas:ci)
           trap 'docker rm --force "$container_id" >/dev/null' EXIT
-          for attempt in 1 2 3 4 5; do
+          for _ in 1 2 3 4 5; do
             if curl --fail --silent --show-error --head http://127.0.0.1:18080/; then break; fi
             sleep 1
           done
@@ -154,6 +188,12 @@ jobs:
           curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^content-security-policy:'
           curl --fail --silent --show-error --head http://127.0.0.1:18080/ | grep --ignore-case '^cache-control: no-store'
           curl --fail --silent --show-error --head http://127.0.0.1:18080/catalog/v1/index.json | grep --ignore-case '^cache-control: public, max-age=60'
+          zip_url=http://127.0.0.1:18080/downloads/theme-factory/1.0.0/theme-factory-1.0.0.zip
+          curl --fail --silent --show-error --head "${zip_url}" | grep --ignore-case '^content-disposition: attachment'
+          curl --fail --silent --show-error --output "${RUNNER_TEMP}/theme-factory.zip" "${zip_url}"
+          expected="$(node -e "process.stdout.write(JSON.parse(require('node:fs').readFileSync('content/agents/skills/anthropic/theme-factory/releases/1.0.0.json','utf8')).sha256)")"
+          echo "${expected}  ${RUNNER_TEMP}/theme-factory.zip" | sha256sum --check
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/downloads/revoked-agent/1.0/revoked-agent-1.0.zip)" = "404"
       - name: Build optional local Studio image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:

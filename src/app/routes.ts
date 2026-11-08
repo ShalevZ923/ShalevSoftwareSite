@@ -1,6 +1,6 @@
-export type Page = "catalog" | "documentation" | "updates" | "about" | "developer";
+export type Page = "catalog" | "agents" | "documentation" | "updates" | "about" | "developer";
 
-const hideablePages = new Set<Page>(["documentation", "updates", "about", "developer"]);
+const hideablePages = new Set<Page>(["agents", "documentation", "updates", "about", "developer"]);
 
 export function parseHiddenPages(
   raw: string | undefined = import.meta.env.VITE_HIDDEN_PAGES,
@@ -29,9 +29,19 @@ export function pageFromSearch(
   hiddenPages: ReadonlySet<Page> = parseHiddenPages(),
 ): Page {
   const page = new URLSearchParams(search).get("page");
+  if (!page) {
+    return isPageVisible("agents", hiddenPages) ? "agents" : "catalog";
+  }
   const candidate: Page =
-    page === "documentation" || page === "updates" || page === "about" || page === "developer"
+    page === "catalog" ||
+    page === "agents" ||
+    page === "documentation" ||
+    page === "updates" ||
+    page === "about" ||
+    page === "developer"
       ? page
-      : "catalog";
+      : isPageVisible("agents", hiddenPages)
+        ? "agents"
+        : "catalog";
   return isPageVisible(candidate, hiddenPages) ? candidate : "catalog";
 }

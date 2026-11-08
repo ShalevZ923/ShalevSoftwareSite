@@ -1,4 +1,5 @@
 # Dependencies & Package Manager State
+node_modules
 node_modules/
 .pnp
 .pnp.js
@@ -28,6 +29,10 @@ result
 result-*
 .direnv/
 
+.internal-generated/
+__pycache__/
+*.py[cod]
+
 # Environment & Secrets
 .env
 .env.local
@@ -52,3 +57,4 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+

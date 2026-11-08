@@ -6,6 +6,7 @@ import { checkLockfilePolicy } from "./lockfile-policy.mjs";
 
 const targets = [
   "src/generated/catalog.ts",
+  "src/generated/agents.ts",
   "public/catalog/v1/index.json",
   "public/catalog/v1/tools.json",
 ];

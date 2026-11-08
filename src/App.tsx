@@ -2,8 +2,18 @@ import { decodeCatalog } from "./contracts";
 import { Sidebar } from "./app/Sidebar";
 import { isPageVisible, pageFromSearch, type Page } from "./app/routes";
 import { SoftwareCatalog as Catalog } from "./features/software/SoftwareCatalog";
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { docs as staticDocs, tools as staticTools, type Platform, type Tool } from "./data";
+import { agents as staticAgents, type AgentPackage } from "./agents";
 import {
   catalogFiltersToSearch,
   defaultFilters,
@@ -36,6 +46,12 @@ import {
   type CatalogTarget,
 } from "./toolLinks";
 
+import { agentPageHref } from "./agentLinks";
+
+const AgentCatalog = lazy(async () => {
+  const module = await import("./components/AgentCatalog");
+  return { default: module.AgentCatalog };
+});
 const About = lazy(async () => {
   const module = await import("./components/About");
   return { default: module.About };
@@ -106,6 +122,14 @@ function App() {
     applyTheme(theme);
   }, [theme]);
   useEffect(() => {
+    document.title =
+      page === "agents"
+        ? "Tool Atlas — Agent catalog"
+        : page === "catalog"
+          ? "Tool Atlas — Software catalog"
+          : "Tool Atlas";
+  }, [page]);
+  useEffect(() => {
     if (!themeFollowsSystem) return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const update = () => setTheme(media.matches ? "dark" : "light");
@@ -120,6 +144,9 @@ function App() {
     !studioSaving.current && (!studioDirty.current || window.confirm("Discard unsaved changes?"));
   const [catalogTools, setCatalogTools] = useState<Tool[]>(staticTools);
   const [catalogDocs, setCatalogDocs] = useState<Record<string, string>>(staticDocs);
+  const [agentPackages, setAgentPackages] = useState<AgentPackage[]>(staticAgents);
+  const [agentFeedStatus, setAgentFeedStatus] = useState<"loading" | "live" | "static">("loading");
+  const [agentCatalogRevision, setAgentCatalogRevision] = useState(0);
   const [devToken, setDevToken] = useState<string>(() => {
     try {
       return window.sessionStorage.getItem("tool-atlas-dev-token") || "";
@@ -136,7 +163,7 @@ function App() {
   });
   const initialPageRender = useRef(true);
 
-  const refreshCatalog = async (required = false) => {
+  const refreshSoftware = useCallback(async (required = false) => {
     try {
       const res = await fetch("/api/catalog");
       if (required && !res.ok)
@@ -154,7 +181,28 @@ function App() {
       if (required) throw error;
       // Offline or static fallback
     }
-  };
+  }, []);
+  const refreshCatalog = useCallback(
+    async (required = false) => {
+      await Promise.all([
+        refreshSoftware(required),
+        (async () => {
+          try {
+            const res = await fetch("/api/agents");
+            if (!res.ok) throw new Error("Live catalog unavailable");
+            const data: AgentPackage[] = await res.json();
+            if (!Array.isArray(data)) throw new Error("Invalid live catalog");
+            setAgentPackages(data);
+            setAgentFeedStatus("live");
+            setAgentCatalogRevision((value) => value + 1);
+          } catch {
+            setAgentFeedStatus((status) => (status === "loading" ? "static" : status));
+          }
+        })(),
+      ]);
+    },
+    [refreshSoftware],
+  );
 
   const verifyDeveloperToken = async (candidateToken: string) => {
     if (!isPageVisible("developer") || !candidateToken) return false;
@@ -205,16 +253,33 @@ function App() {
     } else if (initialDevToken.current) {
       verifyDeveloperToken(initialDevToken.current);
     }
-  }, []);
+  }, [refreshCatalog]);
 
   const navigate = (nextPage: Page, nextTool = selectedDoc, version?: string) => {
-    const targetPage: Page = isPageVisible(nextPage) ? nextPage : "catalog";
+    const defaultPage: Page = isPageVisible("agents") ? "agents" : "catalog";
+    const targetPage: Page = isPageVisible(nextPage) ? nextPage : defaultPage;
     if (targetPage === "developer" && page === "developer") return;
     if (targetPage !== "developer" && !canLeaveStudio()) return;
     studioDirty.current = false;
     const url = new URL(window.location.href);
-    if (targetPage === "catalog") url.searchParams.delete("page");
+    if (targetPage === defaultPage) url.searchParams.delete("page");
     else url.searchParams.set("page", targetPage);
+    if (page === "agents" && targetPage !== "agents") {
+      for (const key of [
+        "agent",
+        "saved",
+        "type",
+        "p",
+        "capability",
+        "publisher",
+        "risk",
+        "status",
+        "query",
+        "sort",
+      ]) {
+        url.searchParams.delete(key);
+      }
+    }
 
     if (targetPage === "documentation") url.searchParams.set("tool", nextTool);
     else url.searchParams.delete("tool");
@@ -237,6 +302,16 @@ function App() {
     setRouteSearch(href);
     setRouteRevision((revision) => revision + 1);
     setPage("catalog");
+  };
+
+  const openAgent = (agentId: string) => {
+    if (!canLeaveStudio()) return;
+    const href = agentPageHref(agentId);
+    window.history.pushState(null, "", href);
+    studioDirty.current = false;
+    setRouteSearch(href);
+    setRouteRevision((revision) => revision + 1);
+    setPage("agents");
   };
 
   const exitDeveloperStudio = () => {
@@ -410,6 +485,18 @@ function App() {
             hotkeysEnabled={!drawerOpen}
           />
         )}
+        {page === "agents" && (
+          <Suspense fallback={<PageFallback />}>
+            <AgentCatalog
+              key={`agents:${routeRevision}:${routeSearch}`}
+              search={routeSearch}
+              agents={agentPackages}
+              feedStatus={agentFeedStatus}
+              catalogRevision={agentCatalogRevision}
+              hotkeysEnabled={!drawerOpen}
+            />
+          </Suspense>
+        )}
         {page === "documentation" && (
           <Suspense fallback={<PageFallback />}>
             <DocumentationPage
@@ -426,7 +513,9 @@ function App() {
           <Suspense fallback={<PageFallback />}>
             <UpdatesPage
               tools={catalogTools}
+              agents={agentPackages}
               onCatalog={openCatalogTool}
+              onAgent={openAgent}
               onDocs={(tool) => navigate("documentation", tool.id)}
             />
           </Suspense>

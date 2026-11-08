@@ -6,10 +6,13 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       args:
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-1.7.2}
+
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-1.8.0}
         VITE_HIDDEN_PAGES: ${VITE_HIDDEN_PAGES:-}
         VITE_SUPPORT_EMAIL: ${VITE_SUPPORT_EMAIL:-}
         VITE_MCP_URL: ${VITE_MCP_URL:-}
+
+
     image: ${TOOL_ATLAS_IMAGE:-tool-atlas:local}
     restart: unless-stopped
     read_only: true

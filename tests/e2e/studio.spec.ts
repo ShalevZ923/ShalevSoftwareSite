@@ -62,7 +62,7 @@ test("Studio edits survive save and reload; stale drafts cannot overwrite them",
   expect(errors).toEqual([]);
 });
 test("catalog renders and navigates at desktop and mobile widths", async ({ page }) => {
-  await page.goto(url);
+  await page.goto(url + "?page=catalog");
   await expect(page.getByRole("heading", { name: "Software catalog" })).toBeVisible();
   await page.getByLabel("Search tools").fill("IntelliJ");
   await expect(page.locator(".tool-row").filter({ hasText: "IntelliJ" }).first()).toBeVisible();
