@@ -2,9 +2,9 @@
 
 Use version notes for the scope and evidence of a particular release. Use the [master documentation index](../README.md) for current development and operating guides.
 
-## Local candidates
+## Releases
 
-- [v1.7.2](v1.7.2.md) — software-catalog maintenance candidate; native Windows acceptance remains pending.
+- [v1.7.2](v1.7.2.md) — software-catalog maintenance release; dependency updates, lockfile policy synchronization, and durable save recovery.
 
 ## Historical version notes
 

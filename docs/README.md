@@ -12,7 +12,7 @@ This is the master index for developer, catalog-maintainer and operator document
 - **Review security or source publication:** the [security assessment](security/SECURITY_REPORT.md) and [publication checklist](security/OPEN_SOURCE_READINESS.md).
 - **Check a version's scope and acceptance:** [release notes index](releases/README.md).
 
-  1.7.2 is a local maintenance candidate. Native Windows acceptance remains pending. Version notes and dated assessments describe their own scope; moving a document does not establish new deployment or security evidence.
+  1.7.2 is the current maintenance release. Native Windows acceptance remains pending. Version notes and dated assessments describe their own scope; moving a document does not establish new deployment or security evidence.
 
 ## Documentation folders and files
 
