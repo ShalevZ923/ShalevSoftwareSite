@@ -37,7 +37,7 @@
     "remark-gfm": "4.0.1"
   },
   "devDependencies": {
-    "@babel/core": "8.0.9",
+    "@babel/core": "8.0.10",
     "@babel/eslint-parser": "8.0.7",
     "@babel/plugin-syntax-jsx": "8.0.1",
     "@babel/plugin-syntax-typescript": "8.0.3",
